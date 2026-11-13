@@ -8,10 +8,13 @@
 #include "Ped.hpp"
 #include "Player.hpp"
 #include "ScriptManager.hpp"
+#include "gtx_0x106C.hpp"
+#include "map_0x370.hpp"
 #include "menu.hpp"
 #include "pause_menu.hpp"
 #include "settings.hpp"
 #include "winmain.hpp"
+#include <math.h>
 
 #if defined(GTA2_PORT_SDL)
 #include <SDL3/SDL_log.h>
@@ -31,6 +34,24 @@ s32 sLastMission;
 bool sLastFrenzy;
 s32 sShown;
 bool sRetrying;
+
+// The player's last steady spots, one a second over the last 12 seconds or so. A checkpoint puts him back
+// at one a few steps from what started the job or frenzy, so that it starts again only if he goes back to it.
+struct Sample
+{
+    PortSaves::Spot mSpot;
+    u32 mStep;
+};
+const s32 kNumSamples = 12;
+const u32 kSampleSteps = 30;
+const f32 kMinTriggerDistance = 2;
+// Further in a second: a teleport, the spots before it are of no use.
+const f32 kMaxSampleDistance = 20;
+// Cars catch fire from there (Car::AccumulateDamage).
+const s16 kBurningDamage = 16000;
+Sample sSamples[kNumSamples];
+s32 sNumSamples;
+u32 sSteps;
 
 void Log(const char* pWhat)
 {
@@ -66,6 +87,84 @@ void End(bool passed)
         sShown = kShowSteps;
     }
 }
+
+f32 Distance(const PortSaves::Spot& a, const PortSaves::Spot& b)
+{
+    const f32 dx = a.mX.ToFloat() - b.mX.ToFloat();
+    const f32 dy = a.mY.ToFloat() - b.mY.ToFloat();
+    return sqrtf(dx * dx + dy * dy);
+}
+
+// On the top of the map's ground there, not water; a road for a car.
+bool OnGround(const PortSaves::Spot& spot)
+{
+    s32 z;
+    const gmp_block_info* pBlock = gMap_0x370->FindHighestBlockForCoord(spot.mX.ToInt(), spot.mY.ToInt(), &z);
+    if (!pBlock || IS_AIR_TYPE(pBlock->mSlopeType) || (spot.mDriving && GET_BLOCK_TYPE(pBlock->mSlopeType) != ROAD) ||
+        gGtx_0x106C->GetSpecIgnoringRoadJunction(pBlock->mLid & 0x3FF) == tile_spec::water)
+    {
+        return false;
+    }
+    return fabsf(gMap_0x370->FindGroundZForCoord(spot.mX, spot.mY).ToFloat() - spot.mZ.ToFloat()) < 0.125f;
+}
+
+// Alive, not burning, walking or standing on the ground, or driving a car that is not burning on a road.
+bool Steady(const PortSaves::Spot& spot)
+{
+    Player* pPlayer = gGame_0x40->mLocalPlayer;
+    Ped* pPed = pPlayer ? pPlayer->mPlayerPed : NULL;
+    if (!pPed || pPlayer->mWastedOrBusted || pPed->get_health() <= 0 || pPed->IsOnFire() || !OnGround(spot))
+    {
+        return false;
+    }
+    if (spot.mDriving)
+    {
+        return spot.mCarDamage < kBurningDamage;
+    }
+    const s32 state1 = pPed->mPedState1;
+    const s32 state2 = pPed->mPedState2;
+    return !pPed->mCar && (state1 == ped_state_1::walking_0 || state1 == ped_state_1::standing_still_7) &&
+        (state2 == ped_state_2::ped2_walking_0 || state2 == ped_state_2::ped2_staying_14);
+}
+
+void TakeSample()
+{
+    Player* pPlayer = gGame_0x40->mLocalPlayer;
+    if (!pPlayer || pPlayer->mWastedOrBusted)
+    {
+        sNumSamples = 0;
+        return;
+    }
+    PortSaves::Spot spot;
+    PortSaves::GetSpot(&spot);
+    if (!Steady(spot))
+    {
+        return;
+    }
+    if (sNumSamples && Distance(sSamples[(sNumSamples - 1) % kNumSamples].mSpot, spot) > kMaxSampleDistance)
+    {
+        sNumSamples = 0;
+    }
+    sSamples[sNumSamples % kNumSamples] = {spot, sSteps};
+    sNumSamples++;
+}
+
+// The latest steady spot of the last seconds far enough from where the player is, else where he is.
+PortSaves::Spot RetrySpot()
+{
+    PortSaves::Spot here;
+    PortSaves::GetSpot(&here);
+    for (s32 i = sNumSamples - 1; i >= 0 && i >= sNumSamples - kNumSamples; i--)
+    {
+        const Sample& sample = sSamples[i % kNumSamples];
+        if (sSteps - sample.mStep <= kNumSamples * kSampleSteps && Distance(sample.mSpot, here) >= kMinTriggerDistance)
+        {
+            Log("put back a few steps away");
+            return sample.mSpot;
+        }
+    }
+    return here;
+}
 } // namespace
 
 void Start()
@@ -75,6 +174,7 @@ void Start()
     sLastFrenzy = false;
     sShown = 0;
     sRetrying = false;
+    sNumSamples = 0;
     PortSaves::RefreshCheckpoint();
     if (gScriptManager && (!gScriptManager->IsLoadedFromSave() || PortSaves::LoadedCheckpoint() == PortSaves::kNoCheckpoint) &&
         !IsNetworkGame() && !gGameSession.IsBonusStage())
@@ -96,7 +196,7 @@ void BeforeStart(PortSaves::Checkpoint kind)
         return;
     }
     Log(kind == PortSaves::kBeforeJob ? "checkpoint before a job" : "checkpoint before a frenzy");
-    PortSaves::WriteCheckpoint(kind);
+    PortSaves::WriteCheckpoint(kind, RetrySpot());
     sRunning = kind;
     sPassedBefore = PassedCount(kind);
     sShown = 0;
@@ -123,6 +223,10 @@ void AfterStep()
     }
     sLastMission = mission;
     sLastFrenzy = frenzy;
+    if (Enabled() && ++sSteps % kSampleSteps == 0)
+    {
+        TakeSample();
+    }
     if (gGame_0x40->IsExitTimerSet() && gGame_0x40->GetExitType() == GameExitType::AreaCompleted_4 &&
         PortSaves::GetCheckpoint() != PortSaves::kNoCheckpoint)
     {

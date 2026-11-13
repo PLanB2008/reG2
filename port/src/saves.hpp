@@ -1,6 +1,8 @@
 // The save files (.svg): written whole or not at all, and checked before the game reads one.
 #pragma once
 
+#include "ang16.hpp"
+#include "fix16.hpp"
 #include "types.hpp"
 #include <stddef.h>
 
@@ -64,9 +66,25 @@ void AfterSave(const char_type* pFileName);
 void FillSave(SaveData* pSave);
 // The autosave of the current city, written now.
 void Autosave();
-// The retry checkpoint, written now or deleted.
+
+// Where the player is, and the car he drives if a save can restore it.
+struct Spot
+{
+    Fix16 mX;
+    Fix16 mY;
+    Fix16 mZ;
+    Ang16 mRotation;
+    bool mDriving;
+    u16 mCarModel;
+    s16 mCarColour; // the remap + 1, 0 for none
+    s16 mCarDamage;
+    u32 mCarDamagedAreas;
+};
+void GetSpot(Spot* pSpot);
+
+// The retry checkpoint, written now with the player put back at that spot, or deleted.
 void CheckpointName(u8 slot, char_type* pOut, size_t size);
-void WriteCheckpoint(Checkpoint kind);
+void WriteCheckpoint(Checkpoint kind, const Spot& spot);
 void DeleteCheckpoint();
 // What it was taken before, kNoCheckpoint if there is none for the current level; its money and file time.
 Checkpoint GetCheckpoint(s32* pMoney = NULL, long long* pTime = NULL);

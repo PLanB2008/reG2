@@ -176,6 +176,7 @@ enum Writing
 };
 Writing sWriting;
 Checkpoint sWritingCheckpoint;
+Spot sWritingSpot;
 
 // The checkpoint as its file was last written, deleted or read.
 struct CheckpointInfo
@@ -470,19 +471,58 @@ void FillSave(SaveData* pSave)
     {
         stats.mPowerUps[i] = pPlayer->mPowerUpTimers[i];
     }
+    Spot spot;
+    if (sWriting == kWritingCheckpoint)
+    {
+        spot = sWritingSpot;
+        stats.mX = spot.mX;
+        stats.mY = spot.mY;
+        stats.mZ = spot.mZ;
+        stats.mRotation = spot.mRotation;
+    }
+    else
+    {
+        GetSpot(&spot);
+    }
+    if (spot.mDriving)
+    {
+        cars.mX[0].mValue = spot.mX;
+        cars.mY[0].mValue = spot.mY;
+        cars.mZ[0].mValue = spot.mZ;
+        cars.mAng[0] = spot.mRotation;
+        cars.mDamage[0] = spot.mCarDamage;
+        cars.mDamagedAreas[0] = spot.mCarDamagedAreas;
+        cars.mCarModel[0] = spot.mCarModel;
+        // RestoreCarsFromSave clears the cars' fields before AfterRestore.
+        data.mUnused44 = spot.mCarColour;
+        pSave->mPad4E = 1;
+    }
+}
+
+void GetSpot(Spot* pSpot)
+{
+    Player* pPlayer = gGame_0x40->mLocalPlayer;
+    Ped* pPed = pPlayer->mPlayerPed;
+    *pSpot = Spot();
     if (Car* pCar = DrivenCar(pPlayer))
     {
         Sprite* pSprite = pCar->mCarSprite;
-        cars.mX[0].mValue = pSprite->GetXPos();
-        cars.mY[0].mValue = pSprite->GetYPos();
-        cars.mZ[0].mValue = pSprite->GetZPos();
-        cars.mAng[0] = pSprite->mRotation;
-        cars.mDamage[0] = pCar->mDamage;
-        cars.mDamagedAreas[0] = pCar->mDamagedAreas.m_var;
-        cars.mCarModel[0] = static_cast<u16>(pCar->mCarInfoIdx);
-        // The colour, 0 for none: RestoreCarsFromSave clears the cars' fields before AfterRestore.
-        data.mUnused44 = static_cast<s16>(pSprite->mPaletteType == palette_types_enum::car_remaps_3 ? pSprite->mRemap + 1 : 0);
-        pSave->mPad4E = 1;
+        pSpot->mX = pSprite->GetXPos();
+        pSpot->mY = pSprite->GetYPos();
+        pSpot->mZ = pSprite->GetZPos();
+        pSpot->mRotation = pSprite->mRotation;
+        pSpot->mDriving = true;
+        pSpot->mCarModel = static_cast<u16>(pCar->mCarInfoIdx);
+        pSpot->mCarColour = static_cast<s16>(pSprite->mPaletteType == palette_types_enum::car_remaps_3 ? pSprite->mRemap + 1 : 0);
+        pSpot->mCarDamage = pCar->mDamage;
+        pSpot->mCarDamagedAreas = pCar->mDamagedAreas.m_var;
+    }
+    else if (pPed)
+    {
+        pSpot->mX = pPed->get_cam_x();
+        pSpot->mY = pPed->get_cam_y();
+        pSpot->mZ = pPed->get_cam_z();
+        pSpot->mRotation = pPed->GetRotation();
     }
 }
 
@@ -495,12 +535,13 @@ void Autosave()
     sWriting = kWritingChurchSave;
 }
 
-void WriteCheckpoint(Checkpoint kind)
+void WriteCheckpoint(Checkpoint kind, const Spot& spot)
 {
     char_type name[260];
     CheckpointName(gGameSession.GetPlySlotIdx(), name, sizeof(name));
     sWriting = kWritingCheckpoint;
     sWritingCheckpoint = kind;
+    sWritingSpot = spot;
     gScriptManager->SaveGame(name);
     sWriting = kWritingChurchSave;
     sCheckpoint.mTime = FileTime(name);
