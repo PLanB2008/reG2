@@ -7686,7 +7686,11 @@ void ScriptThread::launch_mission(SCR_CMD_HEADER* pCmd, const char_type* pMissio
     PortRetry::BeforeStart(PortSaves::kBeforeJob);
 #endif
     u16 cmd_next;
+#if defined(GTA2_PORT)
+    PortRetry::JobLoaded(pCmd, gScriptManager->LoadMissionScript(pMissionName, &cmd_next));
+#else
     gScriptManager->LoadMissionScript(pMissionName, &cmd_next);
+#endif
     strcpy(mStr, pMissionName);
     ScriptThread::Gosub(pCmd, cmd_next);
 }

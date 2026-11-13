@@ -2,12 +2,14 @@
 #include "Draw.hpp"
 #include "Frontend.hpp"
 #include "Game.hpp"
+#include "Gang.hpp"
 #include "GameSession.hpp"
 #include "Globals.hpp"
 #include "Hud.hpp"
 #include "Ped.hpp"
 #include "Player.hpp"
 #include "ScriptManager.hpp"
+#include "ScriptThread.hpp"
 #include "gtx_0x106C.hpp"
 #include "map_0x370.hpp"
 #include "menu.hpp"
@@ -34,6 +36,10 @@ s32 sLastMission;
 bool sLastFrenzy;
 s32 sShown;
 bool sRetrying;
+// A checkpoint was just written before a job, whose script is not loaded yet.
+bool sJobToName;
+// LoadMissionScript loads that many base pointers of a job's script.
+const u32 kJobBasePointers = 0xC00 / sizeof(u16);
 
 // The player's last steady spots, one a second over the last 12 seconds or so. A checkpoint puts him back
 // at one a few steps from what started the job or frenzy, so that it starts again only if he goes back to it.
@@ -197,9 +203,43 @@ void BeforeStart(PortSaves::Checkpoint kind)
     }
     Log(kind == PortSaves::kBeforeJob ? "checkpoint before a job" : "checkpoint before a frenzy");
     PortSaves::WriteCheckpoint(kind, RetrySpot());
+    sJobToName = kind == PortSaves::kBeforeJob;
     sRunning = kind;
     sPassedBefore = PassedCount(kind);
     sShown = 0;
+}
+
+void JobLoaded(const SCR_CMD_HEADER* pCmd, u16 base)
+{
+    if (!sJobToName)
+    {
+        return;
+    }
+    sJobToName = false;
+    PortSaves::JobName job = {};
+    // Jobs from a phone: the gang the phone's command names. The others (tutorial, final jobs) have none.
+    if (pCmd->mType == SCRCMD_PHONE_TEMPLATE || pCmd->mType == SCRCMD_DO_EASY_PHONE)
+    {
+        const SCR_PHONE_TEMPLATE* pPhone = static_cast<const SCR_PHONE_TEMPLATE*>(pCmd);
+        str_table_entry* pName = gScriptManager->FindStringById(pPhone->mGangname);
+        const Gang* pGang = pName ? gGangPool_CA8->FindGangByName(pName->get_name()) : NULL;
+        job.mGang = pGang ? pGang->mArrowColour : 0;
+    }
+    // The title: in the game's scripts, the job's first DISPLAY_MESSAGE of type 0 (1 and 2 are JOB COMPLETE and
+    // JOB FAILED).
+    const u32 end = base + kJobBasePointers;
+    for (u32 i = base; i < end && i < GTA2_COUNTOF(gScriptManager->mBasePointers) && !job.mTitle; i++)
+    {
+        const SCR_TWO_PARAMS* pMessage = static_cast<const SCR_TWO_PARAMS*>(gScriptManager->GetBasePointer(static_cast<u16>(i)));
+        if (pMessage && pMessage->mType == SCRCMD_DISPLAY_MESSAGE && pMessage->mUnsigned2 == 0)
+        {
+            job.mTitle = pMessage->mUnsigned1;
+        }
+    }
+#if defined(GTA2_PORT_SDL)
+    SDL_Log("Retry: job title %u, gang %u", job.mTitle, job.mGang);
+#endif
+    PortSaves::SetCheckpointJob(job);
 }
 
 void AfterStep()

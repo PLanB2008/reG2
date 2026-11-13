@@ -4,12 +4,17 @@
 
 #include "saves.hpp"
 
+struct SCR_CMD_HEADER;
+
 namespace PortRetry
 {
 // A level starts: a new game in a city, or loading another save, deletes the checkpoint.
 void Start();
 // ScriptThread, as a job is launched or a kill frenzy starts, before either marks anything as started.
 void BeforeStart(PortSaves::Checkpoint kind);
+// ScriptThread::launch_mission, once the job's script is loaded at that base pointer: the checkpoint just
+// written gets its title and the gang that gave it.
+void JobLoaded(const SCR_CMD_HEADER* pCmd, u16 base);
 // After each logic step.
 void AfterStep();
 // With the HUD.

@@ -165,7 +165,8 @@ bool Move(const char_type* pFrom, const char_type* pTo)
 }
 
 // An autosave's or a checkpoint's mUnused50, which the original leaves 0: the player spawns where he was.
-// Its mPad4E is 1 if he drove a car, a checkpoint's mPad4F what it was taken before.
+// Its mPad4E is 1 if he drove a car, a checkpoint's mPad4F what it was taken before, and a job checkpoint's
+// player stats mPadE and mPad81 its JobName.
 const s32 kExactSpawn = 0x32474552;
 
 enum Writing
@@ -185,6 +186,7 @@ struct CheckpointInfo
     u8 mMainStage;
     s32 mMoney;
     long long mTime;
+    JobName mJob;
 };
 CheckpointInfo sCheckpoint;
 
@@ -267,6 +269,7 @@ bool ReadEntry(const char_type* pFileName, Kind kind, LevelCheck pCheck, Entry* 
     pEntry->mBonusStage = header.mBonusStage;
     pEntry->mMoney = header.mMoney;
     pEntry->mTime = FileTime(pFileName);
+    pEntry->mJob = header.mJob;
     JobsPassed jobs;
     const bool read = ReadJobsPassed(pFileName, &jobs);
     pEntry->mJobsPassed = read ? jobs.mPassed : -1;
@@ -369,6 +372,9 @@ bool IsValid(const char_type* pFileName, Header* pHeader)
         pHeader->mBonusStage = bonus_stage;
         pHeader->mMoney = save.mPlayerAndWorldStats.mMoney;
         pHeader->mCheckpoint = save.mUnused50 == kExactSpawn && save.mPad4F <= kBeforeFrenzy ? save.mPad4F : kNoCheckpoint;
+        const bool job = pHeader->mCheckpoint == kBeforeJob;
+        pHeader->mJob.mTitle = job ? save.mPlayerAndWorldStats.mPadE : 0;
+        pHeader->mJob.mGang = job ? save.mPlayerAndWorldStats.mPad81 : 0;
     }
     return true;
 }
@@ -457,6 +463,8 @@ void FillSave(SaveData* pSave)
     memset(stats.mPowerUps, 0, sizeof(stats.mPowerUps));
     memset(&cars, 0, sizeof(cars));
     data.mUnused44 = 0;
+    stats.mPadE = 0;
+    stats.mPad81 = 0;
     pSave->mPad4E = 0;
     pSave->mPad4F = 0;
     pSave->mUnused50 = 0;
@@ -548,6 +556,26 @@ void WriteCheckpoint(Checkpoint kind, const Spot& spot)
     sCheckpoint.mKind = sCheckpoint.mTime >= 0 ? kind : kNoCheckpoint;
     sCheckpoint.mMainStage = static_cast<u8>(gGameSession.GetMainStageIdx());
     sCheckpoint.mMoney = gGameSave.mPlayerAndWorldStats.mMoney;
+    sCheckpoint.mJob = JobName();
+}
+
+void SetCheckpointJob(const JobName& job)
+{
+    char_type name[260];
+    CheckpointName(gGameSession.GetPlySlotIdx(), name, sizeof(name));
+    FILE* pFile = sCheckpoint.mKind == kBeforeJob ? fopen(name, "r+b") : NULL;
+    if (!pFile)
+    {
+        return;
+    }
+    const long at = static_cast<long>(offsetof(SaveData, mPlayerAndWorldStats));
+    SavedPlayerStats stats;
+    bool ok = fseek(pFile, at, SEEK_SET) == 0 && fread(&stats, sizeof(stats), 1, pFile) == 1;
+    stats.mPadE = job.mTitle;
+    stats.mPad81 = job.mGang;
+    ok = ok && fseek(pFile, at, SEEK_SET) == 0 && fwrite(&stats, sizeof(stats), 1, pFile) == 1;
+    ok = fclose(pFile) == 0 && ok;
+    sCheckpoint.mJob = ok ? job : JobName();
 }
 
 void DeleteCheckpoint()
@@ -558,7 +586,7 @@ void DeleteCheckpoint()
     sCheckpoint.mKind = kNoCheckpoint;
 }
 
-Checkpoint GetCheckpoint(s32* pMoney, long long* pTime)
+Checkpoint GetCheckpoint(s32* pMoney, long long* pTime, JobName* pJob)
 {
     if (gGameSession.IsBonusStage() || sCheckpoint.mMainStage != static_cast<u8>(gGameSession.GetMainStageIdx()))
     {
@@ -571,6 +599,10 @@ Checkpoint GetCheckpoint(s32* pMoney, long long* pTime)
     if (pTime)
     {
         *pTime = sCheckpoint.mTime;
+    }
+    if (pJob)
+    {
+        *pJob = sCheckpoint.mJob;
     }
     return sCheckpoint.mKind;
 }
@@ -585,6 +617,7 @@ void RefreshCheckpoint()
     sCheckpoint.mMainStage = header.mMainStage;
     sCheckpoint.mMoney = header.mMoney;
     sCheckpoint.mTime = FileTime(name);
+    sCheckpoint.mJob = header.mJob;
 }
 
 bool ExactSpawn()

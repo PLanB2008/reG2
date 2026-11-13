@@ -23,6 +23,14 @@ enum Checkpoint
     kBeforeFrenzy,
 };
 
+// A job's title (a text id) and the gang that gave it (Gang's arrow colour: the text "ganga<colour>"), 0 if
+// none, shown in the language of the moment.
+struct JobName
+{
+    u16 mTitle;
+    u8 mGang;
+};
+
 // What the game reads first from a save: its level's files and stage.
 struct Header
 {
@@ -33,6 +41,7 @@ struct Header
     u8 mBonusStage; // 0 for a main stage
     s32 mMoney;
     u8 mCheckpoint; // a Checkpoint
+    JobName mJob; // a checkpoint's
 };
 
 // The file is a whole save (sizes, header, map changes) whose saved counters are those of its
@@ -86,8 +95,10 @@ void GetSpot(Spot* pSpot);
 void CheckpointName(u8 slot, char_type* pOut, size_t size);
 void WriteCheckpoint(Checkpoint kind, const Spot& spot);
 void DeleteCheckpoint();
-// What it was taken before, kNoCheckpoint if there is none for the current level; its money and file time.
-Checkpoint GetCheckpoint(s32* pMoney = NULL, long long* pTime = NULL);
+// What it was taken before, kNoCheckpoint if there is none for the current level; its money, file time and job.
+Checkpoint GetCheckpoint(s32* pMoney = NULL, long long* pTime = NULL, JobName* pJob = NULL);
+// The job, known once its script is loaded, after the checkpoint was written.
+void SetCheckpointJob(const JobName& job);
 // Read again from its file, as a level starts.
 void RefreshCheckpoint();
 // The level was loaded from an autosave or a checkpoint: the player spawns where he was.
@@ -118,6 +129,7 @@ struct Entry
     s32 mJobsPassed; // -1 if unknown
     s32 mJobsTotal;
     long long mTime; // the file's, in seconds since 1970
+    JobName mJob;
 };
 
 // A save the frontend can boot: its level's files are those of its stage.
