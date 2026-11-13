@@ -1,4 +1,5 @@
 #include "pause_menu.hpp"
+#include "autosave.hpp"
 #include "Camera.hpp"
 #include "Draw.hpp"
 #include "Frontend.hpp"
@@ -238,6 +239,7 @@ void Apply(PortMenu::Result result)
     }
     if (result == PortMenu::kQuitGame)
     {
+        PortAutosave::Quit();
         gGame_0x40->ExitGameNoBonus(1, GameExitType::PlayerQuit_2);
     }
 }

@@ -65,6 +65,7 @@
 #include "sprite.hpp"
 #include "TextTable.hpp"
 #if defined(GTA2_PORT)
+#include "../port/src/autosave.hpp"
 #include "../port/src/frame_loop.hpp"
 #endif
 
@@ -979,6 +980,7 @@ EXPORT void __stdcall InitializeGame()
 #if defined(GTA2_PORT)
     // A church save goes to plyslotN.svg, whichever file was loaded.
     gGameSession.SetSaveFileName("");
+    PortAutosave::Start();
 #endif
     gGame_0x40->BootGame();
 
@@ -1483,6 +1485,10 @@ static bool PortRunGameFrame()
             PortFrameLoop::BeforeStep();
             exit_requested = ExecuteGameTimed();
             PortFrameLoop::AfterStep();
+            if (!exit_requested)
+            {
+                PortAutosave::AfterStep();
+            }
             sbForceGameUpdate = false;
             sbInputsPending = true;
             updated_logic = true;
