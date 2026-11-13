@@ -350,31 +350,15 @@ PortSettings::Style StyleAt(f32 x, f32 y)
     return x < sWidth / 2 + slant - 2 * slant * y / kHeight ? PortSettings::kClassicStyle : PortSettings::kEnhancedStyle;
 }
 
-// A player profile was chosen before: an install from before the screen existed.
-bool PlayedBefore()
-{
-    HKEY hKey;
-    if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\DMA Design Ltd\\GTA2\\Player", 0, KEY_ALL_ACCESS, &hKey) != ERROR_SUCCESS)
-    {
-        return false;
-    }
-    const bool found = RegQueryValueExA(hKey, "plyrslot", NULL, NULL, NULL, NULL) == ERROR_SUCCESS;
-    RegCloseKey(hKey);
-    return found;
-}
-
 bool ShouldShow()
 {
     const char* pAgain = SDL_getenv("GTA2_WELCOME");
     return (pAgain && atoi(pAgain)) || !gRegistry.Get_Screen_Setting("port_style_chosen", 0);
 }
 
-void Close(bool apply)
+void Close()
 {
-    if (apply)
-    {
-        PortSettings::ApplyStyle(sSelected);
-    }
+    PortSettings::ApplyStyle(sSelected);
     gRegistry.Set_Screen_Setting("port_style_chosen", 1);
     sState = kDone;
     port_SetFrameWidth(false);
@@ -383,7 +367,7 @@ void Close(bool apply)
     {
         picture = Picture();
     }
-    snd1.mObjectType = apply ? PortMenu::kEntered : PortMenu::kWentBack;
+    snd1.mObjectType = PortMenu::kEntered;
 }
 #endif
 } // namespace
@@ -400,7 +384,7 @@ bool Update(Frontend* pFrontend)
             Load(kLogoPng, sizeof(kLogoPng), 0.5f, &sPictures[kLogoSlot]))
         {
             RoundCorners(&sPictures[kLogoSlot]);
-            sSelected = PlayedBefore() ? PortSettings::CurrentStyle() : PortSettings::kEnhancedStyle;
+            sSelected = PortSettings::kEnhancedStyle;
             sState = kShown;
         }
     }
@@ -441,11 +425,7 @@ bool Update(Frontend* pFrontend)
     }
     if (pFrontend->mReturnPressed || left)
     {
-        Close(true);
-    }
-    else if (pFrontend->mEscapePressed)
-    {
-        Close(false);
+        Close();
     }
     return true;
 #else

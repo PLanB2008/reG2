@@ -787,16 +787,6 @@ void ApplyRenderOptions()
 #endif
 }
 
-Style CurrentStyle()
-{
-#if defined(GTA2_PORT_SDL)
-    const bool enhancedPreset = CurrentPreset() == kEnhanced;
-#else
-    const bool enhancedPreset = false;
-#endif
-    return enhancedPreset || DayNightCycle() || TwinStick() ? kEnhancedStyle : kClassicStyle;
-}
-
 void ApplyStyle(Style style)
 {
     const bool enhanced = style == kEnhancedStyle;

@@ -1,5 +1,5 @@
 // The first start's CHOOSE YOUR STYLE screen, before the start menu: CLASSIC or ENHANCED (settings.hpp's styles),
-// shown until one is chosen or the screen is left with Escape. GTA2_WELCOME=1 shows it again.
+// ENHANCED first, shown until one is chosen; Escape does nothing there. GTA2_WELCOME=1 shows it again.
 #pragma once
 
 class Frontend;
