@@ -47,8 +47,8 @@ const Id kScreen[] = {kDisplay, kFrameLimit, kShowFps, kBrightness, kLighting, k
 #endif
 const s32 kNumScreen = sizeof(kScreen) / sizeof(kScreen[0]);
 #if defined(GTA2_PORT_SDL)
-const Id kGraphics[] = {kPreset,        kTrueColour, kBloom,      kPerPixelLighting, kTextureFilter,
-                        kAntiAliasing, kShadows,    kHeadlights, kLightEffects};
+const Id kGraphics[] = {kPreset,       kTrueColour, kPerPixelLighting, kShadows,     kHeadlights,
+                        kLightEffects, kBloom,      kTextureFilter,    kAntiAliasing};
 #else
 const Id kGraphics[] = {kHeadlights, kLightEffects};
 #endif
