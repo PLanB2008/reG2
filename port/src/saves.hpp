@@ -11,9 +11,16 @@ class SaveData;
 
 namespace PortSaves
 {
-// The file a save is written to before Commit moves it over pFileName.
-void TempName(const char_type* pFileName, char_type* pOut, size_t size);
-bool Commit(const char_type* pTempName, const char_type* pFileName);
+// ScriptManager::SaveGame's save, its parts in turn: written to a temporary file then moved over pFileName, the
+// previous file kept if that fails. A failure does not end the game as the original's: SAVE FAILED shows instead.
+struct Part
+{
+    const void* mData;
+    u32 mSize;
+};
+bool Write(const char_type* pFileName, const Part* pParts, s32 count);
+// The save failures so far.
+s32 Failures();
 
 // What a retry checkpoint was taken before.
 enum Checkpoint
@@ -73,14 +80,11 @@ const s32 kNumCities = 3;
 // The profile has an autosave of that city, or its backup.
 bool HasAutosave(u8 slot, u8 mainStage);
 
-// After ScriptManager::SaveGame wrote a church save: its copy for the city, and no retry checkpoint.
-void AfterSave(const char_type* pFileName);
-
 // SaveGame, as it fills the header: the exact position, power-ups and car of an autosave or a checkpoint,
 // or none of them in a church save, as the original.
 void FillSave(SaveData* pSave);
-// The autosave of the current city, written now.
-void Autosave();
+// The autosave of the current city, written now; false if it failed.
+bool Autosave();
 
 // Where the player is, and the car he drives if a save can restore it.
 struct Spot

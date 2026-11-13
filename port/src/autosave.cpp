@@ -30,6 +30,10 @@ namespace
 const s32 kWaitSteps = 90;
 const s32 kSafeSteps = 30;
 const s32 kShowSteps = 45;
+// SAVE FAILED in place of SAVING, after any save failed.
+const s32 kFailedSteps = 90;
+// The HUD font's red remap.
+const u16 kRed = 5;
 // Quitting saves once a job or frenzy ended, or after this much play: less is a look around, which must not
 // replace an autosave of a longer game.
 const s32 kQuitSaveSteps = 2 * 60 * 30;
@@ -43,6 +47,8 @@ bool sLastFrenzy;
 const char* sPendingWhy;
 bool sJobEnded;
 s32 sPlayed;
+s32 sFailures;
+s32 sFailedShown;
 
 // As at a church: off a job and out of a kill frenzy. Then on foot and on firm ground, or driving a car
 // out of water (stopped unless quitting), and neither dead, arrested nor burning.
@@ -138,14 +144,14 @@ void DrawSpinner(s32 left, s32 top)
     }
 }
 
-void Save(const char* pWhy)
+bool Save(const char* pWhy)
 {
 #if defined(GTA2_PORT_SDL)
     SDL_Log("Autosave: %s", pWhy);
 #else
     (void)pWhy;
 #endif
-    PortSaves::Autosave();
+    return PortSaves::Autosave();
 }
 } // namespace
 
@@ -157,6 +163,8 @@ void Start()
     sLastFrenzy = false;
     sJobEnded = false;
     sPlayed = 0;
+    sFailures = PortSaves::Failures();
+    sFailedShown = 0;
 }
 
 void AfterStep()
@@ -164,6 +172,16 @@ void AfterStep()
     if (sShown > 0)
     {
         sShown--;
+    }
+    if (sFailedShown > 0)
+    {
+        sFailedShown--;
+    }
+    if (sFailures != PortSaves::Failures())
+    {
+        sFailures = PortSaves::Failures();
+        sFailedShown = kFailedSteps;
+        sShown = 0;
     }
     if (!gGame_0x40 || !gScriptManager || PortSaves::Replaying())
     {
@@ -193,8 +211,7 @@ void AfterStep()
     if (sWaited >= kWaitSteps && sSafe >= kSafeSteps)
     {
         sPending = false;
-        Save(sPendingWhy);
-        sShown = kShowSteps;
+        sShown = Save(sPendingWhy) ? kShowSteps : 0;
     }
 }
 
@@ -218,12 +235,19 @@ void Quit()
 
 void Draw()
 {
+    // Under the zone name and the wanted level, above a job's titles; the spinner level with the letters.
+    const s32 kTop = 58;
+    if (sFailedShown)
+    {
+        const wchar_t* pFailed = PortSettings::Translate(L"SAVE FAILED");
+        const s32 left = 320 - Frontend::GetMaxTextWidth(const_cast<wchar_t*>(pFailed), gDebugFont) / 2;
+        DrawStringScaledPalette(pFailed, Fix16(left), Fix16(kTop), gDebugFont, palette_types_enum::font_remaps_8, kRed, 0, 0);
+        return;
+    }
     if (!sShown)
     {
         return;
     }
-    // Under the zone name and the wanted level, above a job's titles; the spinner level with the letters.
-    const s32 kTop = 58;
     const s32 kSpinnerTop = 5;
     const s32 kSpinner = 15;
     const s32 kGap = 4;

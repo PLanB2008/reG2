@@ -357,10 +357,7 @@ void ScriptManager::SaveGame(const char_type* pFileName)
         return;
     }
     char_type saveName[256];
-    char_type tempName[260];
     snprintf(saveName, sizeof(saveName), "%s", pFileName);
-    PortSaves::TempName(saveName, tempName, sizeof(tempName));
-    pFileName = tempName;
 #endif
 
     ScriptManager::SaveScriptCounters();
@@ -386,8 +383,15 @@ void ScriptManager::SaveGame(const char_type* pFileName)
     ScriptManager::SaveMapInfo();
 #if defined(GTA2_PORT)
     PortSaves::FillSave(&gGameSave);
-#endif
-
+    const PortSaves::Part parts[] = {{&gGameSave, sizeof(SaveData)},
+                                     {&colBytes, sizeof(colBytes)},
+                                     {pColData, colBytes},
+                                     {&blockInfoBytes, sizeof(blockInfoBytes)},
+                                     {pBlockInfo, blockInfoBytes},
+                                     {&mapSubBytes, sizeof(mapSubBytes)},
+                                     {pMapSub, static_cast<u32>(mapSubBytes)}};
+    PortSaves::Write(saveName, parts, GTA2_COUNTOF_S(parts));
+#else
     {
         size_t writeLen = sizeof(SaveData);
         File::WriteBufferToFile(pFileName, &gGameSave, &writeLen);
@@ -418,11 +422,6 @@ void ScriptManager::SaveGame(const char_type* pFileName)
         {
             File::AppendBufferToFile(pFileName, pMapSub, reinterpret_cast<u32*>(&mapSubBytes));
         }
-    }
-#if defined(GTA2_PORT)
-    if (PortSaves::Commit(tempName, saveName))
-    {
-        PortSaves::AfterSave(saveName);
     }
 #endif
 }

@@ -121,29 +121,9 @@ void FileName(u8 slot, const char* pKind, u8 mainStage, char_type* pOut, size_t 
     snprintf(pOut, size, "player\\plyslot%d_%s_%s.svg", slot, pKind, kCityFiles[mainStage < kNumCities ? mainStage : 0]);
 }
 
-bool CopySave(const char_type* pFrom, const char_type* pTo)
+void TempName(const char_type* pFileName, char_type* pOut, size_t size)
 {
-    FILE* pIn = fopen(pFrom, "rb");
-    if (!pIn)
-    {
-        return false;
-    }
-    std::vector<u8> data;
-    u8 buffer[4096];
-    for (size_t n; (n = fread(buffer, 1, sizeof(buffer), pIn)) > 0;)
-    {
-        data.insert(data.end(), buffer, buffer + n);
-    }
-    fclose(pIn);
-    char_type temp[260];
-    TempName(pTo, temp, sizeof(temp));
-    FILE* pOut = fopen(temp, "wb");
-    if (!pOut)
-    {
-        return false;
-    }
-    const bool written = fwrite(data.data(), 1, data.size(), pOut) == data.size();
-    return fclose(pOut) == 0 && written && Commit(temp, pTo);
+    snprintf(pOut, size, "%s.tmp", pFileName);
 }
 
 bool Move(const char_type* pFrom, const char_type* pTo)
@@ -179,6 +159,8 @@ enum Writing
 Writing sWriting;
 Checkpoint sWritingCheckpoint;
 Spot sWritingSpot;
+s32 sFailures;
+bool sWritten;
 
 // The checkpoint as its file was last written, deleted or read.
 struct CheckpointInfo
@@ -204,6 +186,53 @@ void RemoveFile(const char_type* pFileName)
 void BackupName(const char_type* pFileName, char_type* pOut, size_t size)
 {
     snprintf(pOut, size, "%s.bak", pFileName);
+}
+
+bool Commit(const char_type* pTempName, const char_type* pFileName)
+{
+    char_type backup[260];
+    BackupName(pFileName, backup, sizeof(backup));
+    const bool backedUp = sWriting == kWritingAutosave && Move(pFileName, backup);
+    const bool ok = Move(pTempName, pFileName);
+    if (!ok)
+    {
+        Reject(pFileName, "the new save could not replace it");
+        if (backedUp)
+        {
+            Move(backup, pFileName);
+        }
+    }
+    return ok;
+}
+
+bool CopySave(const char_type* pFrom, const char_type* pTo)
+{
+    FILE* pIn = fopen(pFrom, "rb");
+    if (!pIn)
+    {
+        return false;
+    }
+    std::vector<u8> data;
+    u8 buffer[4096];
+    for (size_t n; (n = fread(buffer, 1, sizeof(buffer), pIn)) > 0;)
+    {
+        data.insert(data.end(), buffer, buffer + n);
+    }
+    fclose(pIn);
+    char_type temp[260];
+    TempName(pTo, temp, sizeof(temp));
+    FILE* pOut = fopen(temp, "wb");
+    if (!pOut)
+    {
+        return false;
+    }
+    const bool written = fwrite(data.data(), 1, data.size(), pOut) == data.size();
+    if (fclose(pOut) == 0 && written && Commit(temp, pTo))
+    {
+        return true;
+    }
+    RemoveFile(temp);
+    return false;
 }
 
 // Not a train: RestoreCarsFromSave spawns single cars.
@@ -284,25 +313,37 @@ void CheckpointName(u8 slot, char_type* pOut, size_t size)
     snprintf(pOut, size, "player\\plyslot%d_retry.svg", slot);
 }
 
-void TempName(const char_type* pFileName, char_type* pOut, size_t size)
+// A church save's copy for its city, and no retry checkpoint.
+void AfterSave(const char_type* pFileName);
+
+bool Write(const char_type* pFileName, const Part* pParts, s32 count)
 {
-    snprintf(pOut, size, "%s.tmp", pFileName);
+    char_type temp[260];
+    TempName(pFileName, temp, sizeof(temp));
+    FILE* pFile = fopen(temp, "wb");
+    bool ok = pFile != NULL;
+    for (s32 i = 0; i < count && ok; i++)
+    {
+        ok = !pParts[i].mSize || fwrite(pParts[i].mData, pParts[i].mSize, 1, pFile) == 1;
+    }
+    ok = pFile && fclose(pFile) == 0 && ok;
+    sWritten = ok && Commit(temp, pFileName);
+    if (!sWritten)
+    {
+        RemoveFile(temp);
+        sFailures++;
+#if defined(GTA2_PORT_SDL)
+        SDL_Log("Save %s failed", pFileName);
+#endif
+        return false;
+    }
+    AfterSave(pFileName);
+    return true;
 }
 
-bool Commit(const char_type* pTempName, const char_type* pFileName)
+s32 Failures()
 {
-    if (sWriting == kWritingAutosave)
-    {
-        char_type backup[260];
-        BackupName(pFileName, backup, sizeof(backup));
-        Move(pFileName, backup);
-    }
-    const bool ok = Move(pTempName, pFileName);
-    if (!ok)
-    {
-        Reject(pFileName, "the new save could not replace it");
-    }
-    return ok;
+    return sFailures;
 }
 
 bool Replaying()
@@ -550,13 +591,15 @@ void GetSpot(Spot* pSpot)
     }
 }
 
-void Autosave()
+bool Autosave()
 {
     char_type name[260];
     FileName(gGameSession.GetPlySlotIdx(), "auto", gGameSession.GetMainStageIdx(), name, sizeof(name));
     sWriting = kWritingAutosave;
+    sWritten = false;
     gScriptManager->SaveGame(name);
     sWriting = kWritingChurchSave;
+    return sWritten;
 }
 
 void WriteCheckpoint(Checkpoint kind, const Spot& spot)
@@ -566,8 +609,14 @@ void WriteCheckpoint(Checkpoint kind, const Spot& spot)
     sWriting = kWritingCheckpoint;
     sWritingCheckpoint = kind;
     sWritingSpot = spot;
+    sWritten = false;
     gScriptManager->SaveGame(name);
     sWriting = kWritingChurchSave;
+    if (!sWritten)
+    {
+        RefreshCheckpoint();
+        return;
+    }
     sCheckpoint.mTime = FileTime(name);
     sCheckpoint.mKind = sCheckpoint.mTime >= 0 ? kind : kNoCheckpoint;
     sCheckpoint.mMainStage = static_cast<u8>(gGameSession.GetMainStageIdx());
