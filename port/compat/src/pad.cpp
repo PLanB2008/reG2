@@ -31,6 +31,9 @@ const int kMaxGamepads = 8;
 SDL_Gamepad* sGamepads[kMaxGamepads];
 int sNumGamepads;
 SDL_Gamepad* sActivePad; // the last to give an input
+// Each open pad's axes as last reported: an axis is an input when it crosses the threshold, not when its first report
+// finds it beyond (a resting trigger or a worn stick).
+Sint16 sAxisLast[kMaxGamepads][SDL_GAMEPAD_AXIS_COUNT];
 enum Mode
 {
     kKeyboardMode,
@@ -356,6 +359,10 @@ void port_OpenGamepad()
         {
             if (SDL_Gamepad* pPad = SDL_OpenGamepad(pIds[i]))
             {
+                for (int a = 0; a < SDL_GAMEPAD_AXIS_COUNT; a++)
+                {
+                    sAxisLast[sNumGamepads][a] = SDL_GetGamepadAxis(pPad, static_cast<SDL_GamepadAxis>(a));
+                }
                 sGamepads[sNumGamepads++] = pPad;
                 sActivePad = sActivePad ? sActivePad : pPad;
             }
@@ -520,6 +527,7 @@ void port_PadEvent(const SDL_Event& e)
                 {
                     SDL_Gamepad* pPad = sGamepads[i];
                     sGamepads[i] = sGamepads[--sNumGamepads];
+                    memcpy(sAxisLast[i], sAxisLast[sNumGamepads], sizeof(sAxisLast[i]));
                     sActivePad = sActivePad == pPad ? (sNumGamepads ? sGamepads[0] : NULL) : sActivePad;
                     SDL_CloseGamepad(pPad);
                     break;
@@ -534,10 +542,20 @@ void port_PadEvent(const SDL_Event& e)
             }
             break;
         case SDL_EVENT_GAMEPAD_AXIS_MOTION:
-            if ((e.gaxis.value > kThreshold || e.gaxis.value < -kThreshold) && PadInput(e.gaxis.which))
+            for (int i = 0; i < sNumGamepads && e.gaxis.axis < SDL_GAMEPAD_AXIS_COUNT; i++)
             {
-                sMode = kPadMode;
-                sMouseAims = false;
+                if (SDL_GetGamepadID(sGamepads[i]) != e.gaxis.which)
+                {
+                    continue;
+                }
+                Sint16& last = sAxisLast[i][e.gaxis.axis];
+                const bool crossed = last <= kThreshold && last >= -kThreshold && (e.gaxis.value > kThreshold || e.gaxis.value < -kThreshold);
+                last = e.gaxis.value;
+                if (crossed && PadInput(e.gaxis.which))
+                {
+                    sMode = kPadMode;
+                    sMouseAims = false;
+                }
             }
             break;
         case SDL_EVENT_MOUSE_MOTION:
@@ -587,7 +605,8 @@ void port_UpdatePad()
         }
         ~PadCache() { sPadCache = false; }
     } cache;
-    // New presses, for binding capture (Start stays the pause button).
+    // New presses: the pad is the last device used, as when its events come too late for the input they make (a
+    // pad's first press as it connects); and for binding capture (Start stays the pause button).
     int codes[kNumControls + 4];
     int n = 0;
     for (int c = 0; c < 12; c++)
@@ -602,6 +621,11 @@ void port_UpdatePad()
     {
         const int code = codes[i];
         const bool down = CodeDown(code);
+        if (down && !sPrevCode[code])
+        {
+            sMode = kPadMode;
+            sMouseAims = false;
+        }
         if (down && !sPrevCode[code] && code != 7 && sCapturedPad < 0)
         {
             sCapturedPad = code;
