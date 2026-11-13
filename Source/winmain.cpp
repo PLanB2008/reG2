@@ -2174,6 +2174,9 @@ EXPORT LRESULT __stdcall WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM l
             break;
 
         case WM_DESTROY:
+#if defined(GTA2_PORT)
+            PortAutosave::Quit("window closed");
+#endif
             if (bStartNetworkGame)
             {
                 gNetPlay.Disconnect();

@@ -67,6 +67,7 @@ void Translate(const SDL_Event& e)
     switch (e.type)
     {
         case SDL_EVENT_QUIT:
+        case SDL_EVENT_TERMINATING:
         case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
             Post(h, WM_CLOSE, 0, 0);
             break;

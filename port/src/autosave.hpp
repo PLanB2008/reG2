@@ -9,8 +9,9 @@ namespace PortAutosave
 void Start();
 // After each logic step.
 void AfterStep();
-// QUIT GAME in the pause menu, before the game ends.
-void Quit();
+// QUIT GAME in the pause menu, before the game ends, or the window closing (its close button, Alt+F4, the system
+// ending the program), before the game is destroyed; nothing outside a game.
+void Quit(const char* pWhy);
 // With the HUD.
 void Draw();
 } // namespace PortAutosave

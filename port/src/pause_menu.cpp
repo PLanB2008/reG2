@@ -241,7 +241,7 @@ void Apply(PortMenu::Result result)
     }
     if (result == PortMenu::kQuitGame)
     {
-        PortAutosave::Quit();
+        PortAutosave::Quit("quit");
         gGame_0x40->ExitGameNoBonus(1, GameExitType::PlayerQuit_2);
     }
     if (result == PortMenu::kRetryCheckpoint)

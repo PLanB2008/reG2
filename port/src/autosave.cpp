@@ -215,21 +215,21 @@ void AfterStep()
     }
 }
 
-void Quit()
+void Quit(const char* pWhy)
 {
-    if (PortSaves::Replaying())
+    if (PortSaves::Replaying() || !gGame_0x40 || !gScriptManager)
     {
         return;
     }
     if (!sJobEnded && sPlayed < kQuitSaveSteps)
     {
 #if defined(GTA2_PORT_SDL)
-        SDL_Log("Autosave: none on quitting, no job or frenzy over and %d seconds played", sPlayed / 30);
+        SDL_Log("Autosave: none (%s), no job or frenzy over and %d seconds played", pWhy, sPlayed / 30);
 #endif
     }
     else if (Safe(true))
     {
-        Save("quit");
+        Save(pWhy);
     }
 }
 
