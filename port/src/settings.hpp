@@ -41,6 +41,7 @@ enum Id
     kUpdateCheck,
     kShowFps,
     kAutosave,
+    kRetry,
     kCount,
 };
 
@@ -101,6 +102,9 @@ bool ShowFps();
 
 // AUTOSAVE: a save after each job and on quitting, beside the church's (autosave.hpp).
 bool Autosave();
+
+// RETRY JOBS: a checkpoint before each job and kill frenzy, to go back to after a failure (retry.hpp).
+bool Retry();
 
 // A line under the page that says what the setting does, NULL if none.
 const wchar_t* Help(Id id);

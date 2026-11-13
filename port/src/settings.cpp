@@ -35,9 +35,9 @@ void port_SetFullscreenModeIndex(int index);
 namespace PortSettings
 {
 #if defined(GTA2_UPDATE_CHECK)
-const Id kGeneral[] = {kSfxVolume, kMusicVolume, k3dSound, kTextSpeed, kLanguage, kAutosave, kUpdateCheck};
+const Id kGeneral[] = {kSfxVolume, kMusicVolume, k3dSound, kTextSpeed, kLanguage, kAutosave, kRetry, kUpdateCheck};
 #else
-const Id kGeneral[] = {kSfxVolume, kMusicVolume, k3dSound, kTextSpeed, kLanguage, kAutosave};
+const Id kGeneral[] = {kSfxVolume, kMusicVolume, k3dSound, kTextSpeed, kLanguage, kAutosave, kRetry};
 #endif
 const s32 kNumGeneral = sizeof(kGeneral) / sizeof(kGeneral[0]);
 #if defined(GTA2_PORT_SDL)
@@ -61,7 +61,7 @@ namespace
 const wchar_t* const kNames[kCount] = {L"SOUND EFFECTS", L"MUSIC", L"3D SOUND", L"TEXT SPEED", L"LANGUAGE",
                                        L"DISPLAY", L"BRIGHTNESS", L"LIGHTING", L"EXPLODING SCORES", L"FRAME LIMIT",
                                        L"TRUE COLOUR", L"BLOOM", L"PIXEL LIGHTING", L"CAR HEADLIGHTS",
-                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE"};
+                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS"};
 
 struct Language
 {
@@ -129,6 +129,10 @@ const Translation kTranslations[] = {
      {L"SAUVEGARDE APRES CHAQUE MISSION ET EN QUITTANT", L"SPEICHERT NACH JEDEM AUFTRAG UND BEIM BEENDEN",
       L"SALVA DOPO OGNI MISSIONE E QUANDO ESCI", L"GUARDA TRAS CADA MISIÓN Y AL SALIR"}},
     {L"SAVING", NULL, {L"SAUVEGARDE", L"SPEICHERN", L"SALVATAGGIO", L"GUARDANDO"}},
+    {L"RETRY JOBS", NULL, {L"REESSAYER MISSIONS", L"AUFTRÄGE WIEDERHOLEN", L"RIPROVA MISSIONI", L"REINTENTAR MISIONES"}},
+    {L"RETRY A FAILED JOB OR FRENZY FROM THE PAUSE MENU", NULL,
+     {L"REESSAYER UNE MISSION OU FRENESIE RATEE DEPUIS LE MENU PAUSE", L"NACH EINEM FEHLSCHLAG IM PAUSENMENÜ WIEDERHOLEN",
+      L"RIPROVA UNA MISSIONE O FRENESIA FALLITA DAL MENU DI PAUSA", L"REINTENTA UNA MISIÓN O FRENESÍ FALLIDO DESDE EL MENÚ DE PAUSA"}},
     {L"RESUME SAVED STATUS", "savepos", {}},
     {L"CHURCH", NULL, {L"EGLISE", L"KIRCHE", L"CHIESA", L"IGLESIA"}},
     {L"DOWNTOWN", NULL, {L"CENTRE-VILLE", L"INNENSTADT", L"CENTRO", L"CENTRO"}},
@@ -306,6 +310,8 @@ const char* ScreenName(Id id)
             return "port_show_fps";
         case kAutosave:
             return "port_autosave";
+        case kRetry:
+            return "port_retry";
         default:
             return "car_headlights";
     }
@@ -633,9 +639,22 @@ bool Autosave()
     return Screen(kAutosave) != 0;
 }
 
+bool Retry()
+{
+    return Screen(kRetry) != 0;
+}
+
 const wchar_t* Help(Id id)
 {
-    return id == kAutosave ? L"SAVES AFTER EACH JOB AND WHEN YOU QUIT" : NULL;
+    switch (id)
+    {
+        case kAutosave:
+            return L"SAVES AFTER EACH JOB AND WHEN YOU QUIT";
+        case kRetry:
+            return L"RETRY A FAILED JOB OR FRENZY FROM THE PAUSE MENU";
+        default:
+            return NULL;
+    }
 }
 // The menus ask every frame, and an open costs milliseconds on the 3DS's SD card: looked up once per code.
 bool LanguageInstalled(char code)
@@ -943,6 +962,7 @@ void Change(Id id, s32 delta)
         case kAimCamera:
         case kShowFps:
         case kAutosave:
+        case kRetry:
             gRegistry.Set_Screen_Setting(ScreenName(id), Screen(id) ? 0 : 1);
             break;
         case kFrameLimit:
