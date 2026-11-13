@@ -869,7 +869,8 @@ void GetLayout(Layout* pLayout)
             }
         }
     }
-    const f32 x = controls ? 80.0f : (saves ? 60.0f : 140.0f);
+    // The statistics' BACK centred as their rows.
+    const f32 x = controls ? 80.0f : (saves ? 60.0f : (sPage == kStatsPage ? 320 - Width(ItemName(pItems[0]), normal) / 2 : 140.0f));
     f32 columnX[kNumColumns];
     f32 right;
     // Narrower gaps for a page wider than the screen even moved left.
