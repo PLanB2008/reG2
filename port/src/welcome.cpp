@@ -290,8 +290,9 @@ void DrawTexts()
     // Each style's name, underlined when selected, then what it is; each within its half.
     const f32 half = box * 0.45f;
     const PortSettings::Style styles[2] = {PortSettings::kClassicStyle, PortSettings::kEnhancedStyle};
-    const wchar_t* const kLines[2][3] = {{L"THE GAME AS IT WAS IN 1999", NULL, NULL},
-                                         {L"REFINED LIGHTS AND SHADOWS", L"DAY AND NIGHT CYCLE", L"TWIN STICK CONTROLS"}};
+    const wchar_t* const kLines[2][4] = {
+        {L"THE GAME AS IT WAS IN 1999", NULL, NULL, NULL},
+        {L"REFINED LIGHTS AND SHADOWS", L"DAY AND NIGHT CYCLE", L"TWIN STICK CONTROLS", L"AUTOSAVE AND JOB RETRY"}};
     for (s32 i = 0; i < 2; i++)
     {
         const bool selected = sSelected == styles[i];
@@ -304,7 +305,7 @@ void DrawTexts()
             const f32 left = i ? x - width : x;
             Rect(left, 311 + 26 * Scale(), left + width, 311 + 27.5f * Scale(), 0xFF1414E6u);
         }
-        for (s32 line = 0; line < 3 && kLines[i][line]; line++)
+        for (s32 line = 0; line < 4 && kLines[i][line]; line++)
         {
             Text(Translate(kLines[i][line]), x, 337 + line * 15 * Scale(), gFrontendFont7, scale, align, half);
         }

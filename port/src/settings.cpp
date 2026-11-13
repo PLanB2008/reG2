@@ -190,6 +190,8 @@ const Translation kTranslations[] = {
     {L"DAY AND NIGHT CYCLE", NULL, {L"CYCLE JOUR ET NUIT", L"WECHSEL VON TAG UND NACHT", L"CICLO GIORNO E NOTTE", L"CICLO DE DÍA Y NOCHE"}},
     {L"TWIN STICK CONTROLS", NULL,
      {L"COMMANDES DOUBLE STICK", L"TWIN STICK STEUERUNG", L"COMANDI DOPPIO STICK", L"CONTROLES DE DOBLE STICK"}},
+    {L"AUTOSAVE AND JOB RETRY", NULL,
+     {L"SAUVEGARDE AUTO ET REESSAI", L"AUTOSPEICHERN UND NEUVERSUCH", L"SALVATAGGIO AUTO E RIPROVA", L"GUARDADO AUTO Y REINTENTOS"}},
     {L"ALWAYS INCLUDED", NULL, {L"TOUJOURS INCLUS", L"IMMER DABEI", L"SEMPRE INCLUSI", L"SIEMPRE INCLUIDO"}},
     {L"WIDESCREEN", NULL, {L"ECRAN LARGE", L"BREITBILD", L"SCHERMO LARGO", L"PANTALLA ANCHA"}},
     {L"HD RESOLUTIONS", NULL, {L"RESOLUTIONS HD", L"HD AUFLÖSUNGEN", L"RISOLUZIONI HD", L"RESOLUCIONES HD"}},
@@ -800,6 +802,8 @@ void ApplyStyle(Style style)
     gRegistry.Set_Screen_Setting(ScreenName(kLighting), enhanced ? 2 : 1);
     sTwinStick = enhanced;
     gRegistry.Set_Screen_Setting(ScreenName(kControls), sTwinStick);
+    gRegistry.Set_Screen_Setting(ScreenName(kAutosave), enhanced);
+    gRegistry.Set_Screen_Setting(ScreenName(kRetry), enhanced);
     // Unlimited with vsync: a frame each refresh of the screen.
     gRegistry.Set_Screen_Setting(ScreenName(kFrameLimit), 0);
     gRegistry.Set_Screen_Setting(ScreenName(kVsync), 1);
