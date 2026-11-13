@@ -182,9 +182,12 @@ void Start()
     sRetrying = false;
     sNumSamples = 0;
     PortSaves::RefreshCheckpoint();
-    if (gScriptManager && !PortSaves::Replaying() && (!gScriptManager->IsLoadedFromSave() || PortSaves::LoadedCheckpoint() == PortSaves::kNoCheckpoint) &&
+    if (gScriptManager && !PortSaves::Replaying() &&
+        (!gScriptManager->IsLoadedFromSave() ||
+         (PortSaves::LoadedCheckpoint() == PortSaves::kNoCheckpoint && PortSaves::OlderThanCheckpoint(gGameSession.GetSaveName()))) &&
         !IsNetworkGame() && !gGameSession.IsBonusStage())
     {
+        Log("a new game or an older save: no checkpoint");
         PortSaves::DeleteCheckpoint();
     }
 }

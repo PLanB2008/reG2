@@ -980,10 +980,10 @@ EXPORT void __stdcall InitializeGame()
 
     gGame_0x40->LoadGameFiles();
 #if defined(GTA2_PORT)
-    // A church save goes to plyslotN.svg, whichever file was loaded.
-    gGameSession.SetSaveFileName("");
     PortAutosave::Start();
     PortRetry::Start();
+    // A church save goes to plyslotN.svg, whichever file was loaded.
+    gGameSession.SetSaveFileName("");
 #endif
     gGame_0x40->BootGame();
 

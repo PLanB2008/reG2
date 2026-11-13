@@ -8,7 +8,8 @@ struct SCR_CMD_HEADER;
 
 namespace PortRetry
 {
-// A level starts: a new game in a city, or loading another save, deletes the checkpoint.
+// A level starts, gGameSession's save name still the save it was loaded from: a new game in a city, or loading a
+// save older than the checkpoint, deletes the checkpoint.
 void Start();
 // ScriptThread, as a job is launched or a kill frenzy starts, before either marks anything as started.
 void BeforeStart(PortSaves::Checkpoint kind);

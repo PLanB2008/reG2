@@ -107,6 +107,8 @@ void WriteCheckpoint(Checkpoint kind, const Spot& spot);
 void DeleteCheckpoint();
 // What it was taken before, kNoCheckpoint if there is none for the current level; its money, file time and job.
 Checkpoint GetCheckpoint(s32* pMoney = NULL, long long* pTime = NULL, JobName* pJob = NULL);
+// The save was written before the checkpoint.
+bool OlderThanCheckpoint(const char_type* pFileName);
 // The job, known once its script is loaded, after the checkpoint was written.
 void SetCheckpointJob(const JobName& job);
 // Read again from its file, as a level starts.

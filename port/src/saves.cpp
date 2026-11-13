@@ -267,7 +267,8 @@ void PutInCar(Ped* pPed, Car* pCar)
     pCar->AssignDriver(pPed);
 }
 
-long long FileTime(const char_type* pFileName)
+// The file's time in 100 ns units since 1970, -1 if there is no file.
+long long FileStamp(const char_type* pFileName)
 {
 #if defined(_WIN32)
     WIN32_FILE_ATTRIBUTE_DATA data;
@@ -277,12 +278,27 @@ long long FileTime(const char_type* pFileName)
     }
     const unsigned long long ticks =
         (static_cast<unsigned long long>(data.ftLastWriteTime.dwHighDateTime) << 32) | data.ftLastWriteTime.dwLowDateTime;
-    return static_cast<long long>(ticks / 10000000ull) - 11644473600ll;
+    return static_cast<long long>(ticks) - 116444736000000000ll;
 #else
     char path[PATH_MAX];
     struct stat st;
-    return stat(port_resolve_path(pFileName, path), &st) == 0 ? static_cast<long long>(st.st_mtime) : -1;
+    if (stat(port_resolve_path(pFileName, path), &st) != 0)
+    {
+        return -1;
+    }
+#if defined(__APPLE__)
+    const struct timespec& time = st.st_mtimespec;
+#else
+    const struct timespec& time = st.st_mtim;
 #endif
+    return static_cast<long long>(time.tv_sec) * 10000000ll + time.tv_nsec / 100;
+#endif
+}
+
+long long FileTime(const char_type* pFileName)
+{
+    const long long stamp = FileStamp(pFileName);
+    return stamp >= 0 ? stamp / 10000000ll : -1;
 }
 
 bool ReadEntry(const char_type* pFileName, Kind kind, LevelCheck pCheck, Entry* pEntry)
@@ -622,6 +638,14 @@ void WriteCheckpoint(Checkpoint kind, const Spot& spot)
     sCheckpoint.mMainStage = static_cast<u8>(gGameSession.GetMainStageIdx());
     sCheckpoint.mMoney = gGameSave.mPlayerAndWorldStats.mMoney;
     sCheckpoint.mJob = JobName();
+}
+
+bool OlderThanCheckpoint(const char_type* pFileName)
+{
+    char_type name[260];
+    CheckpointName(gGameSession.GetPlySlotIdx(), name, sizeof(name));
+    const long long checkpoint = FileStamp(name);
+    return checkpoint >= 0 && FileStamp(pFileName) < checkpoint;
 }
 
 void SetCheckpointJob(const JobName& job)
