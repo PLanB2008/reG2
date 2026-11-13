@@ -1,5 +1,6 @@
 #include "pause_menu.hpp"
 #include "autosave.hpp"
+#include "retry.hpp"
 #include "Camera.hpp"
 #include "Draw.hpp"
 #include "Frontend.hpp"
@@ -233,7 +234,7 @@ void Close()
 void Apply(PortMenu::Result result)
 {
     PlaySound(result);
-    if (result == PortMenu::kClosed || result == PortMenu::kQuitGame)
+    if (result == PortMenu::kClosed || result == PortMenu::kQuitGame || result == PortMenu::kRetryCheckpoint)
     {
         Close();
     }
@@ -241,6 +242,10 @@ void Apply(PortMenu::Result result)
     {
         PortAutosave::Quit();
         gGame_0x40->ExitGameNoBonus(1, GameExitType::PlayerQuit_2);
+    }
+    if (result == PortMenu::kRetryCheckpoint)
+    {
+        PortRetry::Retry();
     }
 }
 } // namespace
@@ -284,6 +289,13 @@ bool HandleKey(s32 action, Player* pPlayer)
         }
         OpenSounds();
         PortMenu::Open();
+        if (PortSettings::Retry())
+        {
+            s32 money;
+            long long time;
+            const PortSaves::Checkpoint kind = PortSaves::GetCheckpoint(&money, &time);
+            PortMenu::OfferRetry(kind, money, time, false);
+        }
         if (!gGame_0x40->IsPaused())
         {
             gGame_0x40->Pause();
@@ -390,7 +402,7 @@ void Draw()
     const f32 menuTop = top + 10 * scale;
     UseFrontendStyle(false);
     const PortMenu::Result result = PortMenu::HandleMouse(scale, left, menuTop);
-    if (result == PortMenu::kClosed || result == PortMenu::kQuitGame)
+    if (result == PortMenu::kClosed || result == PortMenu::kQuitGame || result == PortMenu::kRetryCheckpoint)
     {
         UseGameStyle();
         Apply(result);

@@ -30,6 +30,7 @@ enum Result
     kClosed, // Back on the main page, BACK there, or RESUME
     kQuitGame,
     kLoadSave,
+    kRetryCheckpoint,
 };
 
 // The gamepad gave the last input.
@@ -37,6 +38,9 @@ bool PadMode();
 
 // On the main page; in game it starts with RESUME and ends with QUIT GAME.
 void Open();
+// After Open in game: RETRY JOB or RETRY FRENZY above RESUME, with the checkpoint's money and file time,
+// selected or not.
+void OfferRetry(PortSaves::Checkpoint kind, s32 money, long long time, bool selected);
 // The menu is gone: the settings changed in it are saved now rather than at each change.
 void Close();
 

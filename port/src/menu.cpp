@@ -62,6 +62,7 @@ enum Kind
     kResume,
     kQuit,
     kSave,
+    kRetry,
 };
 
 struct Item
@@ -109,6 +110,7 @@ const wchar_t* const kColumnNames[kNumColumns] = {L"KEYBOARD", L"ALTERNATE", L"G
 // A save's two columns, each with two rows: city and money, date and jobs.
 const s32 kSaveColumns = 2;
 const s32 kMaxTexts = 4;
+const s32 kTextLength = 40;
 
 // The frontend's user sprites: a disc behind a pad button's name, arrows.
 const s16 kDiscSprite = 2;
@@ -119,6 +121,10 @@ Page sPage;
 s32 sSelected[kNumPages];
 PortSaves::Entry sSaves[PortSaves::kMaxSaves];
 s32 sNumSaves;
+// The retry checkpoint the pause menu offers.
+PortSaves::Checkpoint sRetry;
+s32 sRetryMoney;
+long long sRetryTime;
 s32 sColumn; // a Column
 s32 sCapturing = -1; // control waiting for a key or pad input
 bool sDragging; // a slider's knob, with the left button held
@@ -148,6 +154,10 @@ s32 Items(Page page, Item* pItems)
     switch (page)
     {
         case kMainPage:
+            if (inGame && sRetry != PortSaves::kNoCheckpoint)
+            {
+                pItems[n++] = Item{kRetry, 0, false};
+            }
             if (inGame)
             {
                 pItems[n++] = Item{kResume, 0, false};
@@ -214,6 +224,8 @@ const wchar_t* EnglishName(const Item& item)
             return L"QUIT GAME";
         case kSave:
             return sSaves[item.mArg].mKind == PortSaves::kChurch ? L"CHURCH" : L"AUTOSAVE";
+        case kRetry:
+            return sRetry == PortSaves::kBeforeFrenzy ? L"RETRY FRENZY" : L"RETRY JOB";
         default:
             return L"BACK";
     }
@@ -665,15 +677,41 @@ void DateText(long long fileTime, wchar_t* pOut)
     }
 }
 
-// A setting's value, a binding's inputs by column, or a save's details by column then on the second row;
-// empty for other items.
-void ItemValues(const Item& item, wchar_t (*pTexts)[24])
+// JUST NOW, 8 MIN AGO, then as DateText.
+void AgeText(long long fileTime, wchar_t* pOut)
+{
+    const long long age = static_cast<long long>(time(NULL)) - fileTime;
+    if (fileTime >= 0 && age < 60)
+    {
+        wcscpy(pOut, Translate(L"JUST NOW"));
+    }
+    else if (fileTime >= 0 && age < 3600)
+    {
+        swprintf(pOut, Translate(L"%d MIN AGO"), static_cast<int>(age / 60));
+    }
+    else
+    {
+        DateText(fileTime, pOut);
+    }
+}
+
+// A setting's value, a binding's inputs by column, a save's details by column then on the second row, or
+// the checkpoint's money and age; empty for other items.
+void ItemValues(const Item& item, wchar_t (*pTexts)[kTextLength])
 {
     for (s32 c = 0; c < kMaxTexts; c++)
     {
         pTexts[c][0] = 0;
     }
-    if (item.mKind == kSave)
+    if (item.mKind == kRetry)
+    {
+        wchar_t age[kTextLength];
+        MoneyText(sRetryMoney, pTexts[0]);
+        AgeText(sRetryTime, age);
+        wcscat(pTexts[0], L", ");
+        wcscat(pTexts[0], age);
+    }
+    else if (item.mKind == kSave)
     {
         static const wchar_t* const kCities[PortSaves::kNumCities] = {L"DOWNTOWN", L"RESIDENTIAL", L"INDUSTRIAL"};
         const PortSaves::Entry& save = sSaves[item.mArg];
@@ -787,10 +825,10 @@ void GetLayout(Layout* pLayout)
     {
         widths[c] = Width(Translate(kColumnNames[c]), normal);
     }
-    wchar_t texts[kMaxTexts][24];
+    wchar_t texts[kMaxTexts][kTextLength];
     for (s32 i = 0; i < count; i++)
     {
-        if (pItems[i].mKind == kSetting || pItems[i].mKind == kBinding || pItems[i].mKind == kSave)
+        if (pItems[i].mKind == kSetting || pItems[i].mKind == kBinding || pItems[i].mKind == kSave || pItems[i].mKind == kRetry)
         {
             ItemValues(pItems[i], texts);
             nameWidth = Max(nameWidth, Width(ItemName(pItems[i]), normal));
@@ -960,12 +998,21 @@ void Open()
 {
     sPage = kMainPage;
     sSelected[kMainPage] = 0;
+    sRetry = PortSaves::kNoCheckpoint;
     sCapturing = -1;
     sDragging = false;
     DiscardMouse();
 #if defined(GTA2_PORT_SDL)
     port_DeferRegistrySaves(true);
 #endif
+}
+
+void OfferRetry(PortSaves::Checkpoint kind, s32 money, long long time, bool selected)
+{
+    sRetry = kind;
+    sRetryMoney = money;
+    sRetryTime = time;
+    sSelected[kMainPage] = kind != PortSaves::kNoCheckpoint && !selected ? 1 : 0;
 }
 
 void OpenSaves(const PortSaves::Entry* pEntries, s32 count)
@@ -1066,6 +1113,8 @@ Result HandleInput(Input input)
                     return kClosed;
                 case kSave:
                     return kLoadSave;
+                case kRetry:
+                    return kRetryCheckpoint;
                 default:
                     return kQuitGame;
             }
@@ -1220,7 +1269,7 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
     {
         Text(Translate(kColumnNames[c]), layout.mColumnX[c], 140, normal);
     }
-    wchar_t texts[kMaxTexts][24];
+    wchar_t texts[kMaxTexts][kTextLength];
     for (s32 i = 0; i < layout.mCount; i++)
     {
         const Item& item = layout.mItems[i];

@@ -67,6 +67,7 @@
 #if defined(GTA2_PORT)
 #include "../port/src/autosave.hpp"
 #include "../port/src/frame_loop.hpp"
+#include "../port/src/options_menu.hpp"
 #include "../port/src/retry.hpp"
 #endif
 
@@ -2412,6 +2413,9 @@ s32 __stdcall GameWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lp
         {
             Frontend::create();
             gFrontend->ChangeMenuPage(state);
+#if defined(GTA2_PORT)
+            PortOptionsMenu::AfterGame(gFrontend);
+#endif
         }
         else
         {

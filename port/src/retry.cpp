@@ -21,6 +21,7 @@ PortSaves::Checkpoint sRunning;
 s32 sPassedBefore;
 s32 sLastMission;
 bool sLastFrenzy;
+bool sRetrying;
 
 void Log(const char* pWhat)
 {
@@ -62,6 +63,7 @@ void Start()
     sRunning = PortSaves::kNoCheckpoint;
     sLastMission = -1;
     sLastFrenzy = false;
+    sRetrying = false;
     PortSaves::RefreshCheckpoint();
     if (gScriptManager && !gScriptManager->IsLoadedFromSave() && !IsNetworkGame() && !gGameSession.IsBonusStage())
     {
@@ -109,5 +111,19 @@ void AfterStep()
         Log("area complete");
         PortSaves::DeleteCheckpoint();
     }
+}
+
+void Retry()
+{
+    Log("chosen");
+    sRetrying = true;
+    gGame_0x40->ExitGameNoBonus(1, GameExitType::PlayerQuit_2);
+}
+
+bool TakeRetry()
+{
+    const bool retrying = sRetrying;
+    sRetrying = false;
+    return retrying;
 }
 } // namespace PortRetry

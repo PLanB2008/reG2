@@ -37,4 +37,6 @@ bool HasSave(Frontend* pFrontend, u8 mainStage, u8 bonusStage);
 bool Resume(Frontend* pFrontend);
 // In LoadMapFilenamesFromSvg: the save to boot in place of plyslotN.svg, if Resume chose one.
 void ResumeFileName(char_type* pFileName);
+// The frontend is back after a game: the retry checkpoint booted at once if RETRY ended it.
+void AfterGame(Frontend* pFrontend);
 } // namespace PortOptionsMenu

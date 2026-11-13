@@ -6,6 +6,7 @@
 #include "SoundObject.hpp"
 #include "menu.hpp"
 #include "reg2_version.h"
+#include "retry.hpp"
 #include "settings.hpp"
 #include <ctype.h>
 #include <stdio.h>
@@ -477,6 +478,17 @@ bool Resume(Frontend* pFrontend)
     sShown = true;
     pFrontend->ChangeMenuPage(kMenuPage);
     return true;
+}
+
+void AfterGame(Frontend* pFrontend)
+{
+    char_type name[64];
+    PortSaves::CheckpointName(gGameSession.GetPlySlotIdx(), name, sizeof(name));
+    PortSaves::Header header;
+    if (PortRetry::TakeRetry() && PortSaves::IsValid(name, &header) && IsLevel(pFrontend, header))
+    {
+        Boot(pFrontend, name);
+    }
 }
 
 void ResumeFileName(char_type* pFileName)
