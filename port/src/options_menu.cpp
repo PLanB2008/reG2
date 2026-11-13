@@ -8,6 +8,7 @@
 #include "reg2_version.h"
 #include "retry.hpp"
 #include "settings.hpp"
+#include "welcome.hpp"
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
@@ -276,6 +277,10 @@ void Setup(Frontend* pFrontend)
 
 bool Update(Frontend* pFrontend)
 {
+    if (PortWelcome::Update(pFrontend))
+    {
+        return true;
+    }
     if (pFrontend->mCurrentPageIdx != kMenuPage)
     {
         if (sShown)

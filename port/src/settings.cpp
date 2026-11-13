@@ -175,6 +175,21 @@ const Translation kTranslations[] = {
     {L"CLASSIC", NULL, {L"CLASSIQUE", L"KLASSISCH", L"CLASSICO", L"CLÁSICO"}},
     {L"ENHANCED", NULL, {L"AMELIORE", L"VERBESSERT", L"MIGLIORATO", L"MEJORADO"}},
     {L"CUSTOM", NULL, {L"PERSO", L"EIGENE", L"PERSONAL.", L"PERSONAL"}},
+    {L"CHOOSE YOUR STYLE", NULL, {L"CHOISISSEZ VOTRE STYLE", L"WÄHLE DEINEN STIL", L"SCEGLI IL TUO STILE", L"ELIGE TU ESTILO"}},
+    {L"THE GAME AS IT WAS IN 1999", NULL,
+     {L"LE JEU TEL QU'IL ETAIT EN 1999", L"DAS SPIEL WIE IM JAHR 1999", L"IL GIOCO COM'ERA NEL 1999", L"EL JUEGO TAL COMO ERA EN 1999"}},
+    {L"REFINED LIGHTS AND SHADOWS", NULL,
+     {L"LUMIERES ET OMBRES AFFINEES", L"VERFEINERTE LICHTER UND SCHATTEN", L"LUCI E OMBRE RAFFINATE", L"LUCES Y SOMBRAS REFINADAS"}},
+    {L"DAY AND NIGHT CYCLE", NULL, {L"CYCLE JOUR ET NUIT", L"WECHSEL VON TAG UND NACHT", L"CICLO GIORNO E NOTTE", L"CICLO DE DÍA Y NOCHE"}},
+    {L"TWIN STICK CONTROLS", NULL,
+     {L"COMMANDES DOUBLE STICK", L"TWIN STICK STEUERUNG", L"COMANDI DOPPIO STICK", L"CONTROLES DE DOBLE STICK"}},
+    {L"ALWAYS INCLUDED", NULL, {L"TOUJOURS INCLUS", L"IMMER DABEI", L"SEMPRE INCLUSI", L"SIEMPRE INCLUIDO"}},
+    {L"WIDESCREEN", NULL, {L"ECRAN LARGE", L"BREITBILD", L"SCHERMO LARGO", L"PANTALLA ANCHA"}},
+    {L"HD RESOLUTIONS", NULL, {L"RESOLUTIONS HD", L"HD AUFLÖSUNGEN", L"RISOLUZIONI HD", L"RESOLUCIONES HD"}},
+    {L"SMOOTH 60+ FPS", NULL, {L"60+ FPS FLUIDES", L"FLÜSSIGE 60+ FPS", L"60+ FPS FLUIDI", L"60+ FPS FLUIDOS"}},
+    {L"YOU CAN CHANGE THIS AND MUCH MORE IN OPTIONS", NULL,
+     {L"VOUS POUVEZ CHANGER CELA ET BIEN PLUS DANS LES OPTIONS", L"DIES UND VIELES MEHR KANNST DU IN DEN OPTIONEN ÄNDERN",
+      L"PUOI CAMBIARLO, E MOLTO ALTRO, NELLE OPZIONI", L"PUEDES CAMBIAR ESTO Y MUCHO MÁS EN OPCIONES"}},
     {L"ON", NULL, {L"OUI", L"AN", L"SÌ", L"SÍ"}},
     {L"OFF", NULL, {L"NON", L"AUS", L"NO", L"NO"}},
     {L"GAME", NULL, {L"JEU", L"SPIEL", L"GIOCO", L"JUEGO"}},
@@ -762,6 +777,39 @@ void ApplyRenderOptions()
 #if defined(GTA2_PORT_SDL)
     port_SetRenderOptions(Screen(kTrueColour) != 0, Screen(kBloom), Screen(kPerPixelLighting) != 0,
                           Clamp(Screen(kTextureFilter), 0, kNumTextureFilters - 1), kMsaaValues[MsaaIndex()], Screen(kShadows) != 0);
+#endif
+}
+
+Style CurrentStyle()
+{
+#if defined(GTA2_PORT_SDL)
+    const bool enhancedPreset = CurrentPreset() == kEnhanced;
+#else
+    const bool enhancedPreset = false;
+#endif
+    return enhancedPreset || DayNightCycle() || TwinStick() ? kEnhancedStyle : kClassicStyle;
+}
+
+void ApplyStyle(Style style)
+{
+    const bool enhanced = style == kEnhancedStyle;
+#if defined(GTA2_PORT_SDL)
+    for (s32 i = 0; i < kNumPresetValues; i++)
+    {
+        gRegistry.Set_Screen_Setting(ScreenName(kPresetValues[i].mId), PresetTarget(kPresetValues[i], enhanced ? kEnhanced : kClassic));
+    }
+    ApplyRenderOptions();
+    // The original's dusk, or the day-night cycle as its settings are.
+    gRegistry.Set_Screen_Setting(ScreenName(kLighting), enhanced ? 2 : 1);
+    sTwinStick = enhanced;
+    gRegistry.Set_Screen_Setting(ScreenName(kControls), sTwinStick);
+    // Unlimited with vsync: a frame each refresh of the screen.
+    gRegistry.Set_Screen_Setting(ScreenName(kFrameLimit), 0);
+    gRegistry.Set_Screen_Setting(ScreenName(kVsync), 1);
+    port_ApplyVsync();
+    PortFrameLoop::ApplySettings();
+#else
+    (void)enhanced;
 #endif
 }
 

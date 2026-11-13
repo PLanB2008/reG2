@@ -37,6 +37,7 @@
 #if defined(GTA2_PORT)
 #include "../port/src/options_menu.hpp"
 #include "../port/src/saves.hpp"
+#include "../port/src/welcome.hpp"
 #endif
 
 #pragma comment(lib, "dxguid.lib")
@@ -3100,8 +3101,16 @@ void Frontend::Render()
     MakeScreenTableAndSetWindow();
 
     pgbh_BeginScene();
+#if defined(GTA2_PORT)
+    if (!PortWelcome::Draw())
+    {
+        DrawBackground();
+        DrawCurrentState();
+    }
+#else
     DrawBackground();
     DrawCurrentState();
+#endif
     pgbh_EndScene();
 
     FreeSurface();

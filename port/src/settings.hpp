@@ -117,4 +117,15 @@ s32 MaxFps();
 
 // The renderer's options from the registry, at start-up.
 void ApplyRenderOptions();
+
+// The first start's two styles (welcome.hpp). CLASSIC: the CLASSIC preset, lighting as the original's and the
+// classic controls; ENHANCED: the ENHANCED preset, the day-night cycle and twin stick. Both draw a frame each
+// refresh of the screen. The settings are closest to ENHANCED with any of its parts.
+enum Style
+{
+    kClassicStyle,
+    kEnhancedStyle,
+};
+Style CurrentStyle();
+void ApplyStyle(Style style);
 } // namespace PortSettings
