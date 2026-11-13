@@ -127,8 +127,9 @@ Page sPage;
 s32 sSelected[kNumPages];
 PortSaves::Entry sSaves[PortSaves::kMaxSaves];
 s32 sNumSaves;
-// The saves page's city tab, and the cities that can be chosen.
+// The saves page's city tab, the one under the mouse, and the cities that can be chosen.
 s32 sTab;
+s32 sTabHover = -1;
 bool sTabEnabled[PortSaves::kNumCities];
 const wchar_t* const kCities[PortSaves::kNumCities] = {L"DOWNTOWN", L"RESIDENTIAL", L"INDUSTRIAL"};
 // The retry checkpoint the pause menu offers.
@@ -1079,8 +1080,19 @@ void DrawHints(f32 y)
         const wchar_t* mLabel;
     };
     const bool resume = port_GameRunning() && sPage == kMainPage;
-    const Hint kNavigate[] = {{L"ENTER", L"A", L"SELECT"}, {L"ESC", L"B", resume ? L"RESUME" : L"BACK"}};
     const bool pad = PadMode();
+    // LOAD GAME's other keys for the city: Q and E where they are on this keyboard.
+    wchar_t cityKeys[8] = L"Q E";
+#if defined(GTA2_PORT_SDL)
+    const s32 q = port_KeyLetter(DIK_Q);
+    const s32 e = port_KeyLetter(DIK_E);
+    if (q && e)
+    {
+        swprintf(cityKeys, L"%lc %lc", static_cast<wchar_t>(q), static_cast<wchar_t>(e));
+    }
+#endif
+    const Hint kNavigate[] = {
+        {L"ENTER", L"A", L"SELECT"}, {L"ESC", L"B", resume ? L"RESUME" : L"BACK"}, {pad ? L"LB RB" : cityKeys, NULL, L"CITY"}};
     // Capture: B cancels on the keyboard columns, Back on the pad column (B can be bound there); Delete
     // clears a second key or a pad input.
     const bool padColumn = sColumn == kPadColumn;
@@ -1088,7 +1100,7 @@ void DrawHints(f32 y)
                              {L"DEL", NULL, L"CLEAR"}};
     const bool capturing = sCapturing >= 0;
     const Hint* pHints = capturing ? kCapture : kNavigate;
-    const s32 count = capturing && sColumn == kKeyColumn ? 1 : 2;
+    const s32 count = capturing && sColumn == kKeyColumn ? 1 : (!capturing && sPage == kSavesPage ? 3 : 2);
     const s16 font = MenuFont();
     const s16 buttonFont = gFrontendHeadingFont;
     // Between the frontend's two logos (x 70 to 550): longer translations start further left, then
@@ -1149,16 +1161,32 @@ void TabsLayout(f32* pX, f32* pWidths)
     }
 }
 
-// The city chosen underlined in red, the cities not reached dim; NO SAVE in a city without one.
+// From a tab row's end to the centre of the marker beside it.
+const f32 kTabMarkerGap = 20;
+
+// The city chosen underlined in red, the one under the mouse red, the cities not reached dim; LB and RB, or arrows,
+// at the row's ends; NO SAVE in a city without one.
 void DrawTabs(const Layout& layout)
 {
     f32 x[PortSaves::kNumCities];
     f32 widths[PortSaves::kNumCities];
     TabsLayout(x, widths);
     const f32 y = ListTop();
+    const f32 left = x[0] - kTabMarkerGap;
+    const f32 right = x[PortSaves::kNumCities - 1] + widths[PortSaves::kNumCities - 1] + kTabMarkerGap;
+    if (PadMode())
+    {
+        Text(L"LB", left - Width(L"LB", MenuFont()) / 2, y, MenuFont());
+        Text(L"RB", right - Width(L"RB", MenuFont()) / 2, y, MenuFont());
+    }
+    else
+    {
+        Sprite(kLeftArrowSprite, left, y + 6);
+        Sprite(kArrowSprite, right, y + 6);
+    }
     for (s32 i = 0; i < PortSaves::kNumCities; i++)
     {
-        Text(Translate(kCities[i]), x[i], y, MenuFont(), i == sTab, !sTabEnabled[i]);
+        Text(Translate(kCities[i]), x[i], y, MenuFont(), i == sTab || (i == sTabHover && sTabEnabled[i]), !sTabEnabled[i]);
         if (i == sTab)
         {
             Rect(x[i], y + 17, x[i] + widths[i], y + 19, TextColour(true, false));
@@ -1174,15 +1202,28 @@ void DrawTabs(const Layout& layout)
     }
 }
 
-// The tab under that layout position, -1 if none.
+// The tab under that layout position, -1 if none; kNumCities for the marker before the row, kNumCities + 1 after it.
 s32 TabAt(f32 x, f32 y)
 {
     f32 tabX[PortSaves::kNumCities];
     f32 widths[PortSaves::kNumCities];
     TabsLayout(tabX, widths);
+    if (y < ListTop() - 4 || y >= ListTop() + 20)
+    {
+        return -1;
+    }
+    const f32 right = tabX[PortSaves::kNumCities - 1] + widths[PortSaves::kNumCities - 1];
+    if (x >= tabX[0] - kTabMarkerGap - 14 && x < tabX[0] - 8)
+    {
+        return PortSaves::kNumCities;
+    }
+    if (x >= right + 8 && x < right + kTabMarkerGap + 14)
+    {
+        return PortSaves::kNumCities + 1;
+    }
     for (s32 i = 0; i < PortSaves::kNumCities; i++)
     {
-        if (y >= ListTop() - 4 && y < ListTop() + 20 && x >= tabX[i] - 8 && x < tabX[i] + widths[i] + 8)
+        if (x >= tabX[i] - 8 && x < tabX[i] + widths[i] + 8)
         {
             return i;
         }
@@ -1461,10 +1502,12 @@ Result HandleMouse(f32 scale, f32 left, f32 top)
     }
     const f32 x = (frameX - left) / scale;
     const f32 y = (frameY - top) / scale;
-    const s32 tab = sPage == kSavesPage && leftClicks ? TabAt(x, y) : -1;
-    if (tab >= 0)
+    const s32 tab = sPage == kSavesPage ? TabAt(x, y) : -1;
+    sTabHover = moved ? (tab < PortSaves::kNumCities ? tab : -1) : sTabHover;
+    if (tab >= 0 && leftClicks)
     {
-        return ChangeTab(tab, 0);
+        const s32 step = tab == PortSaves::kNumCities ? -1 : 1;
+        return tab < PortSaves::kNumCities ? ChangeTab(tab, 0) : ChangeTab(sTab + step, step);
     }
     Layout layout;
     GetLayout(&layout);

@@ -319,15 +319,15 @@ bool Update(Frontend* pFrontend)
     }
     pFrontend->mMenuScreen = RedBar_16;
     PortMenu::Result result = HandleInput(pFrontend);
-    // LOAD GAME's cities: also Page Up and Page Down, the pad's LB and RB.
-    static bool sPrevPageKeys[2];
-    const u8 pageKeys[2] = {DIK_PRIOR, DIK_NEXT};
-    for (s32 i = 0; i < 2; i++)
+    // LOAD GAME's cities: also Page Up and Page Down (the pad's LB and RB), Q and E.
+    static bool sPrevPageKeys[4];
+    const u8 pageKeys[4] = {DIK_PRIOR, DIK_NEXT, DIK_Q, DIK_E};
+    for (s32 i = 0; i < 4; i++)
     {
         const bool down = (pFrontend->mKeys[pageKeys[i]] & 0x80) != 0;
         if (down && !sPrevPageKeys[i] && result == PortMenu::kNothing && PortMenu::OnSaves())
         {
-            result = PortMenu::HandleInput(i ? PortMenu::kRight : PortMenu::kLeft);
+            result = PortMenu::HandleInput(i % 2 ? PortMenu::kRight : PortMenu::kLeft);
         }
         sPrevPageKeys[i] = down;
     }
