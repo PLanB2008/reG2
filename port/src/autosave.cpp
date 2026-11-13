@@ -30,6 +30,9 @@ namespace
 const s32 kWaitSteps = 90;
 const s32 kSafeSteps = 30;
 const s32 kShowSteps = 45;
+// Quitting saves once a job or frenzy ended, or after this much play: less is a look around, which must not
+// replace an autosave of a longer game.
+const s32 kQuitSaveSteps = 2 * 60 * 30;
 
 bool sPending;
 s32 sWaited;
@@ -38,6 +41,8 @@ s32 sShown;
 s32 sLastMission;
 bool sLastFrenzy;
 const char* sPendingWhy;
+bool sJobEnded;
+s32 sPlayed;
 
 // As at a church: off a job and out of a kill frenzy. Then on foot and on firm ground, or driving a car
 // out of water (stopped unless quitting), and neither dead, arrested nor burning.
@@ -150,6 +155,8 @@ void Start()
     sShown = 0;
     sLastMission = -1;
     sLastFrenzy = false;
+    sJobEnded = false;
+    sPlayed = 0;
 }
 
 void AfterStep()
@@ -169,11 +176,13 @@ void AfterStep()
     {
         sPending = true;
         sPendingWhy = sLastFrenzy && !frenzy ? "frenzy over" : "job over";
+        sJobEnded = true;
         sWaited = 0;
         sSafe = 0;
     }
     sLastMission = mission;
     sLastFrenzy = frenzy;
+    sPlayed += gGame_0x40->IsPaused() ? 0 : 1;
     if (!sPending || mission != 0 || gGame_0x40->IsPaused())
     {
         sPending = sPending && mission == 0;
@@ -191,7 +200,13 @@ void AfterStep()
 
 void Quit()
 {
-    if (Safe(true))
+    if (!sJobEnded && sPlayed < kQuitSaveSteps)
+    {
+#if defined(GTA2_PORT_SDL)
+        SDL_Log("Autosave: none on quitting, no job or frenzy over and %d seconds played", sPlayed / 30);
+#endif
+    }
+    else if (Safe(true))
     {
         Save("quit");
     }
