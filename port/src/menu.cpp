@@ -308,7 +308,7 @@ void KeyName(s32 dik, wchar_t* pOut)
     }
     else
     {
-        swprintf(pOut, L"KEY %d", dik);
+        swprintf(pOut, Translate(L"KEY %d"), dik);
     }
 }
 
