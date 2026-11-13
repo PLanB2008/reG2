@@ -1163,6 +1163,57 @@ void port_DrawReticle(f32 x, f32 y, f32 size, f32 alpha)
     gRenderer->DrawTriangles(tris, 6, spTex, RS_BLEND_ALPHA | RS_FILTER_LINEAR);
 }
 
+namespace
+{
+// The port's own pictures (port/src/welcome.cpp), by slot.
+const s32 kNumPictures = 4;
+RTexture* gPictures[kNumPictures];
+IRenderer* gPicturesOwner;
+} // namespace
+
+// Triangles with a colour (bytes r, g, b, a) per vertex and x, y, u, v from pXyuv, of a picture uploaded from
+// pRgba (RGBA8, top row first) the first time, or with no texture for slot -1.
+void port_DrawPicture(s32 slot, s32 width, s32 height, const u32* pRgba, const f32* pXyuv, const u32* pColours, s32 count)
+{
+    if (!gRenderer || slot >= kNumPictures || count > 12)
+    {
+        return;
+    }
+    if (gPicturesOwner != gRenderer)
+    {
+        memset(gPictures, 0, sizeof(gPictures));
+        gPicturesOwner = gRenderer;
+    }
+    if (slot >= 0 && !gPictures[slot])
+    {
+        gPictures[slot] = gRenderer->CreateTexture();
+        gRenderer->UploadTexture(gPictures[slot], width, height, pRgba, RMIP_ALPHA);
+    }
+    RVertex v[12] = {};
+    for (s32 i = 0; i < count; i++)
+    {
+        v[i].x = pXyuv[i * 4];
+        v[i].y = pXyuv[i * 4 + 1];
+        v[i].u = pXyuv[i * 4 + 2];
+        v[i].v = pXyuv[i * 4 + 3];
+        v[i].rhw = 1.0f;
+        v[i].rgba = pColours[i];
+    }
+    gRenderer->DrawTriangles(v, count, slot >= 0 ? gPictures[slot] : NULL, RS_BLEND_ALPHA | RS_FILTER_LINEAR);
+}
+
+void port_FreePictures()
+{
+    for (s32 i = 0; i < kNumPictures && gRenderer == gPicturesOwner && gRenderer; i++)
+    {
+        if (gPictures[i])
+        {
+            gRenderer->FreeTexture(gPictures[i]);
+        }
+    }
+    memset(gPictures, 0, sizeof(gPictures));
+}
+
 GBH_EXPORT void GTA2_CC gbh_DrawQuad(s32 flags, STexture* pTexture, Vert* pVerts, s32 baseColour)
 {
     LogCall("DrawQuad", flags, pTexture, baseColour);

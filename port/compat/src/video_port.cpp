@@ -146,6 +146,25 @@ void port_FrameSize(int* pW, int* pH)
     }
 }
 
+// The frontend's frame, 480 lines high: as wide as the window's shape for a page drawn across the whole window
+// (port/src/welcome.cpp), else its own 640. The new width.
+int port_SetFrameWidth(bool wide)
+{
+    int w = 640;
+    int windowW = 0;
+    int windowH = 0;
+    SDL_Window* pWindow = port_MainSDLWindow();
+    if (wide && pWindow && SDL_GetWindowSizeInPixels(pWindow, &windowW, &windowH) && windowH > 0)
+    {
+        w = windowW * 480 / windowH > 640 ? (windowW * 480 / windowH) & ~1 : 640;
+    }
+    if (sVidSystem && sVidSystem->Renderer().LogicalWidth() != w)
+    {
+        sVidSystem->Renderer().SetLogicalSize(w, 480);
+    }
+    return w;
+}
+
 namespace
 {
 DWORD ScreenGet(const char* name, DWORD def)
