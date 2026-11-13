@@ -1,8 +1,11 @@
 #include "autosave.hpp"
 #include "Car.hpp"
+#include "Draw.hpp"
+#include "Frontend.hpp"
 #include "Game.hpp"
 #include "GameSession.hpp"
 #include "Globals.hpp"
+#include "Hud.hpp"
 #include "Ped.hpp"
 #include "Player.hpp"
 #include "ScriptManager.hpp"
@@ -23,10 +26,12 @@ namespace
 // At 30 steps a second: past the job's end messages, then the player safe for a second.
 const s32 kWaitSteps = 90;
 const s32 kSafeSteps = 30;
+const s32 kShowSteps = 60;
 
 bool sPending;
 s32 sWaited;
 s32 sSafe;
+s32 sShown;
 s32 sLastMission;
 
 // As at a church: off a job and out of a kill frenzy. Then on foot and on firm ground, or driving a car
@@ -73,11 +78,16 @@ void Save(const char* pWhy)
 void Start()
 {
     sPending = false;
+    sShown = 0;
     sLastMission = -1;
 }
 
 void AfterStep()
 {
+    if (sShown > 0)
+    {
+        sShown--;
+    }
     if (!gGame_0x40 || !gScriptManager)
     {
         return;
@@ -102,6 +112,7 @@ void AfterStep()
     {
         sPending = false;
         Save("job over");
+        sShown = kShowSteps;
     }
 }
 
@@ -111,5 +122,16 @@ void Quit()
     {
         Save("quit");
     }
+}
+
+void Draw()
+{
+    if (!sShown)
+    {
+        return;
+    }
+    const wchar_t* pText = PortSettings::Translate(L"SAVING");
+    const s32 width = Frontend::GetMaxTextWidth(const_cast<wchar_t*>(pText), gDebugFont);
+    DrawStringScaled(pText, Fix16(632 - width), Fix16(456), gDebugFont);
 }
 } // namespace PortAutosave

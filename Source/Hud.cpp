@@ -1,6 +1,7 @@
 #define FIX16_POINT_ZERO kFpZero_7064C0
 #include "Hud.hpp"
 #if defined(GTA2_PORT)
+#include "../port/src/autosave.hpp"
 #include "../port/src/pause_menu.hpp"
 #include "../port/src/day_night.hpp"
 #include "../port/src/frame_loop.hpp"
@@ -3388,6 +3389,7 @@ void Hud::DrawGui()
 #if defined(GTA2_PORT)
         PortDayNight::DrawClock();
         PortFrameLoop::DrawFps();
+        PortAutosave::Draw();
         PortTwinStick::DrawReticle();
 #endif
         mUnderRoofArrowMarker.Draw();
