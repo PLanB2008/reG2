@@ -40,6 +40,7 @@ enum Id
     kBlood,
     kUpdateCheck,
     kShowFps,
+    kAutosave,
     kCount,
 };
 
@@ -97,6 +98,12 @@ bool UpdateCheck();
 
 // SHOW FPS: the frames drawn per second in a corner of the HUD (frame_loop.hpp).
 bool ShowFps();
+
+// AUTOSAVE: a save after each job and on quitting, beside the church's (autosave.hpp).
+bool Autosave();
+
+// A line under the page that says what the setting does, NULL if none.
+const wchar_t* Help(Id id);
 
 // SAFE AREA: the part of the screen's width or height kept clear at each edge, 0 to 0.1.
 f32 SafeArea();

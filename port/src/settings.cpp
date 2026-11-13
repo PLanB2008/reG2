@@ -35,9 +35,9 @@ void port_SetFullscreenModeIndex(int index);
 namespace PortSettings
 {
 #if defined(GTA2_UPDATE_CHECK)
-const Id kGeneral[] = {kSfxVolume, kMusicVolume, k3dSound, kTextSpeed, kLanguage, kUpdateCheck};
+const Id kGeneral[] = {kSfxVolume, kMusicVolume, k3dSound, kTextSpeed, kLanguage, kAutosave, kUpdateCheck};
 #else
-const Id kGeneral[] = {kSfxVolume, kMusicVolume, k3dSound, kTextSpeed, kLanguage};
+const Id kGeneral[] = {kSfxVolume, kMusicVolume, k3dSound, kTextSpeed, kLanguage, kAutosave};
 #endif
 const s32 kNumGeneral = sizeof(kGeneral) / sizeof(kGeneral[0]);
 #if defined(GTA2_PORT_SDL)
@@ -61,7 +61,7 @@ namespace
 const wchar_t* const kNames[kCount] = {L"SOUND EFFECTS", L"MUSIC", L"3D SOUND", L"TEXT SPEED", L"LANGUAGE",
                                        L"DISPLAY", L"BRIGHTNESS", L"LIGHTING", L"EXPLODING SCORES", L"FRAME LIMIT",
                                        L"TRUE COLOUR", L"BLOOM", L"PIXEL LIGHTING", L"CAR HEADLIGHTS",
-                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS"};
+                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE"};
 
 struct Language
 {
@@ -124,6 +124,10 @@ const Translation kTranslations[] = {
     {L"EXPLODING SCORES", NULL, {L"SCORES EXPLOSIFS", L"PUNKTE-EXPLOSION", L"PUNTI ESPLOSIVI", L"PUNTOS EXPLOSIVOS"}},
     {L"BLOOD", NULL, {L"SANG", L"BLUT", L"SANGUE", L"SANGRE"}},
     {L"CHECK FOR UPDATES", NULL, {L"MISES A JOUR", L"UPDATES SUCHEN", L"AGGIORNAMENTI", L"ACTUALIZACIONES"}},
+    {L"AUTOSAVE", NULL, {L"SAUVEGARDE AUTO", L"AUTOSPEICHERN", L"SALVATAGGIO AUTO", L"GUARDADO AUTO"}},
+    {L"SAVES AFTER EACH JOB AND WHEN YOU QUIT", NULL,
+     {L"SAUVEGARDE APRES CHAQUE MISSION ET EN QUITTANT", L"SPEICHERT NACH JEDEM AUFTRAG UND BEIM BEENDEN",
+      L"SALVA DOPO OGNI MISSIONE E QUANDO ESCI", L"GUARDA TRAS CADA MISIÓN Y AL SALIR"}},
     {L"FRAME LIMIT", NULL, {L"LIMITE IMAGES", L"BILDRATENLIMIT", L"LIMITE FOTOGRAMMI", L"LÍMITE IMÁGENES"}},
     {L"VSYNC", NULL, {L"VSYNC", L"VSYNC", L"VSYNC", L"VSYNC"}},
     {L"SHOW FPS", NULL, {L"AFFICHER FPS", L"FPS ANZEIGEN", L"MOSTRA FPS", L"MOSTRAR FPS"}},
@@ -181,7 +185,7 @@ const Translation kTranslations[] = {
 const s32 kNumTranslations = sizeof(kTranslations) / sizeof(kTranslations[0]);
 
 // The texts in the game's font codes, for sCacheLang.
-wchar_t sCache[kNumTranslations][32];
+wchar_t sCache[kNumTranslations][64];
 char sCacheLang;
 
 s32 TranslationLanguage(char code)
@@ -290,6 +294,8 @@ const char* ScreenName(Id id)
             return "update_check";
         case kShowFps:
             return "port_show_fps";
+        case kAutosave:
+            return "port_autosave";
         default:
             return "car_headlights";
     }
@@ -509,8 +515,8 @@ const wchar_t* Translate(const wchar_t* pEnglish)
         for (s32 i = 0; i < kNumTranslations; i++)
         {
             const wchar_t* pText = kTranslations[i].mText[lang];
-            wcsncpy(sCache[i], pText ? pText : kTranslations[i].mEnglish, 31);
-            sCache[i][31] = 0;
+            wcsncpy(sCache[i], pText ? pText : kTranslations[i].mEnglish, 63);
+            sCache[i][63] = 0;
             gText_0x14->RemapExtendedChars(sCache[i]);
         }
     }
@@ -610,6 +616,16 @@ bool UpdateCheck()
 bool ShowFps()
 {
     return Screen(kShowFps) != 0;
+}
+
+bool Autosave()
+{
+    return Screen(kAutosave) != 0;
+}
+
+const wchar_t* Help(Id id)
+{
+    return id == kAutosave ? L"SAVES AFTER EACH JOB AND WHEN YOU QUIT" : NULL;
 }
 // The menus ask every frame, and an open costs milliseconds on the 3DS's SD card: looked up once per code.
 bool LanguageInstalled(char code)
@@ -916,6 +932,7 @@ void Change(Id id, s32 delta)
         case kClock:
         case kAimCamera:
         case kShowFps:
+        case kAutosave:
             gRegistry.Set_Screen_Setting(ScreenName(id), Screen(id) ? 0 : 1);
             break;
         case kFrameLimit:

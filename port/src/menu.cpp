@@ -630,6 +630,40 @@ const f32 kGapStep = 24;
 // From a setting's value to the centre of the arrows the mouse changes it with.
 const f32 kArrowGap = 14;
 
+// Dim, on two lines of about the same length if it is wider than the page.
+void DrawHelp(const wchar_t* pText, f32 x, f32 y, f32 width)
+{
+    const s16 font = MenuFont();
+    wchar_t first[64];
+    wcsncpy(first, pText, 63);
+    first[63] = 0;
+    const wchar_t* pSecond = L"";
+    s32 split = -1;
+    f32 best = 0;
+    const bool wide = Width(pText, font) > width;
+    for (s32 i = 0; first[i] && wide; i++)
+    {
+        if (first[i] == L' ')
+        {
+            first[i] = 0;
+            const f32 longest = Max(Width(first, font), Width(first + i + 1, font));
+            first[i] = L' ';
+            if (split < 0 || longest < best)
+            {
+                best = longest;
+                split = i;
+            }
+        }
+    }
+    if (split >= 0)
+    {
+        first[split] = 0;
+        pSecond = first + split + 1;
+    }
+    Text(first, x, y, font, false, true);
+    Text(pSecond, x, y + kLineStep, font, false, true);
+}
+
 void GetLayout(Layout* pLayout)
 {
     if (sKeyNames.empty())
@@ -1076,9 +1110,15 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
         }
         const f32 valueX = layout.mColumnX[0] + TextOffset(item);
         Text(texts[0], valueX, y, normal, selected, dim);
+        const f32 underPage = layout.mY[layout.mCount - 1] + kGapStep + 4;
         if (selected && dim)
         {
-            DrawRequirement(item, layout.mX, layout.mY[layout.mCount - 1] + kGapStep + 4);
+            DrawRequirement(item, layout.mX, underPage);
+        }
+        const wchar_t* pHelp = item.mKind == kSetting ? PortSettings::Help(static_cast<PortSettings::Id>(item.mArg)) : NULL;
+        if (selected && !dim && pHelp)
+        {
+            DrawHelp(Translate(pHelp), layout.mX, underPage, layout.mPanelRight - 10 - layout.mX);
         }
         for (s32 c = 1; c < layout.mColumns && item.mKind == kBinding; c++)
         {
