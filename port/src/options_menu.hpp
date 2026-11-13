@@ -38,11 +38,11 @@ bool Resume(Frontend* pFrontend);
 // In LoadMapFilenamesFromSvg: the save to boot in place of plyslotN.svg, if Resume chose one.
 void ResumeFileName(char_type* pFileName);
 // After the original pages took the input: a new game that would replace the city's autosave (AUTOSAVE on) waits
-// for a YEAH! in the delete player dialog's look.
+// for a YES in the delete player dialog's look.
 void AfterPageInput(Frontend* pFrontend);
-// That dialog's input and its lines above the original's; false for the delete player dialog.
+// That dialog's input and drawing; false for the delete player dialog.
 bool UpdateDialog(Frontend* pFrontend);
-void DrawDialog(Frontend* pFrontend);
+bool DrawDialog(Frontend* pFrontend);
 // The frontend is back after a game: the retry checkpoint booted at once if RETRY ended it.
 void AfterGame(Frontend* pFrontend);
 } // namespace PortOptionsMenu

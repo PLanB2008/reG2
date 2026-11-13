@@ -3029,7 +3029,10 @@ void Frontend::DrawCurrentState()
     {
         case FrontendState::Delete_Player_Dialog_4:
 #if defined(GTA2_PORT)
-            PortOptionsMenu::DrawDialog(this);
+            if (PortOptionsMenu::DrawDialog(this))
+            {
+                break;
+            }
 #endif
             DrawDeletePlayerDialog();
             break;
