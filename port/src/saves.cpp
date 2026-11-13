@@ -51,13 +51,13 @@ struct Script
     std::vector<u16> mBasePointers;
     std::vector<u8> mData;
 
-    const SCR_CMD_HEADER* Command(u16 idx) const
+    const SCR_TWO_PARAMS* Command(u16 idx) const
     {
         if (idx >= mBasePointers.size() || !mBasePointers[idx] || mBasePointers[idx] + sizeof(SCR_TWO_PARAMS) > mData.size())
         {
             return NULL;
         }
-        return reinterpret_cast<const SCR_CMD_HEADER*>(&mData[mBasePointers[idx]]);
+        return reinterpret_cast<const SCR_TWO_PARAMS*>(&mData[mBasePointers[idx]]);
     }
 };
 
@@ -79,6 +79,21 @@ bool ReadScript(const char_type* pScriptName, Script* pScript)
 bool IsSavedCounter(const SCR_CMD_HEADER* pCmd)
 {
     return pCmd && (pCmd->mType == SCRCMD_COUNTER_SAVE || pCmd->mType == SCRCMD_COUNTER_SET_SAVE);
+}
+
+// A counter's value in the save, else the one the script starts it with.
+s32 CounterValue(const SaveData& save, const Script& script, u16 idx)
+{
+    const SavedCarAndScriptData& data = save.mCarAndScriptData;
+    for (s32 i = 0; i < GTA2_COUNTOF_S(data.mScriptCounter); i++)
+    {
+        if (data.mScriptCounter[i].mPointer == idx)
+        {
+            return data.mScriptCounter[i].mSavedValue;
+        }
+    }
+    const SCR_TWO_PARAMS* pCounter = script.Command(idx);
+    return pCounter ? pCounter->mS32 : 0;
 }
 } // namespace
 
@@ -179,5 +194,63 @@ bool IsValid(const char_type* pFileName, Header* pHeader)
         pHeader->mBonusStage = bonus_stage;
     }
     return true;
+}
+
+bool ReadJobsPassed(const char_type* pFileName, JobsPassed* pJobs)
+{
+    FILE* pFile = fopen(pFileName, "rb");
+    if (!pFile)
+    {
+        return false;
+    }
+    SaveData save;
+    const bool read = fread(&save, sizeof(save), 1, pFile) == 1;
+    fclose(pFile);
+    Script script;
+    if (!read || !NameOk(save.mScriptName) || !ReadScript(save.mScriptName, &script))
+    {
+        return false;
+    }
+
+    // As ScriptThread::SCRCMD_SET_MISSIONS_TOTAL and SCRCMD_PASSED_FAILED_FLAGS set them for the pause screen.
+    memset(pJobs, 0, sizeof(*pJobs));
+    bool counted = false;
+    for (u16 idx = 0; idx < script.mBasePointers.size(); idx++)
+    {
+        const SCR_TWO_PARAMS* pCmd = script.Command(idx);
+        if (!pCmd)
+        {
+            continue;
+        }
+        switch (pCmd->mType)
+        {
+            case SCRCMD_TOTAL_MISSIONS:
+                pJobs->mTotal = pCmd->mSigned2;
+                counted = true;
+                break;
+            case SCRCMD_GANG_1_MISSION_TOTAL:
+            case SCRCMD_GANG_2_MISSION_TOTAL:
+            case SCRCMD_GANG_3_MISSION_TOTAL:
+                pJobs->mGangTotal[pCmd->mType - SCRCMD_GANG_1_MISSION_TOTAL] = pCmd->mSigned2;
+                break;
+            case SCRCMD_TOTAL_SECRETS:
+                pJobs->mFrenziesTotal = pCmd->mSigned2;
+                break;
+            case SCRCMD_PASSED_FLAG:
+                pJobs->mPassed = CounterValue(save, script, pCmd->mUnsigned1);
+                break;
+            case SCRCMD_1_PASSED_FLAG:
+            case SCRCMD_2_PASSED_FLAG:
+            case SCRCMD_3_PASSED_FLAG:
+                pJobs->mGangPassed[pCmd->mType - SCRCMD_1_PASSED_FLAG] = CounterValue(save, script, pCmd->mUnsigned1);
+                break;
+            case SCRCMD_SECRETS_PASSED:
+                pJobs->mFrenziesPassed = CounterValue(save, script, pCmd->mUnsigned1);
+                break;
+            default:
+                break;
+        }
+    }
+    return counted;
 }
 } // namespace PortSaves

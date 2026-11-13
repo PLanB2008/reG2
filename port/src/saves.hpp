@@ -23,4 +23,18 @@ struct Header
 // The file is a whole save (sizes, header, map changes) whose saved counters are those of its
 // level's script.
 bool IsValid(const char_type* pFileName, Header* pHeader = NULL);
+
+// The jobs passed in a save, and the totals, as the pause screen counts them. The counters the
+// level's script names are saved ones (COUNTER_SET_SAVE in the three cities' main scripts).
+struct JobsPassed
+{
+    s32 mPassed;
+    s32 mTotal;
+    s32 mGangPassed[3]; // in the order of the level's gangs
+    s32 mGangTotal[3];
+    s32 mFrenziesPassed;
+    s32 mFrenziesTotal;
+};
+// False if the save or its script cannot be read, or the script counts no jobs (bonus stages).
+bool ReadJobsPassed(const char_type* pFileName, JobsPassed* pJobs);
 } // namespace PortSaves
