@@ -1203,8 +1203,10 @@ void Frontend::DrawMenu()
 
                             last_xpos = DrawKeyHint(2, 0x12Cu, 0x1B8u, mFontType, 0xFFFF);
                             DrawKeyHint(8, last_xpos + 300, 0x1B8u, mFontType, 0xFFFF);
+#if !defined(GTA2_PORT)
                             last_xpos = DrawKeyHint(1, 0x12Cu, 0x1CCu, mFontType, 0xFFFF);
                             DrawKeyHint(9, last_xpos + 300, 0x1CCu, mFontType, 0xFFFF);
+#endif
                         }
                     }
                 }
@@ -2081,6 +2083,7 @@ void Frontend::UpdatePageFromUserInput()
             }
         }
     }
+#if !defined(GTA2_PORT)
     if (mDeletePressed && mCurrentPageIdx == MENUPAGE_PLAY && !pMenuPage->mCurrentOptionIdx)
     {
         mState = FrontendState::Delete_Player_Dialog_4;
@@ -2088,6 +2091,7 @@ void Frontend::UpdatePageFromUserInput()
         mDialogType = 1;
         snd1.mObjectType = 8;
     }
+#endif
 
     if (--mCursorBlinkTimer <= 0)
     {
