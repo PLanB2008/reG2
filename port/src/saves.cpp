@@ -1,4 +1,5 @@
 #include "saves.hpp"
+#include "GameSession.hpp"
 #include "ScriptManager.hpp"
 #include "map_0x370.hpp"
 #include <stdio.h>
@@ -94,6 +95,45 @@ s32 CounterValue(const SaveData& save, const Script& script, u16 idx)
     }
     const SCR_TWO_PARAMS* pCounter = script.Command(idx);
     return pCounter ? pCounter->mS32 : 0;
+}
+
+// The main stages in the frontend's order.
+const char* const kCityFiles[kNumCities] = {"downtown", "residential", "industrial"};
+
+void LatestChurchName(u8 slot, char_type* pOut, size_t size)
+{
+    snprintf(pOut, size, "player\\plyslot%d.svg", slot);
+}
+
+// pKind: church or auto.
+void FileName(u8 slot, const char* pKind, u8 mainStage, char_type* pOut, size_t size)
+{
+    snprintf(pOut, size, "player\\plyslot%d_%s_%s.svg", slot, pKind, kCityFiles[mainStage < kNumCities ? mainStage : 0]);
+}
+
+bool CopySave(const char_type* pFrom, const char_type* pTo)
+{
+    FILE* pIn = fopen(pFrom, "rb");
+    if (!pIn)
+    {
+        return false;
+    }
+    std::vector<u8> data;
+    u8 buffer[4096];
+    for (size_t n; (n = fread(buffer, 1, sizeof(buffer), pIn)) > 0;)
+    {
+        data.insert(data.end(), buffer, buffer + n);
+    }
+    fclose(pIn);
+    char_type temp[260];
+    TempName(pTo, temp, sizeof(temp));
+    FILE* pOut = fopen(temp, "wb");
+    if (!pOut)
+    {
+        return false;
+    }
+    const bool written = fwrite(data.data(), 1, data.size(), pOut) == data.size();
+    return fclose(pOut) == 0 && written && Commit(temp, pTo);
 }
 } // namespace
 
@@ -252,5 +292,18 @@ bool ReadJobsPassed(const char_type* pFileName, JobsPassed* pJobs)
         }
     }
     return counted;
+}
+
+void AfterSave(const char_type* pFileName)
+{
+    char_type latest[260];
+    LatestChurchName(gGameSession.GetPlySlotIdx(), latest, sizeof(latest));
+    if (strcmp(pFileName, latest) || gGameSession.IsBonusStage())
+    {
+        return;
+    }
+    char_type copy[260];
+    FileName(gGameSession.GetPlySlotIdx(), "church", gGameSession.GetMainStageIdx(), copy, sizeof(copy));
+    CopySave(pFileName, copy);
 }
 } // namespace PortSaves

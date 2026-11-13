@@ -37,4 +37,11 @@ struct JobsPassed
 };
 // False if the save or its script cannot be read, or the script counts no jobs (bonus stages).
 bool ReadJobsPassed(const char_type* pFileName, JobsPassed* pJobs);
+
+// A profile's church saves in player\, per city: plyslotN.svg, the latest as the original writes it, and a
+// copy for each city.
+const s32 kNumCities = 3;
+
+// After ScriptManager::SaveGame wrote a church save: its copy for the city.
+void AfterSave(const char_type* pFileName);
 } // namespace PortSaves

@@ -413,7 +413,10 @@ void ScriptManager::SaveGame(const char_type* pFileName)
         }
     }
 #if defined(GTA2_PORT)
-    PortSaves::Commit(tempName, saveName);
+    if (PortSaves::Commit(tempName, saveName))
+    {
+        PortSaves::AfterSave(saveName);
+    }
 #endif
 }
 
