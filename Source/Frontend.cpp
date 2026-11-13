@@ -543,7 +543,11 @@ void Frontend::ChangeMenuPage(u16 menu_page_idx)
         }
 
         MenuPage* pPage = &mMenuPagesArray[menu_page_idx];
+#if defined(GTA2_PORT)
+        if (PortOptionsMenu::HasSave(this, main_stage_idx, bonus_stage_idx))
+#else
         if (main_stage_idx == saved_main_stage && bonus_stage_idx == saved_bonus_code)
+#endif
         {
             pPage->mOptionsArray[option_idx].mIsUnlocked = 1;
             pPage->mOptionStates[option_idx].mIsOptionUnlocked = 1;
@@ -1896,6 +1900,12 @@ void Frontend::UpdatePageFromUserInput()
                     mState = FrontendState::Booting_Map_2;
                     break;
                 case MENUPAGE_LOADING_SAVE: // 260
+#if defined(GTA2_PORT)
+                    if (PortOptionsMenu::Resume(this))
+                    {
+                        break;
+                    }
+#endif
                     stage_bonus_idx = gGameSession.GetPlySlotIdx();
                     if (PlySlotSvgExists(stage_bonus_idx))
                     {
@@ -2516,7 +2526,11 @@ void Frontend::UpdateMenuForCurrPlayer()
 
     Frontend::UpdateBonusStageArrows();
     Frontend::UpdateMainStageArrows();
+#if defined(GTA2_PORT)
+    if (PortOptionsMenu::HasSaves(this))
+#else
     if (Frontend::PlySlotSvgExists(PlySlotIdx_4C59B0))
+#endif
     {
         pMenuPage->mOptionsArray[1].mIsUnlocked = 1;
         pMenuPage->mOptionStates[1].mIsOptionUnlocked = 1;
@@ -4398,14 +4412,7 @@ bool Frontend::PlySlotSvgExists(u8 idx)
 #if defined(GTA2_PORT)
     // LoadMapFilenamesFromSvg stops the game on a save of other levels.
     PortSaves::Header header;
-    if (!PortSaves::IsValid(FileName, &header))
-    {
-        return false;
-    }
-    const MainBlockStrings& level = mBlocks[header.mMainStage][header.mBonusStage];
-    return !strncmp(header.mMapName, "data\\", 5) && !strcmp(header.mMapName + 5, level.mGmpName) &&
-        !strncmp(header.mStyleName, "data\\", 5) && !strcmp(header.mStyleName + 5, level.mStyName) &&
-        !strncmp(header.mScriptName, "data\\", 5) && !strcmp(header.mScriptName + 5, level.mScrName);
+    return PortSaves::IsValid(FileName, &header) && PortOptionsMenu::IsLevel(this, header);
 #else
     return true;
 #endif
@@ -5101,6 +5108,9 @@ void Frontend::LoadMapFilenamesFromSvg()
         u8 plySlotIdx = gGameSession.GetPlySlotIdx();
         GetPlySlotSvgName(plySlotIdx, FileName);
     }
+#if defined(GTA2_PORT)
+    PortOptionsMenu::ResumeFileName(FileName);
+#endif
     File::Global_Open(FileName);
 
     SaveSlotInfo svg;

@@ -21,6 +21,7 @@ struct Header
     char_type mScriptName[25];
     u8 mMainStage;
     u8 mBonusStage; // 0 for a main stage
+    s32 mMoney;
 };
 
 // The file is a whole save (sizes, header, map changes) whose saved counters are those of its
@@ -57,4 +58,30 @@ void Autosave();
 bool ExactSpawn();
 // Player::UpdateGameFromSave restored the cars: the player back in the one he drove.
 void AfterRestore(Player* pPlayer);
+
+// The saves RESUME SAVED STATUS lists, newest first.
+enum Kind
+{
+    kChurch,
+    kAutosave,
+};
+// With plyslotN.svg of a bonus stage.
+const s32 kMaxSaves = kNumCities * 2 + 1;
+
+struct Entry
+{
+    char_type mFileName[64];
+    Kind mKind;
+    u8 mMainStage;
+    u8 mBonusStage;
+    s32 mMoney;
+    s32 mJobsPassed; // -1 if unknown
+    s32 mJobsTotal;
+    long long mTime; // the file's, in seconds since 1970
+};
+
+// A save the frontend can boot: its level's files are those of its stage.
+typedef bool (*LevelCheck)(const Header& header);
+
+s32 List(u8 slot, LevelCheck pCheck, Entry* pEntries);
 } // namespace PortSaves

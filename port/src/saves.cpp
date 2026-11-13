@@ -19,6 +19,7 @@
 #else
 #include <fcntl.h>
 #include <limits.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #endif
 
@@ -205,6 +206,44 @@ void PutInCar(Ped* pPed, Car* pCar)
     pPed->mPedState2 = ped_state_2::ped2_driving_10;
     pCar->AssignDriver(pPed);
 }
+
+long long FileTime(const char_type* pFileName)
+{
+#if defined(_WIN32)
+    WIN32_FILE_ATTRIBUTE_DATA data;
+    if (!GetFileAttributesExA(pFileName, GetFileExInfoStandard, &data))
+    {
+        return -1;
+    }
+    const unsigned long long ticks =
+        (static_cast<unsigned long long>(data.ftLastWriteTime.dwHighDateTime) << 32) | data.ftLastWriteTime.dwLowDateTime;
+    return static_cast<long long>(ticks / 10000000ull) - 11644473600ll;
+#else
+    char path[PATH_MAX];
+    struct stat st;
+    return stat(port_resolve_path(pFileName, path), &st) == 0 ? static_cast<long long>(st.st_mtime) : -1;
+#endif
+}
+
+bool ReadEntry(const char_type* pFileName, Kind kind, LevelCheck pCheck, Entry* pEntry)
+{
+    Header header;
+    if (!IsValid(pFileName, &header) || !pCheck(header))
+    {
+        return false;
+    }
+    snprintf(pEntry->mFileName, sizeof(pEntry->mFileName), "%s", pFileName);
+    pEntry->mKind = kind;
+    pEntry->mMainStage = header.mMainStage;
+    pEntry->mBonusStage = header.mBonusStage;
+    pEntry->mMoney = header.mMoney;
+    pEntry->mTime = FileTime(pFileName);
+    JobsPassed jobs;
+    const bool read = ReadJobsPassed(pFileName, &jobs);
+    pEntry->mJobsPassed = read ? jobs.mPassed : -1;
+    pEntry->mJobsTotal = read ? jobs.mTotal : -1;
+    return true;
+}
 } // namespace
 
 void TempName(const char_type* pFileName, char_type* pOut, size_t size)
@@ -294,6 +333,7 @@ bool IsValid(const char_type* pFileName, Header* pHeader)
         memcpy(pHeader->mScriptName, save.mScriptName, sizeof(pHeader->mScriptName));
         pHeader->mMainStage = main_stage;
         pHeader->mBonusStage = bonus_stage;
+        pHeader->mMoney = save.mPlayerAndWorldStats.mMoney;
     }
     return true;
 }
@@ -446,5 +486,55 @@ void AfterRestore(Player* pPlayer)
         pCar->mCarSprite->SetPaletteSprites();
     }
     PutInCar(pPed, pCar);
+}
+
+s32 List(u8 slot, LevelCheck pCheck, Entry* pEntries)
+{
+    char_type name[260];
+    LatestChurchName(slot, name, sizeof(name));
+    Entry latest;
+    bool latestLeft = ReadEntry(name, kChurch, pCheck, &latest);
+    s32 count = 0;
+    for (u8 city = 0; city < kNumCities; city++)
+    {
+        // plyslotN.svg alone, as the original game writes it, is its city's church save unless the copy is newer.
+        Entry& church = pEntries[count];
+        FileName(slot, "church", city, name, sizeof(name));
+        bool found = ReadEntry(name, kChurch, pCheck, &church) && church.mMainStage == city && !church.mBonusStage;
+        if (latestLeft && latest.mMainStage == city && !latest.mBonusStage)
+        {
+            if (!found || latest.mTime > church.mTime)
+            {
+                church = latest;
+            }
+            found = true;
+            latestLeft = false;
+        }
+        count += found ? 1 : 0;
+
+        char_type backup[260];
+        FileName(slot, "auto", city, name, sizeof(name));
+        BackupName(name, backup, sizeof(backup));
+        Entry& autosave = pEntries[count];
+        if ((ReadEntry(name, kAutosave, pCheck, &autosave) || ReadEntry(backup, kAutosave, pCheck, &autosave)) &&
+            autosave.mMainStage == city && !autosave.mBonusStage)
+        {
+            count++;
+        }
+    }
+    if (latestLeft)
+    {
+        pEntries[count++] = latest;
+    }
+    for (s32 i = 1; i < count; i++)
+    {
+        for (s32 j = i; j > 0 && pEntries[j].mTime > pEntries[j - 1].mTime; j--)
+        {
+            const Entry swapped = pEntries[j];
+            pEntries[j] = pEntries[j - 1];
+            pEntries[j - 1] = swapped;
+        }
+    }
+    return count;
 }
 } // namespace PortSaves

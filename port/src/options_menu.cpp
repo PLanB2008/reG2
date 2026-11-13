@@ -1,5 +1,6 @@
 #include "options_menu.hpp"
 #include "Function.hpp"
+#include "GameSession.hpp"
 #include "Draw.hpp"
 #include "Globals.hpp"
 #include "SoundObject.hpp"
@@ -28,6 +29,11 @@ namespace
 {
 const u16 kMenuPage = 12;
 bool sShown;
+// The page and option the list of saves goes back to, and the save chosen in it.
+u16 sSavesReturnPage;
+u16 sSavesReturnOption;
+Frontend* sListing;
+char_type sResumeFile[64];
 
 s32 Wrap(s32 i, s32 n)
 {
@@ -219,6 +225,25 @@ void OriginalPageMouse(Frontend* pFrontend)
     }
 }
 #endif
+// gFrontend is not set yet while the frontend sets its pages up.
+bool IsListingLevel(const PortSaves::Header& header)
+{
+    return IsLevel(sListing, header);
+}
+
+s32 ListSaves(Frontend* pFrontend, PortSaves::Entry* pEntries)
+{
+    sListing = pFrontend;
+    return PortSaves::List(gGameSession.GetPlySlotIdx(), IsListingLevel, pEntries);
+}
+
+void Boot(Frontend* pFrontend, const char_type* pFileName)
+{
+    snprintf(sResumeFile, sizeof(sResumeFile), "%s", pFileName);
+    pFrontend->LoadMapFilenamesFromSvg();
+    pFrontend->mMenuScreen = RedBar_16;
+    pFrontend->mState = FrontendState::Booting_Map_2;
+}
 } // namespace
 
 void Setup(Frontend* pFrontend)
@@ -269,7 +294,21 @@ bool Update(Frontend* pFrontend)
     }
     pFrontend->mMenuScreen = RedBar_16;
     const PortMenu::Result result = HandleInput(pFrontend);
-    if (result == PortMenu::kClosed)
+    if (result == PortMenu::kLoadSave)
+    {
+        PortMenu::Close();
+        sShown = false;
+        Boot(pFrontend, PortMenu::SelectedSave().mFileName);
+        snd1.mObjectType = PortMenu::kEntered;
+        return true;
+    }
+    if (result == PortMenu::kClosed && PortMenu::OnSaves())
+    {
+        pFrontend->ChangeMenuPage(sSavesReturnPage);
+        pFrontend->mMenuPagesArray[sSavesReturnPage].mCurrentOptionIdx = sSavesReturnOption;
+        snd1.mObjectType = PortMenu::kWentBack;
+    }
+    else if (result == PortMenu::kClosed)
     {
         pFrontend->ChangeMenuPage(MENUPAGE_START_MENU);
         snd1.mObjectType = PortMenu::kWentBack;
@@ -386,6 +425,66 @@ void PadKeyHint(u8 hint, wchar_t* pText)
             break;
         default:
             break;
+    }
+}
+
+bool IsLevel(Frontend* pFrontend, const PortSaves::Header& header)
+{
+    const MainBlockStrings& level = pFrontend->mBlocks[header.mMainStage][header.mBonusStage];
+    return !strncmp(header.mMapName, "data\\", 5) && !strcmp(header.mMapName + 5, level.mGmpName) &&
+        !strncmp(header.mStyleName, "data\\", 5) && !strcmp(header.mStyleName + 5, level.mStyName) &&
+        !strncmp(header.mScriptName, "data\\", 5) && !strcmp(header.mScriptName + 5, level.mScrName);
+}
+
+bool HasSaves(Frontend* pFrontend)
+{
+    PortSaves::Entry saves[PortSaves::kMaxSaves];
+    return ListSaves(pFrontend, saves) > 0;
+}
+
+bool HasSave(Frontend* pFrontend, u8 mainStage, u8 bonusStage)
+{
+    PortSaves::Entry saves[PortSaves::kMaxSaves];
+    const s32 count = ListSaves(pFrontend, saves);
+    for (s32 i = 0; i < count; i++)
+    {
+        if (saves[i].mMainStage == mainStage && saves[i].mBonusStage == bonusStage)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Resume(Frontend* pFrontend)
+{
+    PortSaves::Entry saves[PortSaves::kMaxSaves];
+    const s32 count = ListSaves(pFrontend, saves);
+    char_type latest[64];
+    snprintf(latest, sizeof(latest), "player\\plyslot%d.svg", gGameSession.GetPlySlotIdx());
+    if (count == 1 && strcmp(saves[0].mFileName, latest))
+    {
+        Boot(pFrontend, saves[0].mFileName);
+        return true;
+    }
+    if (count < 2)
+    {
+        return false;
+    }
+    sSavesReturnPage = pFrontend->mCurrentPageIdx;
+    sSavesReturnOption = pFrontend->mMenuPagesArray[sSavesReturnPage].mCurrentOptionIdx;
+    PortMenu::OpenSaves(saves, count);
+    sShown = true;
+    pFrontend->ChangeMenuPage(kMenuPage);
+    return true;
+}
+
+void ResumeFileName(char_type* pFileName)
+{
+    if (sResumeFile[0])
+    {
+        strcpy(pFileName, sResumeFile);
+        sResumeFile[0] = 0;
     }
 }
 } // namespace PortOptionsMenu

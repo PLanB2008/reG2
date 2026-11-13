@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Frontend.hpp"
+#include "saves.hpp"
 
 namespace PortOptionsMenu
 {
@@ -25,4 +26,15 @@ bool UpdateNameEntry(Frontend* pFrontend);
 
 // The frontend's key hints (ENTER, ESC, DEL, BACKSPACE) as the gamepad's buttons once it was used last.
 void PadKeyHint(u8 hint, wchar_t* pText);
+
+// The current profile's saves (saves.hpp). RESUME SAVED STATUS is offered on the Play page with any, on
+// the Wasted, Quit and Area complete pages with one of that stage.
+bool IsLevel(Frontend* pFrontend, const PortSaves::Header& header);
+bool HasSaves(Frontend* pFrontend);
+bool HasSave(Frontend* pFrontend, u8 mainStage, u8 bonusStage);
+// RESUME SAVED STATUS chosen: several saves are listed on the menu's page, a single one other than
+// plyslotN.svg is booted. False to go on as the original.
+bool Resume(Frontend* pFrontend);
+// In LoadMapFilenamesFromSvg: the save to boot in place of plyslotN.svg, if Resume chose one.
+void ResumeFileName(char_type* pFileName);
 } // namespace PortOptionsMenu

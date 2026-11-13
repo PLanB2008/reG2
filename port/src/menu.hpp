@@ -2,6 +2,7 @@
 // pages, navigation, settings, key and pad bindings, and its drawing with the frontend's fonts.
 #pragma once
 
+#include "saves.hpp"
 #include "types.hpp"
 
 namespace PortMenu
@@ -28,6 +29,7 @@ enum Result
     kWentBack,
     kClosed, // Back on the main page, BACK there, or RESUME
     kQuitGame,
+    kLoadSave,
 };
 
 // The gamepad gave the last input.
@@ -37,6 +39,12 @@ bool PadMode();
 void Open();
 // The menu is gone: the settings changed in it are saved now rather than at each change.
 void Close();
+
+// The frontend's list of the profile's saves (options_menu.hpp) in place of the main page, the first one
+// selected. Back closes it; a save chosen gives kLoadSave.
+void OpenSaves(const PortSaves::Entry* pEntries, s32 count);
+bool OnSaves();
+const PortSaves::Entry& SelectedSave();
 
 Result HandleInput(Input input);
 

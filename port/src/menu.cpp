@@ -8,8 +8,10 @@
 #include "input.hpp"
 #include "registry.hpp"
 #include "settings.hpp"
+#include "TextTable.hpp"
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <vector>
 
 // No std::wstring: with -fshort-wchar its traits would call the C library's 4-byte wide functions.
@@ -46,6 +48,7 @@ enum Page
     kViewPage,
     kGraphicsPage,
     kControlsPage,
+    kSavesPage,
     kNumPages,
 };
 
@@ -58,6 +61,7 @@ enum Kind
     kBack,
     kResume,
     kQuit,
+    kSave,
 };
 
 struct Item
@@ -68,7 +72,7 @@ struct Item
 };
 
 const s32 kMaxItems = 16;
-const wchar_t* const kTitles[kNumPages] = {L"OPTIONS", L"SCREEN", L"VIEW", L"GRAPHICS", L"CONTROLS"};
+const wchar_t* const kTitles[kNumPages] = {L"OPTIONS", L"SCREEN", L"VIEW", L"GRAPHICS", L"CONTROLS", L"RESUME SAVED STATUS"};
 
 const s32 kNumControls = 12;
 const s32 kDefaultControls[kNumControls] = {DIK_UP, DIK_DOWN, DIK_LEFT, DIK_RIGHT, DIK_LCONTROL, DIK_RETURN,
@@ -102,6 +106,9 @@ const s32 kColumns = kNumColumns;
 const s32 kColumns = 1;
 #endif
 const wchar_t* const kColumnNames[kNumColumns] = {L"KEYBOARD", L"ALTERNATE", L"GAMEPAD"};
+// A save's two columns, each with two rows: city and money, date and jobs.
+const s32 kSaveColumns = 2;
+const s32 kMaxTexts = 4;
 
 // The frontend's user sprites: a disc behind a pad button's name, arrows.
 const s16 kDiscSprite = 2;
@@ -110,6 +117,8 @@ const s16 kArrowSprite = 38;
 
 Page sPage;
 s32 sSelected[kNumPages];
+PortSaves::Entry sSaves[PortSaves::kMaxSaves];
+s32 sNumSaves;
 s32 sColumn; // a Column
 s32 sCapturing = -1; // control waiting for a key or pad input
 bool sDragging; // a slider's knob, with the left button held
@@ -162,6 +171,13 @@ s32 Items(Page page, Item* pItems)
             n = AddSettings(pItems, n, PortSettings::kGraphics, PortSettings::kNumGraphics, false);
             pItems[n++] = Item{kBack, 0, true};
             break;
+        case kSavesPage:
+            for (s32 i = 0; i < sNumSaves; i++)
+            {
+                pItems[n++] = Item{kSave, i, false};
+            }
+            pItems[n++] = Item{kBack, 0, true};
+            break;
         default:
             for (s32 i = 0; i < kNumControls; i++)
             {
@@ -196,6 +212,8 @@ const wchar_t* EnglishName(const Item& item)
             return L"RESUME";
         case kQuit:
             return L"QUIT GAME";
+        case kSave:
+            return sSaves[item.mArg].mKind == PortSaves::kChurch ? L"CHURCH" : L"AUTOSAVE";
         default:
             return L"BACK";
     }
@@ -410,7 +428,7 @@ void GoTo(Page page)
 
 Result Back()
 {
-    if (sPage == kMainPage)
+    if (sPage == kMainPage || sPage == kSavesPage)
     {
         return kClosed;
     }
@@ -582,14 +600,92 @@ Result SetSliderAt(const Item& item, f32 x, f32 trackX)
     return value < slider.mValue ? kLowered : kRaised;
 }
 
-// A setting's value, or a binding's inputs by column; empty for other items.
+// $184,000 in English; 184.000 $, or 184 000 $ in French, in the others.
+void MoneyText(s32 money, wchar_t* pOut)
+{
+    char digits[16];
+    snprintf(digits, sizeof(digits), "%d", money < 0 ? -money : money);
+    const char lang = gText_0x14 ? gText_0x14->mLangCode : 'e';
+    const wchar_t separator = lang == 'e' ? L',' : (lang == 'f' ? L' ' : L'.');
+    wchar_t* p = pOut;
+    if (money < 0)
+    {
+        *p++ = L'-';
+    }
+    if (lang == 'e')
+    {
+        *p++ = L'$';
+    }
+    const size_t len = strlen(digits);
+    for (size_t i = 0; i < len; i++)
+    {
+        if (i && (len - i) % 3 == 0)
+        {
+            *p++ = separator;
+        }
+        *p++ = static_cast<wchar_t>(digits[i]);
+    }
+    if (lang != 'e')
+    {
+        *p++ = L' ';
+        *p++ = L'$';
+    }
+    *p = 0;
+}
+
+time_t Midnight(tm day)
+{
+    day.tm_hour = day.tm_min = day.tm_sec = 0;
+    day.tm_isdst = -1;
+    return mktime(&day);
+}
+
+// TODAY 21:40, YESTERDAY 18:05, 3 DAYS AGO.
+void DateText(long long fileTime, wchar_t* pOut)
+{
+    const time_t t = static_cast<time_t>(fileTime);
+    const time_t now = time(NULL);
+    const tm* pLocal = fileTime >= 0 ? localtime(&t) : NULL;
+    if (!pLocal)
+    {
+        pOut[0] = 0;
+        return;
+    }
+    const tm local = *pLocal;
+    const tm today = *localtime(&now);
+    // Half a day more: a day of a daylight saving change is 23 or 25 hours long.
+    const long long days = (static_cast<long long>(Midnight(today)) - Midnight(local) + 43200) / 86400;
+    if (days >= 2)
+    {
+        swprintf(pOut, Translate(L"%d DAYS AGO"), static_cast<int>(days));
+    }
+    else
+    {
+        swprintf(pOut, L"%ls %d:%02d", Translate(days == 1 ? L"YESTERDAY" : L"TODAY"), local.tm_hour, local.tm_min);
+    }
+}
+
+// A setting's value, a binding's inputs by column, or a save's details by column then on the second row;
+// empty for other items.
 void ItemValues(const Item& item, wchar_t (*pTexts)[24])
 {
-    for (s32 c = 0; c < kNumColumns; c++)
+    for (s32 c = 0; c < kMaxTexts; c++)
     {
         pTexts[c][0] = 0;
     }
-    if (item.mKind == kSetting)
+    if (item.mKind == kSave)
+    {
+        static const wchar_t* const kCities[PortSaves::kNumCities] = {L"DOWNTOWN", L"RESIDENTIAL", L"INDUSTRIAL"};
+        const PortSaves::Entry& save = sSaves[item.mArg];
+        wcscpy(pTexts[0], Translate(kCities[save.mMainStage < PortSaves::kNumCities ? save.mMainStage : 0]));
+        DateText(save.mTime, pTexts[1]);
+        MoneyText(save.mMoney, pTexts[2]);
+        if (save.mJobsPassed >= 0)
+        {
+            swprintf(pTexts[3], Translate(L"%d/%d JOBS"), save.mJobsPassed, save.mJobsTotal);
+        }
+    }
+    else if (item.mKind == kSetting)
     {
         PortSettings::Value(static_cast<PortSettings::Id>(item.mArg), pTexts[0]);
     }
@@ -623,9 +719,15 @@ struct Layout
     f32 mPanelRight;
 };
 
-// From a line's top to the next, or to one set apart.
+// From a line's top to the next, or to one set apart; a save's two rows, and the space after them.
 const f32 kLineStep = 16;
 const f32 kGapStep = 24;
+const f32 kSaveSpace = 6;
+
+f32 Height(const Item& item, f32 lineStep)
+{
+    return item.mKind == kSave ? lineStep * 2 + kSaveSpace : lineStep;
+}
 
 // From a setting's value to the centre of the arrows the mouse changes it with.
 const f32 kArrowGap = 14;
@@ -673,7 +775,8 @@ void GetLayout(Layout* pLayout)
     Item* pItems = pLayout->mItems;
     const s32 count = Items(sPage, pItems);
     const bool controls = sPage == kControlsPage;
-    const s32 columns = controls ? kColumns : 1;
+    const bool saves = sPage == kSavesPage;
+    const s32 columns = controls ? kColumns : (saves ? kSaveColumns : 1);
 
     // The first column at its place, or further right for longer names, each a gap after the longest
     // text of the one before.
@@ -684,26 +787,27 @@ void GetLayout(Layout* pLayout)
     {
         widths[c] = Width(Translate(kColumnNames[c]), normal);
     }
-    wchar_t texts[kNumColumns][24];
+    wchar_t texts[kMaxTexts][24];
     for (s32 i = 0; i < count; i++)
     {
-        if (pItems[i].mKind == kSetting || pItems[i].mKind == kBinding)
+        if (pItems[i].mKind == kSetting || pItems[i].mKind == kBinding || pItems[i].mKind == kSave)
         {
             ItemValues(pItems[i], texts);
             nameWidth = Max(nameWidth, Width(ItemName(pItems[i]), normal));
             for (s32 c = 0; c < columns; c++)
             {
                 widths[c] = Max(widths[c], (c ? 0 : TextOffset(pItems[i])) + Width(texts[c], normal));
+                widths[c] = saves ? Max(widths[c], Width(texts[c + kSaveColumns], normal)) : widths[c];
             }
         }
     }
-    const f32 x = controls ? 80.0f : 140.0f;
+    const f32 x = controls ? 80.0f : (saves ? 60.0f : 140.0f);
     f32 columnX[kNumColumns];
     f32 right;
     // Narrower gaps for a page wider than the screen even moved left.
     for (f32 gap = controls ? 16.0f : 24.0f; gap >= 8; gap -= 4)
     {
-        columnX[0] = Max(controls ? 260.0f : 360.0f, x + nameWidth + gap);
+        columnX[0] = Max(controls ? 260.0f : (saves ? 0.0f : 360.0f), x + nameWidth + gap);
         for (s32 c = 1; c < columns; c++)
         {
             columnX[c] = columnX[c - 1] + widths[c - 1] + gap;
@@ -727,7 +831,7 @@ void GetLayout(Layout* pLayout)
         pLayout->mColumnX[c] = columnX[c] - shift;
     }
     pLayout->mPanelLeft = pLayout->mX < 60 ? pLayout->mX - 20 : 40;
-    pLayout->mPanelRight = Max(600, right - shift + (controls ? 20 : kArrowGap + 16));
+    pLayout->mPanelRight = Max(600, right - shift + (controls || saves ? 20 : kArrowGap + 16));
     // The controls page closer, its last line above the frontend's left logo.
     pLayout->mLineStep = controls ? kLineStep - 1 : kLineStep;
     f32 y = 160;
@@ -735,7 +839,8 @@ void GetLayout(Layout* pLayout)
     {
         if (i)
         {
-            y += pItems[i].mGap ? (controls ? kGapStep - 4 : kGapStep) : pLayout->mLineStep;
+            y += (pItems[i].mGap ? (controls ? kGapStep - 4 : kGapStep) : pLayout->mLineStep) +
+                Height(pItems[i - 1], pLayout->mLineStep) - pLayout->mLineStep;
         }
         pLayout->mY[i] = y;
     }
@@ -750,7 +855,7 @@ s32 LineAt(const Layout& layout, f32 x, f32 y)
     }
     for (s32 i = 0; i < layout.mCount; i++)
     {
-        if (y >= layout.mY[i] - 3 && y < layout.mY[i] + layout.mLineStep - 3)
+        if (y >= layout.mY[i] - 3 && y < layout.mY[i] + Height(layout.mItems[i], layout.mLineStep) - 3)
         {
             return i;
         }
@@ -863,6 +968,25 @@ void Open()
 #endif
 }
 
+void OpenSaves(const PortSaves::Entry* pEntries, s32 count)
+{
+    Open();
+    sNumSaves = count < PortSaves::kMaxSaves ? count : PortSaves::kMaxSaves;
+    memcpy(sSaves, pEntries, sNumSaves * sizeof(sSaves[0]));
+    sPage = kSavesPage;
+    sSelected[kSavesPage] = 0;
+}
+
+bool OnSaves()
+{
+    return sPage == kSavesPage;
+}
+
+const PortSaves::Entry& SelectedSave()
+{
+    return sSaves[sSelected[kSavesPage] < sNumSaves ? sSelected[kSavesPage] : 0];
+}
+
 void Close()
 {
 #if defined(GTA2_PORT_SDL)
@@ -940,6 +1064,8 @@ Result HandleInput(Input input)
                     return Back();
                 case kResume:
                     return kClosed;
+                case kSave:
+                    return kLoadSave;
                 default:
                     return kQuitGame;
             }
@@ -1094,7 +1220,7 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
     {
         Text(Translate(kColumnNames[c]), layout.mColumnX[c], 140, normal);
     }
-    wchar_t texts[kNumColumns][24];
+    wchar_t texts[kMaxTexts][24];
     for (s32 i = 0; i < layout.mCount; i++)
     {
         const Item& item = layout.mItems[i];
@@ -1120,9 +1246,13 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
         {
             DrawHelp(Translate(pHelp), layout.mX, underPage, layout.mPanelRight - 10 - layout.mX);
         }
-        for (s32 c = 1; c < layout.mColumns && item.mKind == kBinding; c++)
+        for (s32 c = 1; c < layout.mColumns && (item.mKind == kBinding || item.mKind == kSave); c++)
         {
             Text(texts[c], layout.mColumnX[c], y, normal, selected);
+        }
+        for (s32 c = 0; c < kSaveColumns && item.mKind == kSave; c++)
+        {
+            Text(texts[c + kSaveColumns], layout.mColumnX[c], y + layout.mLineStep, normal, selected, !selected);
         }
         if (selected && item.mKind == kBinding && layout.mColumns > 1)
         {
