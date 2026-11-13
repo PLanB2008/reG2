@@ -50,8 +50,6 @@ extern const Id kGameSettings[];
 extern const s32 kNumGameSettings;
 extern const Id kGraphicsSettings[];
 extern const s32 kNumGraphicsSettings;
-extern const Id kDayNightSettings[];
-extern const s32 kNumDayNightSettings;
 extern const Id kDisplaySettings[];
 extern const s32 kNumDisplaySettings;
 extern const Id kSoundSettings[];

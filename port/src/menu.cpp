@@ -46,7 +46,6 @@ enum Page
     kMainPage,
     kGamePage,
     kGraphicsPage,
-    kDayNightPage,
     kDisplayPage,
     kSoundPage,
     kControlsPage,
@@ -77,7 +76,7 @@ struct Item
 
 const s32 kMaxItems = 16;
 const wchar_t* const kTitles[kNumPages] =
-    {L"OPTIONS", L"GAME", L"GRAPHICS", L"DAY AND NIGHT", L"DISPLAY", L"SOUND", L"CONTROLS", L"STATISTICS", L"RESUME SAVED STATUS"};
+    {L"OPTIONS", L"GAME", L"GRAPHICS", L"DISPLAY", L"SOUND", L"CONTROLS", L"STATISTICS", L"RESUME SAVED STATUS"};
 
 const s32 kNumControls = 12;
 const s32 kDefaultControls[kNumControls] = {DIK_UP, DIK_DOWN, DIK_LEFT, DIK_RIGHT, DIK_LCONTROL, DIK_RETURN,
@@ -184,8 +183,6 @@ s32 Items(Page page, Item* pItems)
             return SettingsPage(pItems, PortSettings::kGameSettings, PortSettings::kNumGameSettings);
         case kGraphicsPage:
             return SettingsPage(pItems, PortSettings::kGraphicsSettings, PortSettings::kNumGraphicsSettings);
-        case kDayNightPage:
-            return SettingsPage(pItems, PortSettings::kDayNightSettings, PortSettings::kNumDayNightSettings);
         case kDisplayPage:
             return SettingsPage(pItems, PortSettings::kDisplaySettings, PortSettings::kNumDisplaySettings);
         case kSoundPage:

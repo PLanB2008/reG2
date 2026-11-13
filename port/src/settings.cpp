@@ -34,25 +34,25 @@ void port_SetFullscreenModeIndex(int index);
 
 namespace PortSettings
 {
-#if defined(GTA2_UPDATE_CHECK)
-const Id kGameSettings[] = {kLanguage, kTextSpeed, kAutosave, kRetry, kExplodingScores, kBlood, kUpdateCheck};
-#else
-const Id kGameSettings[] = {kLanguage, kTextSpeed, kAutosave, kRetry, kExplodingScores, kBlood};
+// No DAY-NIGHT CYCLE without SDL: its settings would stay greyed.
+const Id kGameSettings[] = {kLanguage, kTextSpeed, kAutosave, kRetry, kExplodingScores, kBlood, kLighting,
+#if defined(GTA2_PORT_SDL)
+                            kDayLength, kStartTime, kClock,
 #endif
+#if defined(GTA2_UPDATE_CHECK)
+                            kUpdateCheck,
+#endif
+};
 const s32 kNumGameSettings = sizeof(kGameSettings) / sizeof(kGameSettings[0]);
 #if defined(GTA2_PORT_SDL)
 const Id kGraphicsSettings[] =
     {kPreset, kTrueColour, kPerPixelLighting, kShadows, kHeadlights, kLightEffects, kBloom, kTextureFilter, kAntiAliasing};
-const Id kDayNightSettings[] = {kLighting, kDayLength, kStartTime, kClock};
 const Id kDisplaySettings[] = {kDisplay, kDisplayMode, kVsync, kFrameLimit, kShowFps, kBrightness, kZoom, kHudScale, kSafeArea};
 #else
-// No DAY-NIGHT CYCLE without SDL: its settings would stay greyed.
 const Id kGraphicsSettings[] = {kHeadlights, kLightEffects};
-const Id kDayNightSettings[] = {kLighting};
 const Id kDisplaySettings[] = {kDisplay, kFrameLimit, kShowFps, kBrightness, kZoom, kHudScale, kSafeArea};
 #endif
 const s32 kNumGraphicsSettings = sizeof(kGraphicsSettings) / sizeof(kGraphicsSettings[0]);
-const s32 kNumDayNightSettings = sizeof(kDayNightSettings) / sizeof(kDayNightSettings[0]);
 const s32 kNumDisplaySettings = sizeof(kDisplaySettings) / sizeof(kDisplaySettings[0]);
 const Id kSoundSettings[] = {kSfxVolume, kMusicVolume, k3dSound};
 const s32 kNumSoundSettings = sizeof(kSoundSettings) / sizeof(kSoundSettings[0]);
@@ -179,7 +179,6 @@ const Translation kTranslations[] = {
     {L"OFF", NULL, {L"NON", L"AUS", L"NO", L"NO"}},
     {L"GAME", NULL, {L"JEU", L"SPIEL", L"GIOCO", L"JUEGO"}},
     {L"GRAPHICS", NULL, {L"GRAPHISMES", L"GRAFIK", L"GRAFICA", L"GRÁFICOS"}},
-    {L"DAY AND NIGHT", NULL, {L"JOUR ET NUIT", L"TAG UND NACHT", L"GIORNO E NOTTE", L"DÍA Y NOCHE"}},
     {L"SOUND", NULL, {L"SON", L"SOUND", L"AUDIO", L"SONIDO"}},
     {L"STATISTICS", NULL, {L"STATISTIQUES", L"STATISTIKEN", L"STATISTICHE", L"ESTADÍSTICAS"}},
     {L"NEEDS", NULL, {L"NECESSITE", L"BENÖTIGT", L"RICHIEDE", L"REQUIERE"}},
