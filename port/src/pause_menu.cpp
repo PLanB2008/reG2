@@ -294,7 +294,7 @@ bool HandleKey(s32 action, Player* pPlayer)
             s32 money;
             long long time;
             const PortSaves::Checkpoint kind = PortSaves::GetCheckpoint(&money, &time);
-            PortMenu::OfferRetry(kind, money, time, false);
+            PortMenu::OfferRetry(kind, money, time, PortRetry::JustFailed());
         }
         if (!gGame_0x40->IsPaused())
         {

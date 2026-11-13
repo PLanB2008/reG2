@@ -1,10 +1,15 @@
 #include "retry.hpp"
+#include "Draw.hpp"
+#include "Frontend.hpp"
 #include "Game.hpp"
 #include "GameSession.hpp"
 #include "Globals.hpp"
+#include "Hud.hpp"
 #include "Ped.hpp"
 #include "Player.hpp"
 #include "ScriptManager.hpp"
+#include "menu.hpp"
+#include "pause_menu.hpp"
 #include "settings.hpp"
 #include "winmain.hpp"
 
@@ -16,11 +21,15 @@ namespace PortRetry
 {
 namespace
 {
+// At 30 steps a second, not counting the time the player is wasted or busted.
+const s32 kShowSteps = 240;
+
 // The job or frenzy the checkpoint was taken before, while it runs, and its passed counter then.
 PortSaves::Checkpoint sRunning;
 s32 sPassedBefore;
 s32 sLastMission;
 bool sLastFrenzy;
+s32 sShown;
 bool sRetrying;
 
 void Log(const char* pWhat)
@@ -51,9 +60,10 @@ void End(bool passed)
         Log("passed");
         PortSaves::DeleteCheckpoint();
     }
-    else
+    else if (PortSaves::GetCheckpoint() != PortSaves::kNoCheckpoint)
     {
         Log("failed");
+        sShown = kShowSteps;
     }
 }
 } // namespace
@@ -63,6 +73,7 @@ void Start()
     sRunning = PortSaves::kNoCheckpoint;
     sLastMission = -1;
     sLastFrenzy = false;
+    sShown = 0;
     sRetrying = false;
     PortSaves::RefreshCheckpoint();
     if (gScriptManager && !gScriptManager->IsLoadedFromSave() && !IsNetworkGame() && !gGameSession.IsBonusStage())
@@ -87,6 +98,7 @@ void BeforeStart(PortSaves::Checkpoint kind)
     PortSaves::WriteCheckpoint(kind);
     sRunning = kind;
     sPassedBefore = PassedCount(kind);
+    sShown = 0;
 }
 
 void AfterStep()
@@ -94,6 +106,11 @@ void AfterStep()
     if (!gGame_0x40 || !gScriptManager)
     {
         return;
+    }
+    Player* pPlayer = gGame_0x40->mLocalPlayer;
+    if (sShown > 0 && pPlayer && !pPlayer->mWastedOrBusted)
+    {
+        sShown--;
     }
     const s32* pMission = gScriptManager->mMissionFlag;
     const s32 mission = pMission ? (*pMission != 0) : -1;
@@ -111,6 +128,25 @@ void AfterStep()
         Log("area complete");
         PortSaves::DeleteCheckpoint();
     }
+}
+
+void Draw()
+{
+    if (!sShown || !PortSettings::Retry() || PortPauseMenu::IsOpen() || PortSaves::GetCheckpoint() == PortSaves::kNoCheckpoint)
+    {
+        return;
+    }
+    // Under SAVING, above a job's titles.
+    const s32 kTop = 78;
+    wchar_t text[64];
+    swprintf(text, PortSettings::Translate(L"%ls: RETRY"), PortMenu::PadMode() ? L"START" : PortSettings::Translate(L"ESC"));
+    const s32 left = 320 - Frontend::GetMaxTextWidth(text, gDebugFont) / 2;
+    DrawStringScaled(text, Fix16(left), Fix16(kTop), gDebugFont);
+}
+
+bool JustFailed()
+{
+    return sShown > 0;
 }
 
 void Retry()
