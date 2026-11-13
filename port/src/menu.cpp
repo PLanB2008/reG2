@@ -113,7 +113,7 @@ const wchar_t* const kColumnNames[kNumColumns] = {L"KEYBOARD", L"ALTERNATE", L"G
 // A save's two columns, each with two rows: city and money, date and jobs.
 const s32 kSaveColumns = 2;
 const s32 kMaxTexts = 4;
-const s32 kTextLength = 40;
+const s32 kTextLength = 64;
 
 // The frontend's user sprites: a disc behind a pad button's name, arrows.
 const s16 kDiscSprite = 2;
@@ -128,6 +128,7 @@ s32 sNumSaves;
 PortSaves::Checkpoint sRetry;
 s32 sRetryMoney;
 long long sRetryTime;
+PortSaves::JobName sRetryJob;
 s32 sStatRows;
 s32 sColumn; // a Column
 s32 sCapturing = -1; // control waiting for a key or pad input
@@ -167,7 +168,7 @@ s32 Items(Page page, Item* pItems)
             }
             if (inGame)
             {
-                pItems[n++] = Item{kResume, 0, false};
+                pItems[n++] = Item{kResume, 0, sRetry != PortSaves::kNoCheckpoint};
             }
             if (inGame && sStatRows)
             {
@@ -712,8 +713,110 @@ void AgeText(long long fileTime, wchar_t* pOut)
     }
 }
 
+// A text of the game's text table, upper case as the menu's fonts have it; false if there is none.
+bool GameText(const char* pKey, wchar_t* pOut, size_t size)
+{
+    if (!gText_0x14 || !gText_0x14->KeyExists(pKey))
+    {
+        return false;
+    }
+    wcsncpy(pOut, gText_0x14->Find(pKey), size - 1);
+    pOut[size - 1] = 0;
+    gText_0x14->StrToUpper(pOut);
+    return pOut[0] != 0;
+}
+
+bool JobTitle(const PortSaves::JobName& job, wchar_t* pOut, size_t size)
+{
+    char key[16];
+    snprintf(key, sizeof(key), "%u", job.mTitle);
+    return job.mTitle && GameText(key, pOut, size);
+}
+
+// Cut after a word, with "...", to fit that width.
+void FitText(wchar_t* pText, f32 width)
+{
+    size_t len = wcslen(pText);
+    while (Width(pText, MenuFont()) > width)
+    {
+        while (len && pText[len - 1] != L' ')
+        {
+            len--;
+        }
+        while (len && pText[len - 1] == L' ')
+        {
+            len--;
+        }
+        if (!len)
+        {
+            return;
+        }
+        wcscpy(pText + len, L"...");
+    }
+}
+
+// The main page's width, from its names to the panel's right edge.
+const f32 kRetryWidth = 450;
+
+// RETRY's rows: RETRY: <title>, on two rows if it is too wide, RETRY JOB without one, or RETRY FRENZY; then
+// the gang that gave the job, the money then and the checkpoint's age.
+s32 RetryRows(wchar_t (*pTexts)[kTextLength])
+{
+    wchar_t title[kTextLength - 16];
+    s32 rows = 1;
+    if (sRetry == PortSaves::kBeforeFrenzy || !JobTitle(sRetryJob, title, GTA2_COUNTOF(title)))
+    {
+        wcscpy(pTexts[0], Translate(sRetry == PortSaves::kBeforeFrenzy ? L"RETRY FRENZY" : L"RETRY JOB"));
+    }
+    else
+    {
+        swprintf(pTexts[0], Translate(L"RETRY: %ls"), title);
+        // Too wide: two rows of about the same width, split in the title.
+        const s32 titleStart = static_cast<s32>(wcslen(pTexts[0]) - wcslen(title));
+        const bool wide = Width(pTexts[0], MenuFont()) > kRetryWidth;
+        s32 split = -1;
+        f32 best = 0;
+        for (s32 i = titleStart > 0 ? titleStart - 1 : 0; pTexts[0][i] && wide; i++)
+        {
+            if (pTexts[0][i] == L' ')
+            {
+                pTexts[0][i] = 0;
+                const f32 first = Width(pTexts[0], MenuFont());
+                const f32 longest = Max(first, Width(pTexts[0] + i + 1, MenuFont()));
+                if (first <= kRetryWidth && (split < 0 || longest < best))
+                {
+                    split = i;
+                    best = longest;
+                }
+                pTexts[0][i] = L' ';
+            }
+        }
+        if (split > 0)
+        {
+            wcscpy(pTexts[1], pTexts[0] + split + 1);
+            pTexts[0][split] = 0;
+            rows = 2;
+        }
+    }
+    wchar_t* pDetails = pTexts[rows];
+    pDetails[0] = 0;
+    char key[16];
+    snprintf(key, sizeof(key), "ganga%u", sRetryJob.mGang);
+    if (sRetry == PortSaves::kBeforeJob && sRetryJob.mGang && GameText(key, pDetails, 16))
+    {
+        wcscat(pDetails, L"   ");
+    }
+    wchar_t text[kTextLength];
+    MoneyText(sRetryMoney, text);
+    wcscat(pDetails, text);
+    wcscat(pDetails, L"   ");
+    AgeText(sRetryTime, text);
+    wcscat(pDetails, text);
+    return rows + 1;
+}
+
 // A setting's value, a binding's inputs by column, a save's details by column then on the second row, or
-// the checkpoint's money and age; empty for other items.
+// RETRY's rows; empty for other items.
 void ItemValues(const Item& item, wchar_t (*pTexts)[kTextLength])
 {
     for (s32 c = 0; c < kMaxTexts; c++)
@@ -722,11 +825,7 @@ void ItemValues(const Item& item, wchar_t (*pTexts)[kTextLength])
     }
     if (item.mKind == kRetry)
     {
-        wchar_t age[kTextLength];
-        MoneyText(sRetryMoney, pTexts[0]);
-        AgeText(sRetryTime, age);
-        wcscat(pTexts[0], L", ");
-        wcscat(pTexts[0], age);
+        RetryRows(pTexts);
     }
     else if (item.mKind == kSave)
     {
@@ -794,6 +893,11 @@ const f32 kSaveSpace = 6;
 
 f32 Height(const Item& item, f32 lineStep)
 {
+    wchar_t texts[kMaxTexts][kTextLength];
+    if (item.mKind == kRetry)
+    {
+        return lineStep * RetryRows(texts);
+    }
     return item.mKind == kSave ? lineStep * 2 + kSaveSpace : lineStep;
 }
 
@@ -858,7 +962,7 @@ void GetLayout(Layout* pLayout)
     wchar_t texts[kMaxTexts][kTextLength];
     for (s32 i = 0; i < count; i++)
     {
-        if (pItems[i].mKind == kSetting || pItems[i].mKind == kBinding || pItems[i].mKind == kSave || pItems[i].mKind == kRetry)
+        if (pItems[i].mKind == kSetting || pItems[i].mKind == kBinding || pItems[i].mKind == kSave)
         {
             ItemValues(pItems[i], texts);
             nameWidth = Max(nameWidth, Width(ItemName(pItems[i]), normal));
@@ -1039,11 +1143,12 @@ void Open()
 #endif
 }
 
-void OfferRetry(PortSaves::Checkpoint kind, s32 money, long long time, bool selected)
+void OfferRetry(PortSaves::Checkpoint kind, s32 money, long long time, const PortSaves::JobName& job, bool selected)
 {
     sRetry = kind;
     sRetryMoney = money;
     sRetryTime = time;
+    sRetryJob = job;
     sSelected[kMainPage] = kind != PortSaves::kNoCheckpoint && !selected ? 1 : 0;
 }
 
@@ -1334,6 +1439,15 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
         const bool selected = i == sSelected[sPage];
         const bool dim = !IsEnabled(item);
         ItemValues(item, texts);
+        if (item.mKind == kRetry)
+        {
+            const s32 rows = RetryRows(texts);
+            for (s32 r = 0; r < rows; r++)
+            {
+                Text(texts[r], layout.mX, y + r * layout.mLineStep, normal, selected, r == rows - 1 && !selected);
+            }
+            continue;
+        }
         Text(ItemName(item), layout.mX, y, normal, selected, dim);
         Slider slider;
         if (GetSlider(item, &slider))
@@ -1358,6 +1472,13 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
         for (s32 c = 0; c < kSaveColumns && item.mKind == kSave; c++)
         {
             Text(texts[c + kSaveColumns], layout.mColumnX[c], y + layout.mLineStep, normal, selected, !selected);
+        }
+        wchar_t title[kTextLength];
+        if (item.mKind == kSave && sSaves[item.mArg].mKind == PortSaves::kRetry &&
+            sSaves[item.mArg].mCheckpoint == PortSaves::kBeforeJob && JobTitle(sSaves[item.mArg].mJob, title, kTextLength))
+        {
+            FitText(title, layout.mColumnX[0] - 12 - layout.mX);
+            Text(title, layout.mX, y + layout.mLineStep, normal, selected, !selected);
         }
         if (selected && item.mKind == kBinding && layout.mColumns > 1)
         {
