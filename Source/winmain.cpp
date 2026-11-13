@@ -2511,9 +2511,15 @@ s32 __stdcall GameWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lp
                                         break;
 
                                     case GameExitType::PlayerQuit_2:
-                                        gGameSession.StoreCrimeStats(gGame_0x40->mLocalPlayer);
-                                        gPlyDat->UpdateStageScore(gGame_0x40->mLocalPlayer);
-                                        gPlyDat->UpdateHiScores();
+#if defined(GTA2_PORT)
+                                        // RETRY: the game it leaves for the checkpoint is not scored.
+                                        if (!PortRetry::Retrying())
+#endif
+                                        {
+                                            gGameSession.StoreCrimeStats(gGame_0x40->mLocalPlayer);
+                                            gPlyDat->UpdateStageScore(gGame_0x40->mLocalPlayer);
+                                            gPlyDat->UpdateHiScores();
+                                        }
 
                                         state = gGameSession.IsBonusStage() != 0 ? MENUPAGE_BONUS_AREA : MENUPAGE_RESULTS_PLAYER_QUIT;
                                         CleanUpInputAndOthers();

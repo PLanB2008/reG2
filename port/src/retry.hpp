@@ -23,6 +23,8 @@ void Draw();
 // The pause menu's RETRY: right after a failure it comes selected.
 bool JustFailed();
 void Retry();
+// The game ends for RETRY.
+bool Retrying();
 // The frontend is back after the game RETRY ended: true once, with the checkpoint to boot.
 bool TakeRetry();
 } // namespace PortRetry

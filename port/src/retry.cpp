@@ -304,6 +304,11 @@ void Retry()
     gGame_0x40->ExitGameNoBonus(1, GameExitType::PlayerQuit_2);
 }
 
+bool Retrying()
+{
+    return sRetrying;
+}
+
 bool TakeRetry()
 {
     const bool retrying = sRetrying;
