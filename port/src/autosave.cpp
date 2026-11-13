@@ -1,4 +1,6 @@
 #include "autosave.hpp"
+#include "frame_loop.hpp"
+#include "Camera.hpp"
 #include "Car.hpp"
 #include "Draw.hpp"
 #include "Frontend.hpp"
@@ -14,6 +16,7 @@
 #include "settings.hpp"
 #include "sprite.hpp"
 #include "winmain.hpp"
+#include <math.h>
 
 #if defined(GTA2_PORT_SDL)
 #include <SDL3/SDL_log.h>
@@ -26,7 +29,7 @@ namespace
 // At 30 steps a second: past the job's or frenzy's end messages, then the player safe for a second.
 const s32 kWaitSteps = 90;
 const s32 kSafeSteps = 30;
-const s32 kShowSteps = 60;
+const s32 kShowSteps = 45;
 
 bool sPending;
 s32 sWaited;
@@ -64,6 +67,70 @@ bool Safe(bool quitting)
             state == ped_state_1::standing_still_7) &&
         !pPlayer->mJumping &&
         !gMap_0x370->IsWaterBlockAt(pPed->get_cam_x().ToInt(), pPed->get_cam_y().ToInt(), pPed->get_cam_z().ToInt() - 1);
+}
+
+void Rect(f32 left, f32 top, f32 right, f32 bottom, s32 colour)
+{
+    Vert verts[4] = {};
+    verts[0].x = verts[3].x = left;
+    verts[1].x = verts[2].x = right;
+    verts[0].y = verts[1].y = top;
+    verts[2].y = verts[3].y = bottom;
+    pgbh_DrawFlatRect(verts, colour);
+}
+
+// Font pixels (layout pixels) to whole screen pixels, as the HUD font's own texels land.
+struct FontPixels
+{
+    f32 mX0;
+    f32 mY0;
+    f32 mScale;
+
+    void Fill(s32 x, s32 y, s32 w, s32 h, s32 colour) const
+    {
+        Rect(floorf(mX0 + x * mScale + 0.5f), floorf(mY0 + y * mScale + 0.5f), floorf(mX0 + (x + w) * mScale + 0.5f),
+             floorf(mY0 + (y + h) * mScale + 0.5f), colour);
+    }
+};
+
+// A loading spinner in the HUD font's look (outline, shadow, lit top left): 8 dots on a ring 15 font pixels high,
+// the brightest going round once a second at the logic steps' pace, the others darker behind it.
+void DrawSpinner(s32 left, s32 top)
+{
+    const s32 kDots = 8;
+    // A dot's top left pixel, clockwise from the top.
+    const s8 kPos[kDots][2] = {{6, 1}, {10, 2}, {11, 6}, {10, 10}, {6, 11}, {2, 10}, {1, 6}, {2, 2}};
+    // By age, the head first: the font's highlight, bevel and body colours, then darker toward its outline.
+    const s32 kFill[kDots] = {0xCECA73, 0xAD9A52, 0xAD9A52, 0x8C7531, 0x8C7531, 0x7A6528, 0x67561F, 0x554616};
+    const s32 kLight[kDots] = {0xCECA73, 0xCECA73, 0xCECA73, 0xAD9A52, 0xAD9A52, 0x8C7531, 0x7A6528, 0x67561F};
+    const s32 kOutline = 0x313500;
+    const s32 kShadow = 0x000000;
+
+    const FontPixels pixels = {PortUiX(Fix16(left)).ToFloat(), PortUiY(Fix16(top)).ToFloat(), gViewCamera->mUiScale.ToFloat()};
+    const f32 turns = (PortFrameLoop::StepCount() % 30 + PortFrameLoop::DrawAlpha()) / 30.0f;
+    const s32 head = static_cast<s32>(turns * kDots) % kDots;
+    for (s32 layer = 0; layer < 3; layer++)
+    {
+        for (s32 i = 0; i < kDots; i++)
+        {
+            const s32 x = kPos[i][0];
+            const s32 y = kPos[i][1];
+            const s32 age = (head - i + kDots) % kDots;
+            if (layer == 0)
+            {
+                pixels.Fill(x, y, 4, 4, kShadow);
+            }
+            else if (layer == 1)
+            {
+                pixels.Fill(x - 1, y - 1, 4, 4, kOutline);
+            }
+            else
+            {
+                pixels.Fill(x, y, 2, 2, kFill[age]);
+                pixels.Fill(x, y, 1, 1, kLight[age]);
+            }
+        }
+    }
 }
 
 void Save(const char* pWhy)
@@ -136,8 +203,14 @@ void Draw()
     {
         return;
     }
+    // Under the zone name and the wanted level, above a job's titles; the spinner level with the letters.
+    const s32 kTop = 58;
+    const s32 kSpinnerTop = 5;
+    const s32 kSpinner = 15;
+    const s32 kGap = 4;
     const wchar_t* pText = PortSettings::Translate(L"SAVING");
-    const s32 width = Frontend::GetMaxTextWidth(const_cast<wchar_t*>(pText), gDebugFont);
-    DrawStringScaled(pText, Fix16(632 - width), Fix16(456), gDebugFont);
+    const s32 left = 320 - (Frontend::GetMaxTextWidth(const_cast<wchar_t*>(pText), gDebugFont) + kSpinner + kGap) / 2;
+    DrawSpinner(left, kTop + kSpinnerTop);
+    DrawStringScaled(pText, Fix16(left + kSpinner + kGap), Fix16(kTop), gDebugFont);
 }
 } // namespace PortAutosave

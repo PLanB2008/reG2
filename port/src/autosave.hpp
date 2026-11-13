@@ -1,5 +1,5 @@
 // AUTOSAVE (settings.hpp): the city's autosave (saves.hpp) once a job or a kill frenzy is over and the
-// player is safe, and on quitting off a job; a SAVING line in a corner after it.
+// player is safe, and on quitting off a job; SAVING at the top of the screen after it.
 #pragma once
 
 namespace PortAutosave
