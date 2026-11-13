@@ -1051,7 +1051,8 @@ bool MouseMode()
 #endif
 }
 
-// The keys at y, or the pad's buttons in the frontend's red discs once the pad was used last.
+// The keys at y, or the pad's buttons in the frontend's red discs once the pad was used last. Back on the pause
+// menu's main page resumes the game.
 void DrawHints(f32 y)
 {
     struct Hint
@@ -1060,7 +1061,8 @@ void DrawHints(f32 y)
         const wchar_t* mButton;
         const wchar_t* mLabel;
     };
-    const Hint kNavigate[] = {{L"ENTER", L"A", L"SELECT"}, {L"ESC", L"B", L"BACK"}};
+    const bool resume = port_GameRunning() && sPage == kMainPage;
+    const Hint kNavigate[] = {{L"ENTER", L"A", L"SELECT"}, {L"ESC", L"B", resume ? L"RESUME" : L"BACK"}};
     const bool pad = PadMode();
     // Capture: B cancels on the keyboard columns, Back on the pad column (B can be bound there); Delete
     // clears a second key or a pad input.
