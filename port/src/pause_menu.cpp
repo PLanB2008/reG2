@@ -403,8 +403,7 @@ void Draw()
     }
     PlaySound(PortMenu::UpdateCapture());
 
-    // The 640x480 layout centred on the screen, inside the safe area but without the HUD scale, 10 lower:
-    // the panel then ends at the bottom.
+    // The 640x480 layout centred on the screen, inside the safe area but without the HUD scale, 10 lower.
     const f32 scale = PortScreenUiScale().ToFloat() * (1 - 2 * PortSettings::SafeArea());
     const f32 left = (gViewCamera->mScreenPxWidth - 640.0f * scale) / 2;
     const f32 top = (gViewCamera->mScreenPxHeight - 480.0f * scale) / 2;

@@ -941,8 +941,8 @@ bool MouseMode()
 #endif
 }
 
-// The keys at the bottom, or the pad's buttons in the frontend's red discs once the pad was used last.
-void DrawHints()
+// The keys at y, or the pad's buttons in the frontend's red discs once the pad was used last.
+void DrawHints(f32 y)
 {
     struct Hint
     {
@@ -981,7 +981,6 @@ void DrawHints()
         gap = kRight - x - width > 10 ? kRight - x - width : 10;
     }
 
-    const f32 y = 440;
     for (s32 i = 0; i < count; i++)
     {
         if (pad && pHints[i].mButton)
@@ -1305,9 +1304,22 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
     Layout layout;
     GetLayout(&layout);
     const s16 normal = MenuFont();
+    // In game the keys go under the page and the two lines a setting's help or requirement takes, on a
+    // panel that ends with them.
+    const f32 underPage = layout.mY[layout.mCount - 1] + kGapStep + 4;
+    f32 bottom = layout.mY[layout.mCount - 1] + Height(layout.mItems[layout.mCount - 1], layout.mLineStep);
+    for (s32 i = 0; i < layout.mCount; i++)
+    {
+        const PortSettings::Id id = static_cast<PortSettings::Id>(layout.mItems[i].mArg);
+        if (layout.mItems[i].mKind == kSetting && (PortSettings::Help(id) || PortSettings::Requirement(id) != PortSettings::kCount))
+        {
+            bottom = Max(bottom, underPage + kLineStep * 2);
+        }
+    }
+    const f32 hintsY = port_GameRunning() ? bottom + kLineStep : 440;
     if (panel)
     {
-        Rect(layout.mPanelLeft, kGamePanelTop, layout.mPanelRight, 470, 0);
+        Rect(layout.mPanelLeft, kGamePanelTop, layout.mPanelRight, hintsY + kGameListTop - kGamePanelTop, 0);
     }
     for (s32 c = 0; c < layout.mColumns && layout.mControls; c++)
     {
@@ -1329,7 +1341,6 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
         }
         const f32 valueX = layout.mColumnX[0] + TextOffset(item);
         Text(texts[0], valueX, y, normal, selected, dim);
-        const f32 underPage = layout.mY[layout.mCount - 1] + kGapStep + 4;
         if (selected && dim)
         {
             DrawRequirement(item, layout.mX, underPage);
@@ -1357,6 +1368,6 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
             Sprite(kArrowSprite, valueX + Width(texts[0], normal) + kArrowGap, y + 6);
         }
     }
-    DrawHints();
+    DrawHints(hintsY);
 }
 } // namespace PortMenu
