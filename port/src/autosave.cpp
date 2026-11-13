@@ -165,7 +165,7 @@ void AfterStep()
     {
         sShown--;
     }
-    if (!gGame_0x40 || !gScriptManager)
+    if (!gGame_0x40 || !gScriptManager || PortSaves::Replaying())
     {
         return;
     }
@@ -200,6 +200,10 @@ void AfterStep()
 
 void Quit()
 {
+    if (PortSaves::Replaying())
+    {
+        return;
+    }
     if (!sJobEnded && sPlayed < kQuitSaveSteps)
     {
 #if defined(GTA2_PORT_SDL)

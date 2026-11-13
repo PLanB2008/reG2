@@ -4,6 +4,7 @@
 #include "Game.hpp"
 #include "GameSession.hpp"
 #include "Globals.hpp"
+#include "InputRecorder_67F8B0.hpp"
 #include "Ped.hpp"
 #include "Player.hpp"
 #include "ScriptManager.hpp"
@@ -302,6 +303,11 @@ bool Commit(const char_type* pTempName, const char_type* pFileName)
         Reject(pFileName, "the new save could not replace it");
     }
     return ok;
+}
+
+bool Replaying()
+{
+    return gInputRecorder.IsPlayingBack();
 }
 
 bool IsValid(const char_type* pFileName, Header* pHeader)

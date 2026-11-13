@@ -70,7 +70,7 @@ void Log(const char* pWhat)
 
 bool Enabled()
 {
-    return PortSettings::Retry() && gGame_0x40 && gScriptManager && !IsNetworkGame() && !gGameSession.IsBonusStage();
+    return PortSettings::Retry() && !PortSaves::Replaying() && gGame_0x40 && gScriptManager && !IsNetworkGame() && !gGameSession.IsBonusStage();
 }
 
 s32 PassedCount(PortSaves::Checkpoint kind)
@@ -182,7 +182,7 @@ void Start()
     sRetrying = false;
     sNumSamples = 0;
     PortSaves::RefreshCheckpoint();
-    if (gScriptManager && (!gScriptManager->IsLoadedFromSave() || PortSaves::LoadedCheckpoint() == PortSaves::kNoCheckpoint) &&
+    if (gScriptManager && !PortSaves::Replaying() && (!gScriptManager->IsLoadedFromSave() || PortSaves::LoadedCheckpoint() == PortSaves::kNoCheckpoint) &&
         !IsNetworkGame() && !gGameSession.IsBonusStage())
     {
         PortSaves::DeleteCheckpoint();
@@ -244,7 +244,7 @@ void JobLoaded(const SCR_CMD_HEADER* pCmd, u16 base)
 
 void AfterStep()
 {
-    if (!gGame_0x40 || !gScriptManager)
+    if (!gGame_0x40 || !gScriptManager || PortSaves::Replaying())
     {
         return;
     }

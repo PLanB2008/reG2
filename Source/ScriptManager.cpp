@@ -352,6 +352,10 @@ void ScriptManager::SaveGame(const char_type* pFileName)
     }
 
 #if defined(GTA2_PORT)
+    if (PortSaves::Replaying())
+    {
+        return;
+    }
     char_type saveName[256];
     char_type tempName[260];
     snprintf(saveName, sizeof(saveName), "%s", pFileName);

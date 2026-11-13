@@ -44,6 +44,9 @@ struct Header
     JobName mJob; // a checkpoint's
 };
 
+// An attract demo or a recorded input replay plays: no save, autosave, checkpoint or retry.
+bool Replaying();
+
 // The file is a whole save (sizes, header, map changes) whose saved counters are those of its
 // level's script.
 bool IsValid(const char_type* pFileName, Header* pHeader = NULL);
