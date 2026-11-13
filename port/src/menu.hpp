@@ -41,6 +41,10 @@ void Open();
 // After Open in game: RETRY JOB or RETRY FRENZY above RESUME, with the checkpoint's money and file time,
 // selected or not.
 void OfferRetry(PortSaves::Checkpoint kind, s32 money, long long time, bool selected);
+// After Open in game: STATISTICS under RESUME, a page with that many rows of the original's pause screen.
+void OfferStatistics(s32 rows);
+// On that page: true, with the layout's top of its first row and the distance between rows.
+bool OnStatistics(f32* pTop, f32* pStep);
 // The menu is gone: the settings changed in it are saved now rather than at each change.
 void Close();
 

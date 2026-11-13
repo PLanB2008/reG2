@@ -50,6 +50,7 @@ enum Page
     kDisplayPage,
     kSoundPage,
     kControlsPage,
+    kStatsPage,
     kSavesPage,
     kNumPages,
 };
@@ -76,7 +77,7 @@ struct Item
 
 const s32 kMaxItems = 16;
 const wchar_t* const kTitles[kNumPages] =
-    {L"OPTIONS", L"GAME", L"GRAPHICS", L"DAY AND NIGHT", L"DISPLAY", L"SOUND", L"CONTROLS", L"RESUME SAVED STATUS"};
+    {L"OPTIONS", L"GAME", L"GRAPHICS", L"DAY AND NIGHT", L"DISPLAY", L"SOUND", L"CONTROLS", L"STATISTICS", L"RESUME SAVED STATUS"};
 
 const s32 kNumControls = 12;
 const s32 kDefaultControls[kNumControls] = {DIK_UP, DIK_DOWN, DIK_LEFT, DIK_RIGHT, DIK_LCONTROL, DIK_RETURN,
@@ -128,6 +129,7 @@ s32 sNumSaves;
 PortSaves::Checkpoint sRetry;
 s32 sRetryMoney;
 long long sRetryTime;
+s32 sStatRows;
 s32 sColumn; // a Column
 s32 sCapturing = -1; // control waiting for a key or pad input
 bool sDragging; // a slider's knob, with the left button held
@@ -168,9 +170,13 @@ s32 Items(Page page, Item* pItems)
             {
                 pItems[n++] = Item{kResume, 0, false};
             }
+            if (inGame && sStatRows)
+            {
+                pItems[n++] = Item{kGoTo, kStatsPage, false};
+            }
             for (s32 page = kGamePage; page <= kControlsPage; page++)
             {
-                pItems[n++] = Item{kGoTo, page, false};
+                pItems[n++] = Item{kGoTo, page, inGame && page == kGamePage};
             }
             pItems[n++] = Item{inGame ? kQuit : kBack, 0, true};
             break;
@@ -184,6 +190,9 @@ s32 Items(Page page, Item* pItems)
             return SettingsPage(pItems, PortSettings::kDisplaySettings, PortSettings::kNumDisplaySettings);
         case kSoundPage:
             return SettingsPage(pItems, PortSettings::kSoundSettings, PortSettings::kNumSoundSettings);
+        case kStatsPage:
+            pItems[n++] = Item{kBack, 0, false};
+            break;
         case kSavesPage:
             for (s32 i = 0; i < sNumSaves; i++)
             {
@@ -768,6 +777,11 @@ struct Layout
     f32 mPanelRight;
 };
 
+// The first line's top, under the frontend's logo.
+const f32 kListTop = 160;
+// The statistics' rows, from one's top to the next.
+const f32 kStatStep = 24;
+
 // From a line's top to the next, or to one set apart; a save's two rows, and the space after them.
 const f32 kLineStep = 16;
 const f32 kGapStep = 24;
@@ -883,7 +897,8 @@ void GetLayout(Layout* pLayout)
     pLayout->mPanelRight = Max(600, right - shift + (controls || saves ? 20 : kArrowGap + 16));
     // The controls page closer, its last line above the frontend's left logo.
     pLayout->mLineStep = controls ? kLineStep - 1 : kLineStep;
-    f32 y = 160;
+    // BACK under the statistics.
+    f32 y = kListTop + (sPage == kStatsPage ? sStatRows * kStatStep + kGapStep - kLineStep : 0);
     for (s32 i = 0; i < count; i++)
     {
         if (i)
@@ -1010,6 +1025,7 @@ void Open()
     sPage = kMainPage;
     sSelected[kMainPage] = 0;
     sRetry = PortSaves::kNoCheckpoint;
+    sStatRows = 0;
     sCapturing = -1;
     sDragging = false;
     DiscardMouse();
@@ -1024,6 +1040,18 @@ void OfferRetry(PortSaves::Checkpoint kind, s32 money, long long time, bool sele
     sRetryMoney = money;
     sRetryTime = time;
     sSelected[kMainPage] = kind != PortSaves::kNoCheckpoint && !selected ? 1 : 0;
+}
+
+void OfferStatistics(s32 rows)
+{
+    sStatRows = rows;
+}
+
+bool OnStatistics(f32* pTop, f32* pStep)
+{
+    *pTop = kListTop;
+    *pStep = kStatStep;
+    return sPage == kStatsPage;
 }
 
 void OpenSaves(const PortSaves::Entry* pEntries, s32 count)

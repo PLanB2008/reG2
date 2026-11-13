@@ -6,6 +6,7 @@
 #include "Frontend.hpp"
 #include "Function.hpp"
 #include "Game.hpp"
+#include "GameSession.hpp"
 #include "Globals.hpp"
 #include "Hud.hpp"
 #include "TextTable.hpp"
@@ -248,6 +249,28 @@ void Apply(PortMenu::Result result)
         PortRetry::Retry();
     }
 }
+
+// The original pause screen's sections, in UpdatePauseSection's order and with its checks; none in a bonus
+// stage, where it shows none.
+s32 StatSections(u8* pSections)
+{
+    if (gGameSession.IsBonusStage())
+    {
+        return 0;
+    }
+    Hud_PauseScreen& pause = gHud_2B00->mPauseScreen;
+    const Hud_PauseScreen saved = pause;
+    s32 count = 0;
+    pause.mCurrentPauseSection = HudPauseSection::tokens_collected_6;
+    do
+    {
+        pause.mTimer = 1;
+        pause.UpdatePauseSection();
+        pSections[count++] = pause.mCurrentPauseSection;
+    } while (pause.mCurrentPauseSection != HudPauseSection::tokens_collected_6);
+    pause = saved;
+    return count;
+}
 } // namespace
 
 bool IsOpen()
@@ -296,6 +319,8 @@ bool HandleKey(s32 action, Player* pPlayer)
             const PortSaves::Checkpoint kind = PortSaves::GetCheckpoint(&money, &time);
             PortMenu::OfferRetry(kind, money, time, PortRetry::JustFailed());
         }
+        u8 sections[7];
+        PortMenu::OfferStatistics(StatSections(sections));
         if (!gGame_0x40->IsPaused())
         {
             gGame_0x40->Pause();
@@ -345,40 +370,24 @@ f32 PlaceUi(f32 pos, bool y)
     return (y ? sStatTop : sStatLeft) + pos * sStatScale;
 }
 
-// One row per section, in UpdatePauseSection's order and with its checks, packed between the HUD's
-// multiplier (long lines reach it above y 43) and the panel, lowered to 140.
-static void DrawStats(f32 scale, f32 left, f32 top)
+// One row per section from rowTop in the menu's layout, each centred as the original's pause screen draws it.
+static void DrawStats(f32 scale, f32 left, f32 top, f32 rowTop, f32 rowStep)
 {
     Hud_PauseScreen& pause = gHud_2B00->mPauseScreen;
     const Hud_PauseScreen saved = pause;
     u8 sections[7];
-    s32 count = 0;
-    pause.mCurrentPauseSection = HudPauseSection::tokens_collected_6;
-    do
-    {
-        pause.mTimer = 1;
-        pause.UpdatePauseSection();
-        sections[count++] = pause.mCurrentPauseSection;
-    } while (pause.mCurrentPauseSection != HudPauseSection::tokens_collected_6);
-
+    const s32 count = StatSections(sections);
     const Fix16 hudScale = gViewCamera->mUiScale;
     gViewCamera->mUiScale = Fx(scale);
     sDrawingStats = true;
     sStatScale = scale;
     sStatLeft = left;
-    // By section, the distance to the next row: icons are taller than text, the frenzy icon the tallest.
-    const s32 kPitch[7] = {14, 17, 17, 16, 16, 15, 0};
-    s32 y = 118;
-    for (s32 i = 0; i < count - 1; i++)
-    {
-        y -= kPitch[sections[i]];
-    }
     for (s32 i = 0; i < count; i++)
     {
-        sStatTop = top + (y - 220) * scale;
+        // DrawPause puts its text at y 220.
+        sStatTop = top + (rowTop + i * rowStep - 220) * scale;
         pause.mCurrentPauseSection = sections[i];
         pause.DrawPause();
-        y += kPitch[sections[i]];
     }
     sDrawingStats = false;
     gViewCamera->mUiScale = hudScale;
@@ -394,8 +403,8 @@ void Draw()
     }
     PlaySound(PortMenu::UpdateCapture());
 
-    // The 640x480 layout centred on the screen, inside the safe area but without the HUD scale, the menu
-    // 10 lower (its panel then ends at the bottom) and above it the lines of the original's pause screen.
+    // The 640x480 layout centred on the screen, inside the safe area but without the HUD scale, 10 lower:
+    // the panel then ends at the bottom.
     const f32 scale = PortScreenUiScale().ToFloat() * (1 - 2 * PortSettings::SafeArea());
     const f32 left = (gViewCamera->mScreenPxWidth - 640.0f * scale) / 2;
     const f32 top = (gViewCamera->mScreenPxHeight - 480.0f * scale) / 2;
@@ -411,6 +420,11 @@ void Draw()
     PlaySound(result);
     PortMenu::Draw(scale, left, menuTop, true);
     UseGameStyle();
-    DrawStats(scale, left, top);
+    f32 rowTop;
+    f32 rowStep;
+    if (PortMenu::OnStatistics(&rowTop, &rowStep))
+    {
+        DrawStats(scale, left, menuTop, rowTop, rowStep);
+    }
 }
 } // namespace PortPauseMenu
