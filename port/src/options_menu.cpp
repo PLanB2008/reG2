@@ -3,6 +3,7 @@
 #include "GameSession.hpp"
 #include "Draw.hpp"
 #include "Globals.hpp"
+#include "PlyDat.hpp"
 #include "SoundObject.hpp"
 #include "TextTable.hpp"
 #include "menu.hpp"
@@ -313,7 +314,19 @@ bool Update(Frontend* pFrontend)
         sShown = true;
     }
     pFrontend->mMenuScreen = RedBar_16;
-    const PortMenu::Result result = HandleInput(pFrontend);
+    PortMenu::Result result = HandleInput(pFrontend);
+    // LOAD GAME's cities: also Page Up and Page Down, the pad's LB and RB.
+    static bool sPrevPageKeys[2];
+    const u8 pageKeys[2] = {DIK_PRIOR, DIK_NEXT};
+    for (s32 i = 0; i < 2; i++)
+    {
+        const bool down = (pFrontend->mKeys[pageKeys[i]] & 0x80) != 0;
+        if (down && !sPrevPageKeys[i] && result == PortMenu::kNothing && PortMenu::OnSaves())
+        {
+            result = PortMenu::HandleInput(i ? PortMenu::kRight : PortMenu::kLeft);
+        }
+        sPrevPageKeys[i] = down;
+    }
     if (result == PortMenu::kLoadSave)
     {
         PortMenu::Close();
@@ -596,7 +609,14 @@ bool Resume(Frontend* pFrontend)
     }
     sSavesReturnPage = pFrontend->mCurrentPageIdx;
     sSavesReturnOption = pFrontend->mMenuPagesArray[sSavesReturnPage].mCurrentOptionIdx;
-    PortMenu::OpenSaves(saves, count);
+    bool cities[PortSaves::kNumCities];
+    PlySlot* pStats = pFrontend->GetCurrPlayerStats();
+    for (u8 city = 0; city < PortSaves::kNumCities; city++)
+    {
+        cities[city] = city < pFrontend->mNumMainStages && pStats->mPlyrStageStats[city][0].mIsStageUnlocked &&
+            FreeLoader::CheckCityInstalled(city);
+    }
+    PortMenu::OpenSaves(saves, count, cities);
     sShown = true;
     pFrontend->ChangeMenuPage(kMenuPage);
     return true;

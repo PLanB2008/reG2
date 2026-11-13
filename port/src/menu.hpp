@@ -48,9 +48,10 @@ bool OnStatistics(f32* pTop, f32* pStep);
 // The menu is gone: the settings changed in it are saved now rather than at each change.
 void Close();
 
-// The frontend's list of the profile's saves (options_menu.hpp) in place of the main page, the first one
-// selected. Back closes it; a save chosen gives kLoadSave.
-void OpenSaves(const PortSaves::Entry* pEntries, s32 count);
+// The frontend's LOAD GAME page in place of the main page: the profile's saves (options_menu.hpp), newest first,
+// under a tab per city, the cities the profile has not reached dim unless they have a save. It opens on the newest
+// save. Left and right change the city; Back closes it; a save chosen gives kLoadSave.
+void OpenSaves(const PortSaves::Entry* pEntries, s32 count, const bool* pCities);
 bool OnSaves();
 const PortSaves::Entry& SelectedSave();
 

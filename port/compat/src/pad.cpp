@@ -487,6 +487,9 @@ void port_AddPadMenuKeys(BYTE* pKeys)
         {Button(SDL_GAMEPAD_BUTTON_SOUTH) || Button(SDL_GAMEPAD_BUTTON_START), DIK_RETURN},
         {Button(SDL_GAMEPAD_BUTTON_EAST) || Button(SDL_GAMEPAD_BUTTON_BACK), DIK_ESCAPE},
         {Button(SDL_GAMEPAD_BUTTON_WEST), DIK_DELETE},
+        // The frontend's LOAD GAME changes city with them.
+        {!port_GameRunning() && Button(SDL_GAMEPAD_BUTTON_LEFT_SHOULDER), DIK_PRIOR},
+        {!port_GameRunning() && Button(SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER), DIK_NEXT},
     };
     for (const auto& k : keys)
     {

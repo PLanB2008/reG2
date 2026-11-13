@@ -76,7 +76,7 @@ struct Item
 
 const s32 kMaxItems = 16;
 const wchar_t* const kTitles[kNumPages] =
-    {L"OPTIONS", L"GAME", L"GRAPHICS", L"DISPLAY", L"SOUND", L"CONTROLS", L"STATISTICS", L"RESUME SAVED STATUS"};
+    {L"OPTIONS", L"GAME", L"GRAPHICS", L"DISPLAY", L"SOUND", L"CONTROLS", L"STATISTICS", L"LOAD GAME"};
 
 const s32 kNumControls = 12;
 const s32 kDefaultControls[kNumControls] = {DIK_UP, DIK_DOWN, DIK_LEFT, DIK_RIGHT, DIK_LCONTROL, DIK_RETURN,
@@ -110,8 +110,11 @@ const s32 kColumns = kNumColumns;
 const s32 kColumns = 1;
 #endif
 const wchar_t* const kColumnNames[kNumColumns] = {L"KEYBOARD", L"ALTERNATE", L"GAMEPAD"};
-// A save's two columns, each with two rows: city and money, date and jobs.
-const s32 kSaveColumns = 2;
+// A save's line: its kind, then its money, jobs and date under their headings.
+const s32 kSaveColumns = 3;
+const wchar_t* const kSaveHeadings[kSaveColumns] = {L"MONEY", L"JOBS", L"DATE"};
+// What the kind's column leaves of the page, a job's title cut to fit.
+f32 sSaveNameWidth = 200;
 const s32 kMaxTexts = 4;
 const s32 kTextLength = 64;
 
@@ -124,6 +127,10 @@ Page sPage;
 s32 sSelected[kNumPages];
 PortSaves::Entry sSaves[PortSaves::kMaxSaves];
 s32 sNumSaves;
+// The saves page's city tab, and the cities that can be chosen.
+s32 sTab;
+bool sTabEnabled[PortSaves::kNumCities];
+const wchar_t* const kCities[PortSaves::kNumCities] = {L"DOWNTOWN", L"RESIDENTIAL", L"INDUSTRIAL"};
 // The retry checkpoint the pause menu offers.
 PortSaves::Checkpoint sRetry;
 bool sRestart; // the job or frenzy still runs
@@ -195,7 +202,10 @@ s32 Items(Page page, Item* pItems)
         case kSavesPage:
             for (s32 i = 0; i < sNumSaves; i++)
             {
-                pItems[n++] = Item{kSave, i, false};
+                if (sSaves[i].mMainStage == sTab)
+                {
+                    pItems[n++] = Item{kSave, i, false};
+                }
             }
             pItems[n++] = Item{kBack, 0, true};
             break;
@@ -254,8 +264,22 @@ const wchar_t* EnglishName(const Item& item)
     }
 }
 
+bool JobTitle(const PortSaves::JobName& job, wchar_t* pOut, size_t size);
+void FitText(wchar_t* pText, f32 width);
+
+// An item's name; a job checkpoint's is BEFORE: <title>.
 const wchar_t* ItemName(const Item& item)
 {
+    static wchar_t sName[kTextLength];
+    wchar_t title[kTextLength - 16];
+    const PortSaves::Entry* pSave = item.mKind == kSave ? &sSaves[item.mArg] : NULL;
+    if (pSave && pSave->mKind == PortSaves::kRetry && pSave->mCheckpoint == PortSaves::kBeforeJob &&
+        JobTitle(pSave->mJob, title, GTA2_COUNTOF(title)))
+    {
+        swprintf(sName, Translate(L"BEFORE: %ls"), title);
+        FitText(sName, sSaveNameWidth);
+        return sName;
+    }
     return Translate(EnglishName(item));
 }
 
@@ -648,8 +672,8 @@ time_t Midnight(tm day)
     return mktime(&day);
 }
 
-// TODAY 21:40, YESTERDAY 18:05, 3 DAYS AGO.
-void DateText(long long fileTime, wchar_t* pOut)
+// TODAY 21:40, or 21:40 under a DATE heading; YESTERDAY 18:05, 3 DAYS AGO.
+void DateText(long long fileTime, wchar_t* pOut, bool underHeading = false)
 {
     const time_t t = static_cast<time_t>(fileTime);
     const time_t now = time(NULL);
@@ -666,6 +690,10 @@ void DateText(long long fileTime, wchar_t* pOut)
     if (days >= 2)
     {
         swprintf(pOut, Translate(L"%d DAYS AGO"), static_cast<int>(days));
+    }
+    else if (days == 0 && underHeading)
+    {
+        swprintf(pOut, L"%d:%02d", local.tm_hour, local.tm_min);
     }
     else
     {
@@ -807,15 +835,13 @@ void ItemValues(const Item& item, wchar_t (*pTexts)[kTextLength])
     }
     else if (item.mKind == kSave)
     {
-        static const wchar_t* const kCities[PortSaves::kNumCities] = {L"DOWNTOWN", L"RESIDENTIAL", L"INDUSTRIAL"};
         const PortSaves::Entry& save = sSaves[item.mArg];
-        wcscpy(pTexts[0], Translate(kCities[save.mMainStage < PortSaves::kNumCities ? save.mMainStage : 0]));
-        DateText(save.mTime, pTexts[1]);
-        MoneyText(save.mMoney, pTexts[2]);
+        MoneyText(save.mMoney, pTexts[0]);
         if (save.mJobsPassed >= 0)
         {
-            swprintf(pTexts[3], Translate(L"%d/%d JOBS"), save.mJobsPassed, save.mJobsTotal);
+            swprintf(pTexts[1], L"%d/%d", save.mJobsPassed, save.mJobsTotal);
         }
+        DateText(save.mTime, pTexts[2], true);
     }
     else if (item.mKind == kSetting)
     {
@@ -864,10 +890,13 @@ f32 ListTop()
     return port_GameRunning() ? kGameListTop : kListTop;
 }
 
-// From a line's top to the next, or to one set apart; a save's two rows, and the space after them.
+// From a line's top to the next, or to one set apart; a save's line, and the space after it; from the saves page's
+// tabs to its first line.
 const f32 kLineStep = 16;
 const f32 kGapStep = 24;
-const f32 kSaveSpace = 6;
+const f32 kSaveSpace = 4;
+const f32 kTabsStep = 46;
+const f32 kHeadingsStep = 20;
 
 f32 Height(const Item& item, f32 lineStep)
 {
@@ -876,7 +905,7 @@ f32 Height(const Item& item, f32 lineStep)
     {
         return lineStep * RetryRows(texts);
     }
-    return item.mKind == kSave ? lineStep * 2 + kSaveSpace : lineStep;
+    return item.mKind == kSave ? lineStep + kSaveSpace : lineStep;
 }
 
 // From a setting's value to the centre of the arrows the mouse changes it with.
@@ -938,21 +967,35 @@ void GetLayout(Layout* pLayout)
         widths[c] = Width(Translate(kColumnNames[c]), normal);
     }
     wchar_t texts[kMaxTexts][kTextLength];
-    for (s32 i = 0; i < count; i++)
+    for (s32 c = 0; c < columns && saves; c++)
     {
-        if (pItems[i].mKind == kSetting || pItems[i].mKind == kBinding || pItems[i].mKind == kSave)
+        widths[c] = Width(Translate(kSaveHeadings[c]), normal);
+    }
+    // The saves' columns where they are in every city, their kinds in what the others leave of the page from x 20.
+    for (s32 i = 0; i < sNumSaves && saves; i++)
+    {
+        ItemValues(Item{kSave, i, false}, texts);
+        for (s32 c = 0; c < columns; c++)
         {
-            ItemValues(pItems[i], texts);
-            nameWidth = Max(nameWidth, Width(ItemName(pItems[i]), normal));
+            widths[c] = Max(widths[c], Width(texts[c], normal));
+        }
+    }
+    sSaveNameWidth = 610 - widths[0] - widths[1] - widths[2] - 12 * columns;
+    for (s32 i = 0; i < (saves ? sNumSaves : count); i++)
+    {
+        const Item item = saves ? Item{kSave, i, false} : pItems[i];
+        if (item.mKind == kSetting || item.mKind == kBinding || item.mKind == kSave)
+        {
+            ItemValues(item, texts);
+            nameWidth = Max(nameWidth, Width(ItemName(item), normal));
             for (s32 c = 0; c < columns; c++)
             {
-                widths[c] = Max(widths[c], (c ? 0 : TextOffset(pItems[i])) + Width(texts[c], normal));
-                widths[c] = saves ? Max(widths[c], Width(texts[c + kSaveColumns], normal)) : widths[c];
+                widths[c] = Max(widths[c], (c ? 0 : TextOffset(item)) + Width(texts[c], normal));
             }
         }
     }
     // The statistics' BACK centred as their rows.
-    const f32 x = controls ? 80.0f : (saves ? 60.0f : (sPage == kStatsPage ? 320 - Width(ItemName(pItems[0]), normal) / 2 : 140.0f));
+    const f32 x = controls ? 80.0f : (saves ? 40.0f : (sPage == kStatsPage ? 320 - Width(ItemName(pItems[0]), normal) / 2 : 140.0f));
     f32 columnX[kNumColumns];
     f32 right;
     // Narrower gaps for a page wider than the screen even moved left.
@@ -985,8 +1028,9 @@ void GetLayout(Layout* pLayout)
     pLayout->mPanelRight = Max(600, right - shift + (controls || saves ? 20 : kArrowGap + 16));
     // The controls page closer, its last line above the frontend's left logo.
     pLayout->mLineStep = controls ? kLineStep - 1 : kLineStep;
-    // BACK under the statistics.
+    // BACK under the statistics; the saves under the tabs, BACK under NO SAVE.
     f32 y = ListTop() + (sPage == kStatsPage ? sStatRows * kStatStep + kGapStep - kLineStep : 0);
+    y += saves ? (count == 1 ? kTabsStep - kHeadingsStep + kGapStep : kTabsStep) : 0;
     for (s32 i = 0; i < count; i++)
     {
         if (i)
@@ -1086,6 +1130,83 @@ void DrawHints(f32 y)
     }
 }
 
+// The saves page's tabs, centred on a row: where each starts and its width.
+void TabsLayout(f32* pX, f32* pWidths)
+{
+    f32 total = 0;
+    for (s32 i = 0; i < PortSaves::kNumCities; i++)
+    {
+        pWidths[i] = Width(Translate(kCities[i]), MenuFont());
+        total += pWidths[i];
+    }
+    const f32 room = (600 - total) / (PortSaves::kNumCities - 1);
+    const f32 gap = room < 48 ? room : 48;
+    f32 x = 320 - (total + gap * (PortSaves::kNumCities - 1)) / 2;
+    for (s32 i = 0; i < PortSaves::kNumCities; i++)
+    {
+        pX[i] = x;
+        x += pWidths[i] + gap;
+    }
+}
+
+// The city chosen underlined in red, the cities not reached dim; NO SAVE in a city without one.
+void DrawTabs(const Layout& layout)
+{
+    f32 x[PortSaves::kNumCities];
+    f32 widths[PortSaves::kNumCities];
+    TabsLayout(x, widths);
+    const f32 y = ListTop();
+    for (s32 i = 0; i < PortSaves::kNumCities; i++)
+    {
+        Text(Translate(kCities[i]), x[i], y, MenuFont(), i == sTab, !sTabEnabled[i]);
+        if (i == sTab)
+        {
+            Rect(x[i], y + 17, x[i] + widths[i], y + 19, TextColour(true, false));
+        }
+    }
+    for (s32 c = 0; c < kSaveColumns && layout.mCount > 1; c++)
+    {
+        Text(Translate(kSaveHeadings[c]), layout.mColumnX[c], y + kTabsStep - kHeadingsStep, MenuFont(), false, true);
+    }
+    if (layout.mCount == 1)
+    {
+        Text(Translate(L"NO SAVE"), layout.mX, y + kTabsStep - kHeadingsStep, MenuFont(), false, true);
+    }
+}
+
+// The tab under that layout position, -1 if none.
+s32 TabAt(f32 x, f32 y)
+{
+    f32 tabX[PortSaves::kNumCities];
+    f32 widths[PortSaves::kNumCities];
+    TabsLayout(tabX, widths);
+    for (s32 i = 0; i < PortSaves::kNumCities; i++)
+    {
+        if (y >= ListTop() - 4 && y < ListTop() + 20 && x >= tabX[i] - 8 && x < tabX[i] + widths[i] + 8)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+// The next city that can be chosen that way, its newest save selected.
+Result ChangeTab(s32 tab, s32 step)
+{
+    while (tab >= 0 && tab < PortSaves::kNumCities && !sTabEnabled[tab])
+    {
+        tab += step;
+    }
+    if (tab < 0 || tab >= PortSaves::kNumCities || tab == sTab)
+    {
+        return kNothing;
+    }
+    const Result result = tab < sTab ? kLowered : kRaised;
+    sTab = tab;
+    sSelected[kSavesPage] = 0;
+    return result;
+}
+
 // Drops the mouse's moves and clicks so far.
 void DiscardMouse()
 {
@@ -1145,11 +1266,22 @@ bool OnStatistics(f32* pTop, f32* pStep)
     return sPage == kStatsPage;
 }
 
-void OpenSaves(const PortSaves::Entry* pEntries, s32 count)
+void OpenSaves(const PortSaves::Entry* pEntries, s32 count, const bool* pCities)
 {
     Open();
     sNumSaves = count < PortSaves::kMaxSaves ? count : PortSaves::kMaxSaves;
     memcpy(sSaves, pEntries, sNumSaves * sizeof(sSaves[0]));
+    sTab = -1;
+    for (s32 c = 0; c < PortSaves::kNumCities; c++)
+    {
+        sTabEnabled[c] = pCities[c];
+        for (s32 i = 0; i < sNumSaves; i++)
+        {
+            sTabEnabled[c] = sTabEnabled[c] || sSaves[i].mMainStage == c;
+        }
+        sTab = sTab < 0 && sTabEnabled[c] ? c : sTab;
+    }
+    sTab = sNumSaves ? sSaves[0].mMainStage : (sTab < 0 ? 0 : sTab);
     sPage = kSavesPage;
     sSelected[kSavesPage] = 0;
 }
@@ -1161,7 +1293,10 @@ bool OnSaves()
 
 const PortSaves::Entry& SelectedSave()
 {
-    return sSaves[sSelected[kSavesPage] < sNumSaves ? sSelected[kSavesPage] : 0];
+    Item items[kMaxItems];
+    const s32 count = Items(kSavesPage, items);
+    const s32 selected = sSelected[kSavesPage];
+    return sSaves[selected < count && items[selected].mKind == kSave ? items[selected].mArg : 0];
 }
 
 void Close()
@@ -1187,6 +1322,10 @@ Result HandleInput(Input input)
             return kMovedDown;
         case kLeft:
         case kRight:
+            if (sPage == kSavesPage)
+            {
+                return ChangeTab(sTab + (input == kLeft ? -1 : 1), input == kLeft ? -1 : 1);
+            }
             if (!IsEnabled(item))
             {
                 return kNothing;
@@ -1322,6 +1461,11 @@ Result HandleMouse(f32 scale, f32 left, f32 top)
     }
     const f32 x = (frameX - left) / scale;
     const f32 y = (frameY - top) / scale;
+    const s32 tab = sPage == kSavesPage && leftClicks ? TabAt(x, y) : -1;
+    if (tab >= 0)
+    {
+        return ChangeTab(tab, 0);
+    }
     Layout layout;
     GetLayout(&layout);
     s32& selected = sSelected[sPage];
@@ -1412,6 +1556,10 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
     {
         Text(Translate(kColumnNames[c]), layout.mColumnX[c], ListTop() - 20, normal);
     }
+    if (sPage == kSavesPage)
+    {
+        DrawTabs(layout);
+    }
     wchar_t texts[kMaxTexts][kTextLength];
     for (s32 i = 0; i < layout.mCount; i++)
     {
@@ -1449,17 +1597,6 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
         for (s32 c = 1; c < layout.mColumns && (item.mKind == kBinding || item.mKind == kSave); c++)
         {
             Text(texts[c], layout.mColumnX[c], y, normal, selected);
-        }
-        for (s32 c = 0; c < kSaveColumns && item.mKind == kSave; c++)
-        {
-            Text(texts[c + kSaveColumns], layout.mColumnX[c], y + layout.mLineStep, normal, selected, !selected);
-        }
-        wchar_t title[kTextLength];
-        if (item.mKind == kSave && sSaves[item.mArg].mKind == PortSaves::kRetry &&
-            sSaves[item.mArg].mCheckpoint == PortSaves::kBeforeJob && JobTitle(sSaves[item.mArg].mJob, title, kTextLength))
-        {
-            FitText(title, layout.mColumnX[0] - 12 - layout.mX);
-            Text(title, layout.mX, y + layout.mLineStep, normal, selected, !selected);
         }
         if (selected && item.mKind == kBinding && layout.mColumns > 1)
         {
