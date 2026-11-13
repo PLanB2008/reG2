@@ -56,6 +56,7 @@
 #include "ped_death_cause.hpp"
 #include "ped_graphic_type.hpp"
 #if defined(GTA2_PORT)
+#include "../port/src/retry.hpp"
 #include "../port/src/saves.hpp"
 #endif
 // Back to force inline
@@ -6646,6 +6647,9 @@ void ScriptThread::Handle_START_BASIC_KF() // START_BASIC_KF_TEMPLATE
     }
     else
     {
+#if defined(GTA2_PORT)
+        PortRetry::BeforeStart(PortSaves::kBeforeFrenzy);
+#endif
         gScriptManager->SetKillFrenzyActive(true);
         ScriptThread::DisableThread(pCmd->mTriggername);
         gHud_2B00->mMessage.ShowMessage(gText_0x14->Find("kfstart"), hud_message_priority::important_3); // KILL FRENZY!
@@ -7678,6 +7682,9 @@ ScriptThread* ScriptThread::SpawnThread(u16 start_cmd)
 MATCH_FUNC(0x5119a0)
 void ScriptThread::launch_mission(SCR_CMD_HEADER* pCmd, const char_type* pMissionName)
 {
+#if defined(GTA2_PORT)
+    PortRetry::BeforeStart(PortSaves::kBeforeJob);
+#endif
     u16 cmd_next;
     gScriptManager->LoadMissionScript(pMissionName, &cmd_next);
     strcpy(mStr, pMissionName);

@@ -67,6 +67,7 @@
 #if defined(GTA2_PORT)
 #include "../port/src/autosave.hpp"
 #include "../port/src/frame_loop.hpp"
+#include "../port/src/retry.hpp"
 #endif
 
 DEFINE_STATIC_GLOBAL(u8, sNetDisconnectPlayersBits, 0x6F56B8);
@@ -981,6 +982,7 @@ EXPORT void __stdcall InitializeGame()
     // A church save goes to plyslotN.svg, whichever file was loaded.
     gGameSession.SetSaveFileName("");
     PortAutosave::Start();
+    PortRetry::Start();
 #endif
     gGame_0x40->BootGame();
 
@@ -1488,6 +1490,7 @@ static bool PortRunGameFrame()
             if (!exit_requested)
             {
                 PortAutosave::AfterStep();
+                PortRetry::AfterStep();
             }
             sbForceGameUpdate = false;
             sbInputsPending = true;

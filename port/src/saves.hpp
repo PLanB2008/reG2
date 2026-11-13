@@ -13,6 +13,14 @@ namespace PortSaves
 void TempName(const char_type* pFileName, char_type* pOut, size_t size);
 bool Commit(const char_type* pTempName, const char_type* pFileName);
 
+// What a retry checkpoint was taken before.
+enum Checkpoint
+{
+    kNoCheckpoint,
+    kBeforeJob,
+    kBeforeFrenzy,
+};
+
 // What the game reads first from a save: its level's files and stage.
 struct Header
 {
@@ -22,6 +30,7 @@ struct Header
     u8 mMainStage;
     u8 mBonusStage; // 0 for a main stage
     s32 mMoney;
+    u8 mCheckpoint; // a Checkpoint
 };
 
 // The file is a whole save (sizes, header, map changes) whose saved counters are those of its
@@ -43,18 +52,27 @@ struct JobsPassed
 bool ReadJobsPassed(const char_type* pFileName, JobsPassed* pJobs);
 
 // A profile's saves in player\, per city: the church save, as plyslotN.svg (the latest, as the original
-// writes it) and a copy, and the autosave, with the one before it kept as a backup.
+// writes it) and a copy, and the autosave, with the one before it kept as a backup. And one retry
+// checkpoint for all cities.
 const s32 kNumCities = 3;
 
-// After ScriptManager::SaveGame wrote a church save: its copy for the city.
+// After ScriptManager::SaveGame wrote a church save: its copy for the city, and no retry checkpoint.
 void AfterSave(const char_type* pFileName);
 
-// SaveGame, as it fills the header: the autosave's exact position, power-ups and car, or none of them in a
-// church save, as the original.
+// SaveGame, as it fills the header: the exact position, power-ups and car of an autosave or a checkpoint,
+// or none of them in a church save, as the original.
 void FillSave(SaveData* pSave);
 // The autosave of the current city, written now.
 void Autosave();
-// The level was loaded from an autosave: the player spawns where he was.
+// The retry checkpoint, written now or deleted.
+void CheckpointName(u8 slot, char_type* pOut, size_t size);
+void WriteCheckpoint(Checkpoint kind);
+void DeleteCheckpoint();
+// What it was taken before, kNoCheckpoint if there is none for the current level; its money and file time.
+Checkpoint GetCheckpoint(s32* pMoney = NULL, long long* pTime = NULL);
+// Read again from its file, as a level starts.
+void RefreshCheckpoint();
+// The level was loaded from an autosave or a checkpoint: the player spawns where he was.
 bool ExactSpawn();
 // Player::UpdateGameFromSave restored the cars: the player back in the one he drove.
 void AfterRestore(Player* pPlayer);

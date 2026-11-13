@@ -164,11 +164,38 @@ bool Move(const char_type* pFrom, const char_type* pTo)
 #endif
 }
 
-// An autosave's mUnused50, which the original leaves 0: the player spawns where he was. Its mPad4E is 1
-// if he drove a car.
+// An autosave's or a checkpoint's mUnused50, which the original leaves 0: the player spawns where he was.
+// Its mPad4E is 1 if he drove a car, a checkpoint's mPad4F what it was taken before.
 const s32 kExactSpawn = 0x32474552;
 
-bool sAutosaving;
+enum Writing
+{
+    kWritingChurchSave,
+    kWritingAutosave,
+    kWritingCheckpoint,
+};
+Writing sWriting;
+Checkpoint sWritingCheckpoint;
+
+// The checkpoint as its file was last written, deleted or read.
+struct CheckpointInfo
+{
+    Checkpoint mKind;
+    u8 mMainStage;
+    s32 mMoney;
+    long long mTime;
+};
+CheckpointInfo sCheckpoint;
+
+void RemoveFile(const char_type* pFileName)
+{
+#if defined(_WIN32)
+    DeleteFileA(pFileName);
+#else
+    char path[PATH_MAX];
+    unlink(port_resolve_path(pFileName, path));
+#endif
+}
 
 void BackupName(const char_type* pFileName, char_type* pOut, size_t size)
 {
@@ -246,6 +273,11 @@ bool ReadEntry(const char_type* pFileName, Kind kind, LevelCheck pCheck, Entry* 
 }
 } // namespace
 
+void CheckpointName(u8 slot, char_type* pOut, size_t size)
+{
+    snprintf(pOut, size, "player\\plyslot%d_retry.svg", slot);
+}
+
 void TempName(const char_type* pFileName, char_type* pOut, size_t size)
 {
     snprintf(pOut, size, "%s.tmp", pFileName);
@@ -253,7 +285,7 @@ void TempName(const char_type* pFileName, char_type* pOut, size_t size)
 
 bool Commit(const char_type* pTempName, const char_type* pFileName)
 {
-    if (sAutosaving)
+    if (sWriting == kWritingAutosave)
     {
         char_type backup[260];
         BackupName(pFileName, backup, sizeof(backup));
@@ -334,6 +366,7 @@ bool IsValid(const char_type* pFileName, Header* pHeader)
         pHeader->mMainStage = main_stage;
         pHeader->mBonusStage = bonus_stage;
         pHeader->mMoney = save.mPlayerAndWorldStats.mMoney;
+        pHeader->mCheckpoint = save.mUnused50 == kExactSpawn && save.mPad4F <= kBeforeFrenzy ? save.mPad4F : kNoCheckpoint;
     }
     return true;
 }
@@ -400,7 +433,12 @@ void AfterSave(const char_type* pFileName)
 {
     char_type latest[260];
     LatestChurchName(gGameSession.GetPlySlotIdx(), latest, sizeof(latest));
-    if (sAutosaving || strcmp(pFileName, latest) || gGameSession.IsBonusStage())
+    if (sWriting != kWritingChurchSave || strcmp(pFileName, latest))
+    {
+        return;
+    }
+    DeleteCheckpoint();
+    if (gGameSession.IsBonusStage())
     {
         return;
     }
@@ -418,11 +456,13 @@ void FillSave(SaveData* pSave)
     memset(&cars, 0, sizeof(cars));
     data.mUnused44 = 0;
     pSave->mPad4E = 0;
+    pSave->mPad4F = 0;
     pSave->mUnused50 = 0;
-    if (!sAutosaving)
+    if (sWriting == kWritingChurchSave)
     {
         return;
     }
+    pSave->mPad4F = static_cast<char_type>(sWriting == kWritingCheckpoint ? sWritingCheckpoint : kNoCheckpoint);
     Player* pPlayer = gGame_0x40->mLocalPlayer;
     pSave->mUnused50 = kExactSpawn;
     for (s32 i = 0; i < GTA2_COUNTOF_S(stats.mPowerUps); i++)
@@ -449,9 +489,60 @@ void Autosave()
 {
     char_type name[260];
     FileName(gGameSession.GetPlySlotIdx(), "auto", gGameSession.GetMainStageIdx(), name, sizeof(name));
-    sAutosaving = true;
+    sWriting = kWritingAutosave;
     gScriptManager->SaveGame(name);
-    sAutosaving = false;
+    sWriting = kWritingChurchSave;
+}
+
+void WriteCheckpoint(Checkpoint kind)
+{
+    char_type name[260];
+    CheckpointName(gGameSession.GetPlySlotIdx(), name, sizeof(name));
+    sWriting = kWritingCheckpoint;
+    sWritingCheckpoint = kind;
+    gScriptManager->SaveGame(name);
+    sWriting = kWritingChurchSave;
+    sCheckpoint.mTime = FileTime(name);
+    sCheckpoint.mKind = sCheckpoint.mTime >= 0 ? kind : kNoCheckpoint;
+    sCheckpoint.mMainStage = static_cast<u8>(gGameSession.GetMainStageIdx());
+    sCheckpoint.mMoney = gGameSave.mPlayerAndWorldStats.mMoney;
+}
+
+void DeleteCheckpoint()
+{
+    char_type name[260];
+    CheckpointName(gGameSession.GetPlySlotIdx(), name, sizeof(name));
+    RemoveFile(name);
+    sCheckpoint.mKind = kNoCheckpoint;
+}
+
+Checkpoint GetCheckpoint(s32* pMoney, long long* pTime)
+{
+    if (gGameSession.IsBonusStage() || sCheckpoint.mMainStage != static_cast<u8>(gGameSession.GetMainStageIdx()))
+    {
+        return kNoCheckpoint;
+    }
+    if (pMoney)
+    {
+        *pMoney = sCheckpoint.mMoney;
+    }
+    if (pTime)
+    {
+        *pTime = sCheckpoint.mTime;
+    }
+    return sCheckpoint.mKind;
+}
+
+void RefreshCheckpoint()
+{
+    char_type name[260];
+    CheckpointName(gGameSession.GetPlySlotIdx(), name, sizeof(name));
+    Header header = {};
+    const bool valid = IsValid(name, &header) && !header.mBonusStage;
+    sCheckpoint.mKind = valid ? static_cast<Checkpoint>(header.mCheckpoint) : kNoCheckpoint;
+    sCheckpoint.mMainStage = header.mMainStage;
+    sCheckpoint.mMoney = header.mMoney;
+    sCheckpoint.mTime = FileTime(name);
 }
 
 bool ExactSpawn()
