@@ -777,10 +777,18 @@ struct Layout
     f32 mPanelRight;
 };
 
-// The first line's top, under the frontend's logo.
+// The first line's top: under the frontend's logo, or near the top of the pause menu's panel, which
+// starts under the HUD's gang bars on a 4:3 screen.
 const f32 kListTop = 160;
+const f32 kGameListTop = 110;
+const f32 kGamePanelTop = 80;
 // The statistics' rows, from one's top to the next.
 const f32 kStatStep = 24;
+
+f32 ListTop()
+{
+    return port_GameRunning() ? kGameListTop : kListTop;
+}
 
 // From a line's top to the next, or to one set apart; a save's two rows, and the space after them.
 const f32 kLineStep = 16;
@@ -898,7 +906,7 @@ void GetLayout(Layout* pLayout)
     // The controls page closer, its last line above the frontend's left logo.
     pLayout->mLineStep = controls ? kLineStep - 1 : kLineStep;
     // BACK under the statistics.
-    f32 y = kListTop + (sPage == kStatsPage ? sStatRows * kStatStep + kGapStep - kLineStep : 0);
+    f32 y = ListTop() + (sPage == kStatsPage ? sStatRows * kStatStep + kGapStep - kLineStep : 0);
     for (s32 i = 0; i < count; i++)
     {
         if (i)
@@ -1049,7 +1057,7 @@ void OfferStatistics(s32 rows)
 
 bool OnStatistics(f32* pTop, f32* pStep)
 {
-    *pTop = kListTop;
+    *pTop = ListTop();
     *pStep = kStatStep;
     return sPage == kStatsPage;
 }
@@ -1302,11 +1310,11 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
     const s16 normal = MenuFont();
     if (panel)
     {
-        Rect(layout.mPanelLeft, 130, layout.mPanelRight, 470, 0);
+        Rect(layout.mPanelLeft, kGamePanelTop, layout.mPanelRight, 470, 0);
     }
     for (s32 c = 0; c < layout.mColumns && layout.mControls; c++)
     {
-        Text(Translate(kColumnNames[c]), layout.mColumnX[c], 140, normal);
+        Text(Translate(kColumnNames[c]), layout.mColumnX[c], ListTop() - 20, normal);
     }
     wchar_t texts[kMaxTexts][kTextLength];
     for (s32 i = 0; i < layout.mCount; i++)
