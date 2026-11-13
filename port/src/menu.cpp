@@ -126,6 +126,7 @@ PortSaves::Entry sSaves[PortSaves::kMaxSaves];
 s32 sNumSaves;
 // The retry checkpoint the pause menu offers.
 PortSaves::Checkpoint sRetry;
+bool sRestart; // the job or frenzy still runs
 s32 sRetryMoney;
 long long sRetryTime;
 PortSaves::JobName sRetryJob;
@@ -243,6 +244,10 @@ const wchar_t* EnglishName(const Item& item)
                     return sSaves[item.mArg].mCheckpoint == PortSaves::kBeforeFrenzy ? L"BEFORE LAST FRENZY" : L"BEFORE LAST JOB";
             }
         case kRetry:
+            if (sRestart)
+            {
+                return sRetry == PortSaves::kBeforeFrenzy ? L"RESTART FRENZY" : L"RESTART JOB";
+            }
             return sRetry == PortSaves::kBeforeFrenzy ? L"RETRY FRENZY" : L"RETRY JOB";
         default:
             return L"BACK";
@@ -758,19 +763,19 @@ void FitText(wchar_t* pText, f32 width)
 // The main page's width, from its names to the panel's right edge.
 const f32 kRetryWidth = 450;
 
-// RETRY's rows: RETRY: <title>, on two rows if it is too wide, RETRY JOB without one, or RETRY FRENZY; then
-// the gang that gave the job, the money then and the checkpoint's age.
+// RETRY's rows: RETRY: <title> (RESTART while it runs), on two rows if it is too wide, RETRY JOB without one, or
+// RETRY FRENZY; then the gang that gave the job, the money then and the checkpoint's age.
 s32 RetryRows(wchar_t (*pTexts)[kTextLength])
 {
     wchar_t title[kTextLength - 16];
     s32 rows = 1;
     if (sRetry == PortSaves::kBeforeFrenzy || !JobTitle(sRetryJob, title, GTA2_COUNTOF(title)))
     {
-        wcscpy(pTexts[0], Translate(sRetry == PortSaves::kBeforeFrenzy ? L"RETRY FRENZY" : L"RETRY JOB"));
+        wcscpy(pTexts[0], ItemName(Item{kRetry, 0, false}));
     }
     else
     {
-        swprintf(pTexts[0], Translate(L"RETRY: %ls"), title);
+        swprintf(pTexts[0], Translate(sRestart ? L"RESTART: %ls" : L"RETRY: %ls"), title);
         // Too wide: two rows of about the same width, split in the title.
         const s32 titleStart = static_cast<s32>(wcslen(pTexts[0]) - wcslen(title));
         const bool wide = Width(pTexts[0], MenuFont()) > kRetryWidth;
@@ -1143,9 +1148,10 @@ void Open()
 #endif
 }
 
-void OfferRetry(PortSaves::Checkpoint kind, s32 money, long long time, const PortSaves::JobName& job, bool selected)
+void OfferRetry(PortSaves::Checkpoint kind, s32 money, long long time, const PortSaves::JobName& job, bool selected, bool restart)
 {
     sRetry = kind;
+    sRestart = restart;
     sRetryMoney = money;
     sRetryTime = time;
     sRetryJob = job;

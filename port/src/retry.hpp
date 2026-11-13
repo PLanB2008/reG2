@@ -20,8 +20,9 @@ void JobLoaded(const SCR_CMD_HEADER* pCmd, u16 base);
 void AfterStep();
 // With the HUD.
 void Draw();
-// The pause menu's RETRY: right after a failure it comes selected.
+// The pause menu's RETRY: right after a failure it comes selected; RESTART while the job or frenzy runs.
 bool JustFailed();
+bool Running();
 void Retry();
 // The game ends for RETRY.
 bool Retrying();

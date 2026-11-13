@@ -318,7 +318,7 @@ bool HandleKey(s32 action, Player* pPlayer)
             long long time;
             PortSaves::JobName job;
             const PortSaves::Checkpoint kind = PortSaves::GetCheckpoint(&money, &time, &job);
-            PortMenu::OfferRetry(kind, money, time, job, PortRetry::JustFailed());
+            PortMenu::OfferRetry(kind, money, time, job, PortRetry::JustFailed(), PortRetry::Running());
         }
         u8 sections[7];
         PortMenu::OfferStatistics(StatSections(sections));
