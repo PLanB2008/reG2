@@ -635,37 +635,10 @@ Result SetSliderAt(const Item& item, f32 x, f32 trackX)
     return value < slider.mValue ? kLowered : kRaised;
 }
 
-// $184,000 in English; 184.000 $, or 184 000 $ in French, in the others.
+// $184000 in every language, as the HUD and the original frontend's bonus results show money.
 void MoneyText(s32 money, wchar_t* pOut)
 {
-    char digits[16];
-    snprintf(digits, sizeof(digits), "%d", money < 0 ? -money : money);
-    const char lang = gText_0x14 ? gText_0x14->mLangCode : 'e';
-    const wchar_t separator = lang == 'e' ? L',' : (lang == 'f' ? L' ' : L'.');
-    wchar_t* p = pOut;
-    if (money < 0)
-    {
-        *p++ = L'-';
-    }
-    if (lang == 'e')
-    {
-        *p++ = L'$';
-    }
-    const size_t len = strlen(digits);
-    for (size_t i = 0; i < len; i++)
-    {
-        if (i && (len - i) % 3 == 0)
-        {
-            *p++ = separator;
-        }
-        *p++ = static_cast<wchar_t>(digits[i]);
-    }
-    if (lang != 'e')
-    {
-        *p++ = L' ';
-        *p++ = L'$';
-    }
-    *p = 0;
+    swprintf(pOut, money < 0 ? L"-$%d" : L"$%d", money < 0 ? -money : money);
 }
 
 time_t Midnight(tm day)
