@@ -47,10 +47,10 @@ const s32 kNumGameSettings = sizeof(kGameSettings) / sizeof(kGameSettings[0]);
 #if defined(GTA2_PORT_SDL)
 const Id kGraphicsSettings[] =
     {kPreset, kTrueColour, kPerPixelLighting, kShadows, kHeadlights, kLightEffects, kBloom, kTextureFilter, kAntiAliasing};
-const Id kDisplaySettings[] = {kDisplay, kDisplayMode, kVsync, kFrameLimit, kShowFps, kBrightness, kZoom, kHudScale, kSafeArea};
+const Id kDisplaySettings[] = {kFullScreen, kDisplayMode, kVsync, kFrameLimit, kShowFps, kBrightness, kZoom, kHudScale, kSafeArea};
 #else
 const Id kGraphicsSettings[] = {kHeadlights, kLightEffects};
-const Id kDisplaySettings[] = {kDisplay, kFrameLimit, kShowFps, kBrightness, kZoom, kHudScale, kSafeArea};
+const Id kDisplaySettings[] = {kFullScreen, kFrameLimit, kShowFps, kBrightness, kZoom, kHudScale, kSafeArea};
 #endif
 const s32 kNumGraphicsSettings = sizeof(kGraphicsSettings) / sizeof(kGraphicsSettings[0]);
 const s32 kNumDisplaySettings = sizeof(kDisplaySettings) / sizeof(kDisplaySettings[0]);
@@ -60,7 +60,7 @@ const s32 kNumSoundSettings = sizeof(kSoundSettings) / sizeof(kSoundSettings[0])
 namespace
 {
 const wchar_t* const kNames[kCount] = {L"SOUND EFFECTS", L"MUSIC", L"3D SOUND", L"TEXT SPEED", L"LANGUAGE",
-                                       L"DISPLAY", L"BRIGHTNESS", L"LIGHTING", L"EXPLODING SCORES", L"FRAME LIMIT",
+                                       L"FULL SCREEN", L"BRIGHTNESS", L"LIGHTING", L"EXPLODING SCORES", L"FRAME LIMIT",
                                        L"TRUE COLOUR", L"BLOOM", L"PIXEL LIGHTING", L"CAR HEADLIGHTS",
                                        L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS"};
 
@@ -112,8 +112,7 @@ const Translation kTranslations[] = {
     {L"TEXT SPEED", NULL, {L"VITESSE TEXTE", L"TEXTTEMPO", L"VELOCITÀ TESTO", L"VELOCIDAD TEXTO"}},
     {L"LANGUAGE", NULL, {L"LANGUE", L"SPRACHE", L"LINGUA", L"IDIOMA"}},
     {L"DISPLAY", NULL, {L"AFFICHAGE", L"ANZEIGE", L"SCHERMO", L"PANTALLA"}},
-    {L"FULL SCREEN", NULL, {L"PLEIN ECRAN", L"VOLLBILD", L"INTERO", L"COMPLETA"}},
-    {L"WINDOW", NULL, {L"FENETRE", L"FENSTER", L"FINESTRA", L"VENTANA"}},
+    {L"FULL SCREEN", NULL, {L"PLEIN ECRAN", L"VOLLBILD", L"SCHERMO INTERO", L"PANTALLA COMPLETA"}},
     {L"BRIGHTNESS", NULL, {L"VALEUR GAMMA", L"GAMMA-WERT", L"VALORE GAMMA", L"VALOR GAMMA"}},
     {L"LIGHTING", NULL, {L"ECLAIRAGE", L"LICHT", L"ILLUMINAZIONE", L"LUCES"}},
     {L"DUSK", NULL, {L"CREPUSCULE", L"DÄMMERUNG", L"CREPUSCOLO", L"ATARDECER"}},
@@ -783,8 +782,8 @@ void Value(Id id, wchar_t* pOut)
         case kLanguage:
             wcscpy(pOut, kLanguages[LanguageIndex()].mName);
             break;
-        case kDisplay:
-            wcscpy(pOut, Translate(gRegistry.Get_Screen_Setting("start_mode", 1) ? L"FULL SCREEN" : L"WINDOW"));
+        case kFullScreen:
+            wcscpy(pOut, Translate(gRegistry.Get_Screen_Setting("start_mode", 1) ? L"ON" : L"OFF"));
             break;
         case kBrightness:
             swprintf(pOut, L"%d", gRegistry.Get_Screen_Setting("gamma", 10));
@@ -945,7 +944,7 @@ void Change(Id id, s32 delta)
             }
             break;
         }
-        case kDisplay:
+        case kFullScreen:
             // As Alt+Enter: start_mode 1 is full screen, 0 a window.
             if (IsWindowedModeAvailable())
             {

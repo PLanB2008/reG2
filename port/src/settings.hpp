@@ -13,7 +13,7 @@ enum Id
     k3dSound,
     kTextSpeed,
     kLanguage,
-    kDisplay,
+    kFullScreen,
     kBrightness,
     kLighting,
     kExplodingScores,
