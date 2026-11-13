@@ -1619,6 +1619,9 @@ void Frontend::Update()
             {
                 snd1.mbStatus = false;
                 UpdatePageFromUserInput();
+#if defined(GTA2_PORT)
+                PortOptionsMenu::AfterPageInput(this);
+#endif
             }
             break;
 
@@ -1627,6 +1630,12 @@ void Frontend::Update()
             break;
 
         case FrontendState::Delete_Player_Dialog_4:
+#if defined(GTA2_PORT)
+            if (PortOptionsMenu::UpdateDialog(this))
+            {
+                break;
+            }
+#endif
             HandleDeletePlayerDialog();
             break;
 
@@ -3019,6 +3028,9 @@ void Frontend::DrawCurrentState()
     switch (mState)
     {
         case FrontendState::Delete_Player_Dialog_4:
+#if defined(GTA2_PORT)
+            PortOptionsMenu::DrawDialog(this);
+#endif
             DrawDeletePlayerDialog();
             break;
 

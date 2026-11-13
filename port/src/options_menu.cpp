@@ -4,6 +4,7 @@
 #include "Draw.hpp"
 #include "Globals.hpp"
 #include "SoundObject.hpp"
+#include "TextTable.hpp"
 #include "menu.hpp"
 #include "reg2_version.h"
 #include "retry.hpp"
@@ -36,6 +37,17 @@ u16 sSavesReturnPage;
 u16 sSavesReturnOption;
 Frontend* sListing;
 char_type sResumeFile[64];
+
+// The delete player dialog's type for a new game that replaces an autosave, past the original's 1, and its lines'
+// y as HandleDeletePlayerDialog has them.
+const u8 kReplaceDialog = 2;
+const u16 kSureY = 190;
+const u16 kYesY = 210;
+const u16 kNoY = 230;
+// Before the original pages took the input, put back if the new game is not confirmed; and the boot's screen.
+GameSession sSessionBefore;
+char_type sScreenBefore;
+char_type sBootScreen;
 
 s32 Wrap(s32 i, s32 n)
 {
@@ -291,6 +303,8 @@ bool Update(Frontend* pFrontend)
 #if defined(GTA2_PORT_SDL)
         OriginalPageMouse(pFrontend);
 #endif
+        sSessionBefore = gGameSession;
+        sScreenBefore = pFrontend->mMenuScreen;
         return false;
     }
     if (!sShown)
@@ -325,6 +339,109 @@ bool Update(Frontend* pFrontend)
     }
     wcsncpy(pFrontend->mMenuPagesArray[kMenuPage].mElementsArray[0].mElementNameStr, PortMenu::Title(), 50);
     return true;
+}
+
+void AfterPageInput(Frontend* pFrontend)
+{
+    if (pFrontend->mState != FrontendState::Booting_Map_2 || gGameSession.GetSaveName()[0] || gGameSession.IsBonusStage() ||
+        !PortSettings::Autosave() ||
+        !PortSaves::HasAutosave(gGameSession.GetPlySlotIdx(), static_cast<u8>(gGameSession.GetMainStageIdx())))
+    {
+        return;
+    }
+    sBootScreen = pFrontend->mMenuScreen;
+    pFrontend->mMenuScreen = sScreenBefore;
+    pFrontend->mState = FrontendState::Delete_Player_Dialog_4;
+    pFrontend->mDialogType = kReplaceDialog;
+    pFrontend->mDialogCursorYpos = kSureY;
+}
+
+bool UpdateDialog(Frontend* pFrontend)
+{
+    if (pFrontend->mDialogType != kReplaceDialog)
+    {
+        return false;
+    }
+    u16& cursor = pFrontend->mDialogCursorYpos;
+#if defined(GTA2_PORT_SDL)
+    // YEAH! and NO WAY! with the mouse, as the original pages' options.
+    float x;
+    float y;
+    int left;
+    int right;
+    int wheel;
+    const bool moved = port_TakeMouse(&x, &y, &left, &right, &wheel);
+    pFrontend->mEscapePressed = pFrontend->mEscapePressed || right;
+    const u16 lines[2] = {kYesY, kNoY};
+    const char* const keys[2] = {"yes", "no"};
+    for (s32 i = 0; i < 2 && (moved || left); i++)
+    {
+        const f32 width = static_cast<f32>(Frontend::GetMaxTextWidth(gText_0x14->Find(keys[i]), pFrontend->mSelectedFont));
+        if (Inside(x, y, 296.0f, lines[i] - 2.0f, 304.0f + width, lines[i] + 18.0f))
+        {
+            if (cursor != lines[i])
+            {
+                snd1.mObjectType = lines[i] < cursor ? PortMenu::kMovedUp : PortMenu::kMovedDown;
+                cursor = lines[i];
+            }
+            pFrontend->mReturnPressed = pFrontend->mReturnPressed || left;
+        }
+    }
+#endif
+    if (pFrontend->mReturnPressed && cursor == kYesY)
+    {
+        pFrontend->mMenuScreen = sBootScreen;
+        pFrontend->mState = FrontendState::Booting_Map_2;
+        snd1.mObjectType = PortMenu::kEntered;
+    }
+    else if (pFrontend->mEscapePressed || (pFrontend->mReturnPressed && cursor == kNoY))
+    {
+        gGameSession = sSessionBefore;
+        pFrontend->mMenuScreen = sScreenBefore;
+        pFrontend->mState = FrontendState::Menu_Navigation_1;
+        snd1.mObjectType = PortMenu::kWentBack;
+    }
+    else if (pFrontend->mUpPressed)
+    {
+        cursor = cursor == kNoY ? kYesY : kNoY;
+        snd1.mObjectType = PortMenu::kMovedUp;
+    }
+    else if (pFrontend->mDownPressed)
+    {
+        cursor = cursor == kYesY ? kNoY : kYesY;
+        snd1.mObjectType = PortMenu::kMovedDown;
+    }
+    return true;
+}
+
+void DrawDialog(Frontend* pFrontend)
+{
+    if (pFrontend->mDialogType != kReplaceDialog)
+    {
+        return;
+    }
+    static const wchar_t* const kCities[PortSaves::kNumCities] = {L"DOWNTOWN", L"RESIDENTIAL", L"INDUSTRIAL"};
+    const u8 city = static_cast<u8>(gGameSession.GetMainStageIdx());
+    wchar_t text[128];
+    swprintf(text, PortSettings::Translate(L"YOUR %ls AUTOSAVE WILL BE REPLACED"),
+             PortSettings::Translate(kCities[city < PortSaves::kNumCities ? city : 0]));
+    // The small font has no hyphen.
+    for (wchar_t* p = text; *p; p++)
+    {
+        *p = *p == L'-' ? L' ' : *p;
+    }
+    // In the title bar as the original dialog's DELETE PLAYER, then over the lines, ending above them.
+    DrawStringDefaultPalette(PortSettings::Translate(L"AUTOSAVE"), Fix16(275), Fix16(gText_0x14->LangIsJapanese() ? 16 : 12),
+                             pFrontend->mHeadingFont, Fix16(1));
+    const u16 font = static_cast<u16>(gFrontendFont7);
+    // Up to the screen's right edge, on lines of about the same width.
+    const s32 kWidth = 330;
+    const s32 total = Frontend::GetMaxTextWidth(text, font);
+    const s32 rows = (total + kWidth - 1) / kWidth;
+    const s32 wrap = rows > 1 && total / rows + 40 < kWidth ? total / rows + 40 : kWidth;
+    wchar_t lines[160];
+    const s32 count = TextTable::InsertLineBreaksAndGetNumLines(lines, text, wrap, font);
+    DrawStringDefaultPalette(lines, Fix16(300), Fix16(kSureY - 8 - count * GetLineSpacingFromFontType(font)), font, Fix16(1));
 }
 
 void Draw(Frontend* pFrontend)

@@ -437,6 +437,16 @@ bool ReadJobsPassed(const char_type* pFileName, JobsPassed* pJobs)
     return counted;
 }
 
+bool HasAutosave(u8 slot, u8 mainStage)
+{
+    char_type name[260];
+    char_type backup[260];
+    FileName(slot, "auto", mainStage, name, sizeof(name));
+    BackupName(name, backup, sizeof(backup));
+    Header header;
+    return (IsValid(name, &header) || IsValid(backup, &header)) && header.mMainStage == mainStage && !header.mBonusStage;
+}
+
 void AfterSave(const char_type* pFileName)
 {
     char_type latest[260];

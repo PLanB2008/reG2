@@ -67,6 +67,9 @@ bool ReadJobsPassed(const char_type* pFileName, JobsPassed* pJobs);
 // checkpoint for all cities.
 const s32 kNumCities = 3;
 
+// The profile has an autosave of that city, or its backup.
+bool HasAutosave(u8 slot, u8 mainStage);
+
 // After ScriptManager::SaveGame wrote a church save: its copy for the city, and no retry checkpoint.
 void AfterSave(const char_type* pFileName);
 
