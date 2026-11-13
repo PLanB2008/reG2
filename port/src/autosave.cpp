@@ -23,7 +23,7 @@ namespace PortAutosave
 {
 namespace
 {
-// At 30 steps a second: past the job's end messages, then the player safe for a second.
+// At 30 steps a second: past the job's or frenzy's end messages, then the player safe for a second.
 const s32 kWaitSteps = 90;
 const s32 kSafeSteps = 30;
 const s32 kShowSteps = 60;
@@ -33,6 +33,8 @@ s32 sWaited;
 s32 sSafe;
 s32 sShown;
 s32 sLastMission;
+bool sLastFrenzy;
+const char* sPendingWhy;
 
 // As at a church: off a job and out of a kill frenzy. Then on foot and on firm ground, or driving a car
 // out of water (stopped unless quitting), and neither dead, arrested nor burning.
@@ -80,6 +82,7 @@ void Start()
     sPending = false;
     sShown = 0;
     sLastMission = -1;
+    sLastFrenzy = false;
 }
 
 void AfterStep()
@@ -94,13 +97,16 @@ void AfterStep()
     }
     const s32* pMission = gScriptManager->mMissionFlag;
     const s32 mission = pMission ? (*pMission != 0) : -1;
-    if (sLastMission == 1 && mission == 0)
+    const bool frenzy = gScriptManager->IsKillFrenzyActive();
+    if ((sLastMission == 1 && mission == 0) || (sLastFrenzy && !frenzy))
     {
         sPending = true;
+        sPendingWhy = sLastFrenzy && !frenzy ? "frenzy over" : "job over";
         sWaited = 0;
         sSafe = 0;
     }
     sLastMission = mission;
+    sLastFrenzy = frenzy;
     if (!sPending || mission != 0 || gGame_0x40->IsPaused())
     {
         sPending = sPending && mission == 0;
@@ -111,7 +117,7 @@ void AfterStep()
     if (sWaited >= kWaitSteps && sSafe >= kSafeSteps)
     {
         sPending = false;
-        Save("job over");
+        Save(sPendingWhy);
         sShown = kShowSteps;
     }
 }
