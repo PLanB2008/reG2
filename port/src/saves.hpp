@@ -1,8 +1,11 @@
-// The church save files (.svg): written whole or not at all, and checked before the game reads one.
+// The save files (.svg): written whole or not at all, and checked before the game reads one.
 #pragma once
 
 #include "types.hpp"
 #include <stddef.h>
+
+class Player;
+class SaveData;
 
 namespace PortSaves
 {
@@ -38,10 +41,20 @@ struct JobsPassed
 // False if the save or its script cannot be read, or the script counts no jobs (bonus stages).
 bool ReadJobsPassed(const char_type* pFileName, JobsPassed* pJobs);
 
-// A profile's church saves in player\, per city: plyslotN.svg, the latest as the original writes it, and a
-// copy for each city.
+// A profile's saves in player\, per city: the church save, as plyslotN.svg (the latest, as the original
+// writes it) and a copy, and the autosave, with the one before it kept as a backup.
 const s32 kNumCities = 3;
 
 // After ScriptManager::SaveGame wrote a church save: its copy for the city.
 void AfterSave(const char_type* pFileName);
+
+// SaveGame, as it fills the header: the autosave's exact position, power-ups and car, or none of them in a
+// church save, as the original.
+void FillSave(SaveData* pSave);
+// The autosave of the current city, written now.
+void Autosave();
+// The level was loaded from an autosave: the player spawns where he was.
+bool ExactSpawn();
+// Player::UpdateGameFromSave restored the cars: the player back in the one he drove.
+void AfterRestore(Player* pPlayer);
 } // namespace PortSaves

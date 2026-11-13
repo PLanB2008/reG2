@@ -1,5 +1,6 @@
 #include "Player.hpp"
 #if defined(GTA2_PORT)
+#include "../port/src/saves.hpp"
 #include "../port/src/twin_stick.hpp"
 #endif
 #include "car_shop_type.hpp"
@@ -2803,6 +2804,9 @@ void Player::UpdateGameFromSave(SavedPlayerStats* pSave)
 
     Player::RestorePowerUpsFromSave(pSave);
     Player::RestoreCarsFromSave();
+#if defined(GTA2_PORT)
+    PortSaves::AfterRestore(this);
+#endif
 }
 
 MATCH_FUNC(0x56A490)

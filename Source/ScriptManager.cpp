@@ -380,6 +380,9 @@ void ScriptManager::SaveGame(const char_type* pFileName)
     gMap_0x370->GetModifiedMapData(&pColData, &colBytes, &pBlockInfo, &blockInfoBytes, &pMapSub, &mapSubBytes);
 
     ScriptManager::SaveMapInfo();
+#if defined(GTA2_PORT)
+    PortSaves::FillSave(&gGameSave);
+#endif
 
     {
         size_t writeLen = sizeof(SaveData);

@@ -1,7 +1,15 @@
 #include "saves.hpp"
+#include "Car.hpp"
+#include "Char_Pool.hpp"
+#include "Game.hpp"
 #include "GameSession.hpp"
+#include "Globals.hpp"
+#include "Ped.hpp"
+#include "Player.hpp"
 #include "ScriptManager.hpp"
+#include "char.hpp"
 #include "map_0x370.hpp"
+#include "sprite.hpp"
 #include <stdio.h>
 #include <string.h>
 #include <vector>
@@ -135,6 +143,68 @@ bool CopySave(const char_type* pFrom, const char_type* pTo)
     const bool written = fwrite(data.data(), 1, data.size(), pOut) == data.size();
     return fclose(pOut) == 0 && written && Commit(temp, pTo);
 }
+
+bool Move(const char_type* pFrom, const char_type* pTo)
+{
+#if defined(_WIN32)
+    return MoveFileExA(pFrom, pTo, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
+#else
+    char from[PATH_MAX];
+    char to[PATH_MAX];
+    port_resolve_path(pFrom, from);
+    port_resolve_path(pTo, to);
+    const int fd = open(from, O_RDONLY);
+    if (fd >= 0)
+    {
+        fsync(fd);
+        close(fd);
+    }
+    return rename(from, to) == 0;
+#endif
+}
+
+// An autosave's mUnused50, which the original leaves 0: the player spawns where he was. Its mPad4E is 1
+// if he drove a car.
+const s32 kExactSpawn = 0x32474552;
+
+bool sAutosaving;
+
+void BackupName(const char_type* pFileName, char_type* pOut, size_t size)
+{
+    snprintf(pOut, size, "%s.bak", pFileName);
+}
+
+// Not a train: RestoreCarsFromSave spawns single cars.
+Car* DrivenCar(Player* pPlayer)
+{
+    Ped* pPed = pPlayer->mPlayerPed;
+    Car* pCar = pPed ? pPed->mCar : NULL;
+    if (!pCar || pPed->mPedState1 != ped_state_1::in_car_10 || pCar->mDriver != pPed || pCar->IsTrainModel())
+    {
+        return NULL;
+    }
+    return pCar;
+}
+
+// As Ped::UpdateCharB4 ends a walk into a car.
+void PutInCar(Ped* pPed, Car* pCar)
+{
+    if (Char* pChar = pPed->mGameObject)
+    {
+        if (pChar->mObj2c.mP18)
+        {
+            pChar->mObj2c.DestroyAllSprites();
+        }
+        gChar_B4_Pool->DeAllocate(pChar);
+        pPed->mGameObject = NULL;
+    }
+    pPed->mCar = pCar;
+    pPed->mEnterCarAsPassenger = 0;
+    pPed->mTargetCarDoor = 0;
+    pPed->mPedState1 = ped_state_1::in_car_10;
+    pPed->mPedState2 = ped_state_2::ped2_driving_10;
+    pCar->AssignDriver(pPed);
+}
 } // namespace
 
 void TempName(const char_type* pFileName, char_type* pOut, size_t size)
@@ -144,21 +214,13 @@ void TempName(const char_type* pFileName, char_type* pOut, size_t size)
 
 bool Commit(const char_type* pTempName, const char_type* pFileName)
 {
-#if defined(_WIN32)
-    const bool ok = MoveFileExA(pTempName, pFileName, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
-#else
-    char temp[PATH_MAX];
-    char dest[PATH_MAX];
-    port_resolve_path(pTempName, temp);
-    port_resolve_path(pFileName, dest);
-    const int fd = open(temp, O_RDONLY);
-    if (fd >= 0)
+    if (sAutosaving)
     {
-        fsync(fd);
-        close(fd);
+        char_type backup[260];
+        BackupName(pFileName, backup, sizeof(backup));
+        Move(pFileName, backup);
     }
-    const bool ok = rename(temp, dest) == 0;
-#endif
+    const bool ok = Move(pTempName, pFileName);
     if (!ok)
     {
         Reject(pFileName, "the new save could not replace it");
@@ -298,12 +360,91 @@ void AfterSave(const char_type* pFileName)
 {
     char_type latest[260];
     LatestChurchName(gGameSession.GetPlySlotIdx(), latest, sizeof(latest));
-    if (strcmp(pFileName, latest) || gGameSession.IsBonusStage())
+    if (sAutosaving || strcmp(pFileName, latest) || gGameSession.IsBonusStage())
     {
         return;
     }
     char_type copy[260];
     FileName(gGameSession.GetPlySlotIdx(), "church", gGameSession.GetMainStageIdx(), copy, sizeof(copy));
     CopySave(pFileName, copy);
+}
+
+void FillSave(SaveData* pSave)
+{
+    SavedPlayerStats& stats = pSave->mPlayerAndWorldStats;
+    SavedCarAndScriptData& data = pSave->mCarAndScriptData;
+    SavedCarInfo& cars = data.mSavedCars;
+    memset(stats.mPowerUps, 0, sizeof(stats.mPowerUps));
+    memset(&cars, 0, sizeof(cars));
+    data.mUnused44 = 0;
+    pSave->mPad4E = 0;
+    pSave->mUnused50 = 0;
+    if (!sAutosaving)
+    {
+        return;
+    }
+    Player* pPlayer = gGame_0x40->mLocalPlayer;
+    pSave->mUnused50 = kExactSpawn;
+    for (s32 i = 0; i < GTA2_COUNTOF_S(stats.mPowerUps); i++)
+    {
+        stats.mPowerUps[i] = pPlayer->mPowerUpTimers[i];
+    }
+    if (Car* pCar = DrivenCar(pPlayer))
+    {
+        Sprite* pSprite = pCar->mCarSprite;
+        cars.mX[0].mValue = pSprite->GetXPos();
+        cars.mY[0].mValue = pSprite->GetYPos();
+        cars.mZ[0].mValue = pSprite->GetZPos();
+        cars.mAng[0] = pSprite->mRotation;
+        cars.mDamage[0] = pCar->mDamage;
+        cars.mDamagedAreas[0] = pCar->mDamagedAreas.m_var;
+        cars.mCarModel[0] = static_cast<u16>(pCar->mCarInfoIdx);
+        // The colour, 0 for none: RestoreCarsFromSave clears the cars' fields before AfterRestore.
+        data.mUnused44 = static_cast<s16>(pSprite->mPaletteType == palette_types_enum::car_remaps_3 ? pSprite->mRemap + 1 : 0);
+        pSave->mPad4E = 1;
+    }
+}
+
+void Autosave()
+{
+    char_type name[260];
+    FileName(gGameSession.GetPlySlotIdx(), "auto", gGameSession.GetMainStageIdx(), name, sizeof(name));
+    sAutosaving = true;
+    gScriptManager->SaveGame(name);
+    sAutosaving = false;
+}
+
+bool ExactSpawn()
+{
+    return gGameSave.mUnused50 == kExactSpawn;
+}
+
+void AfterRestore(Player* pPlayer)
+{
+    Ped* pPed = pPlayer->mPlayerPed;
+    if (!ExactSpawn() || !gGameSave.mPad4E || !pPed || pPed->mCar)
+    {
+        return;
+    }
+    // The car restored last.
+    Car* pCar = NULL;
+    for (s32 i = 0; i < GTA2_COUNTOF_S(pPlayer->mCarHistory); i++)
+    {
+        pCar = pPlayer->mCarHistory[i] ? pPlayer->mCarHistory[i] : pCar;
+    }
+    if (!pCar)
+    {
+        return;
+    }
+    const s16 colour = gGameSave.mCarAndScriptData.mUnused44;
+    if (colour)
+    {
+        pCar->SetCarRemap(static_cast<u8>(colour - 1));
+    }
+    else
+    {
+        pCar->mCarSprite->SetPaletteSprites();
+    }
+    PutInCar(pPed, pCar);
 }
 } // namespace PortSaves

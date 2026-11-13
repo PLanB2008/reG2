@@ -55,6 +55,9 @@
 #include "TextTable.hpp"
 #include "ped_death_cause.hpp"
 #include "ped_graphic_type.hpp"
+#if defined(GTA2_PORT)
+#include "../port/src/saves.hpp"
+#endif
 // Back to force inline
 #define INLINE_MODE __forceinline
 
@@ -423,6 +426,16 @@ void ScriptThread::Handle_PLAYER_PED(SCR_PLAYER_PED* pCmd)
         Ped* pPed;
         if (gScriptManager->IsLoadedFromSave())
         {
+#if defined(GTA2_PORT)
+            // A church save puts the player one block south, out of the church; an autosave where he was.
+            const SavedPlayerStats& saved = gGameSave.mPlayerAndWorldStats;
+            const bool exact = PortSaves::ExactSpawn();
+            pPed = gPedManager->SpawnPedAt(exact ? saved.mX : kFpHalf_6F75F0 + saved.mX.GetFloorValue(),
+                                           exact ? saved.mY : kFpOneAndHalf + saved.mY.GetFloorValue(),
+                                           saved.mZ,
+                                           saved.mPlayerPedRemap,
+                                           exact ? saved.mRotation : kAngZero_6F804C);
+#else
             Fix16 saved_y = kFpOneAndHalf + gGameSave.mPlayerAndWorldStats.mY.GetFloorValue();
             Fix16 saved_x = kFpHalf_6F75F0 + gGameSave.mPlayerAndWorldStats.mX.GetFloorValue();
 
@@ -431,6 +444,7 @@ void ScriptThread::Handle_PLAYER_PED(SCR_PLAYER_PED* pCmd)
                                            gGameSave.mPlayerAndWorldStats.mZ,
                                            gGameSave.mPlayerAndWorldStats.mPlayerPedRemap,
                                            kAngZero_6F804C);
+#endif
         }
         else
         {
