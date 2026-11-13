@@ -261,6 +261,7 @@ bool ReadEntry(const char_type* pFileName, Kind kind, LevelCheck pCheck, Entry* 
     }
     snprintf(pEntry->mFileName, sizeof(pEntry->mFileName), "%s", pFileName);
     pEntry->mKind = kind;
+    pEntry->mCheckpoint = static_cast<Checkpoint>(header.mCheckpoint);
     pEntry->mMainStage = header.mMainStage;
     pEntry->mBonusStage = header.mBonusStage;
     pEntry->mMoney = header.mMoney;
@@ -616,6 +617,12 @@ s32 List(u8 slot, LevelCheck pCheck, Entry* pEntries)
     if (latestLeft)
     {
         pEntries[count++] = latest;
+    }
+    CheckpointName(slot, name, sizeof(name));
+    Entry& checkpoint = pEntries[count];
+    if (ReadEntry(name, kRetry, pCheck, &checkpoint) && checkpoint.mCheckpoint != kNoCheckpoint && !checkpoint.mBonusStage)
+    {
+        count++;
     }
     for (s32 i = 1; i < count; i++)
     {

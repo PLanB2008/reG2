@@ -223,7 +223,15 @@ const wchar_t* EnglishName(const Item& item)
         case kQuit:
             return L"QUIT GAME";
         case kSave:
-            return sSaves[item.mArg].mKind == PortSaves::kChurch ? L"CHURCH" : L"AUTOSAVE";
+            switch (sSaves[item.mArg].mKind)
+            {
+                case PortSaves::kChurch:
+                    return L"CHURCH";
+                case PortSaves::kAutosave:
+                    return L"AUTOSAVE";
+                default:
+                    return sSaves[item.mArg].mCheckpoint == PortSaves::kBeforeFrenzy ? L"BEFORE LAST FRENZY" : L"BEFORE LAST JOB";
+            }
         case kRetry:
             return sRetry == PortSaves::kBeforeFrenzy ? L"RETRY FRENZY" : L"RETRY JOB";
         default:

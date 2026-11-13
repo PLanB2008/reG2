@@ -82,14 +82,16 @@ enum Kind
 {
     kChurch,
     kAutosave,
+    kRetry,
 };
-// With plyslotN.svg of a bonus stage.
-const s32 kMaxSaves = kNumCities * 2 + 1;
+// With plyslotN.svg of a bonus stage and the checkpoint.
+const s32 kMaxSaves = kNumCities * 2 + 2;
 
 struct Entry
 {
     char_type mFileName[64];
     Kind mKind;
+    Checkpoint mCheckpoint;
     u8 mMainStage;
     u8 mBonusStage;
     s32 mMoney;
