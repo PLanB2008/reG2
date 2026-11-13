@@ -36,6 +36,7 @@
 
 #if defined(GTA2_PORT)
 #include "../port/src/options_menu.hpp"
+#include "../port/src/saves.hpp"
 #endif
 
 #pragma comment(lib, "dxguid.lib")
@@ -4390,7 +4391,20 @@ bool Frontend::PlySlotSvgExists(u8 idx)
     }
 
     _findclose(hFind);
+#if defined(GTA2_PORT)
+    // LoadMapFilenamesFromSvg stops the game on a save of other levels.
+    PortSaves::Header header;
+    if (!PortSaves::IsValid(FileName, &header))
+    {
+        return false;
+    }
+    const MainBlockStrings& level = mBlocks[header.mMainStage][header.mBonusStage];
+    return !strncmp(header.mMapName, "data\\", 5) && !strcmp(header.mMapName + 5, level.mGmpName) &&
+        !strncmp(header.mStyleName, "data\\", 5) && !strcmp(header.mStyleName + 5, level.mStyName) &&
+        !strncmp(header.mScriptName, "data\\", 5) && !strcmp(header.mScriptName + 5, level.mScrName);
+#else
     return true;
+#endif
 }
 
 MATCH_FUNC(0x4B77B0)

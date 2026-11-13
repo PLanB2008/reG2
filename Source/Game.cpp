@@ -66,6 +66,9 @@
 #include "sprite.hpp"
 #include "TextTable.hpp"
 #include "winmain.hpp"
+#if defined(GTA2_PORT)
+#include "../port/src/saves.hpp"
+#endif
 
 DEFINE_GLOBAL_INIT(Fix16, kFpFive_67DECC, Fix16(5), 0x67DECC);
 DEFINE_STATIC_GLOBAL_INIT(Fix16, kFpFive, kFpFive_67DECC, 0x67DFB4);
@@ -161,7 +164,11 @@ void Game::LoadGameFiles()
     char_type* script_name = gGameSession.GetScriptName();
     gScriptManager->Load(script_name);
 
+#if defined(GTA2_PORT)
+    if (strlen(gGameSession.GetSaveName()) != 0 && PortSaves::IsValid(gGameSession.GetSaveName()))
+#else
     if (strlen(gGameSession.GetSaveName()) != 0)
+#endif
     {
         char_type* debug_str = gGameSession.GetSaveName();
         gScriptManager->LoadSave(debug_str);

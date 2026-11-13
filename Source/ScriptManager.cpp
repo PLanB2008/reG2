@@ -20,6 +20,9 @@
 #include "PedGroup.hpp"
 #include "ped_death_cause.hpp"
 #include "PublicTransport.hpp"
+#if defined(GTA2_PORT)
+#include "../port/src/saves.hpp"
+#endif
 
 DEFINE_GLOBAL(ScriptManager*, gScriptManager, 0x6F8060);
 DEFINE_GLOBAL(SaveData, gGameSave, 0x6F78C8);
@@ -348,6 +351,14 @@ void ScriptManager::SaveGame(const char_type* pFileName)
         pFileName = gTmpBuffer;
     }
 
+#if defined(GTA2_PORT)
+    char_type saveName[256];
+    char_type tempName[260];
+    snprintf(saveName, sizeof(saveName), "%s", pFileName);
+    PortSaves::TempName(saveName, tempName, sizeof(tempName));
+    pFileName = tempName;
+#endif
+
     ScriptManager::SaveScriptCounters();
 
     gGame_0x40->mLocalPlayer->CopyPlayerDataToSave(&gGameSave.mPlayerAndWorldStats);
@@ -401,6 +412,9 @@ void ScriptManager::SaveGame(const char_type* pFileName)
             File::AppendBufferToFile(pFileName, pMapSub, reinterpret_cast<u32*>(&mapSubBytes));
         }
     }
+#if defined(GTA2_PORT)
+    PortSaves::Commit(tempName, saveName);
+#endif
 }
 
 MATCH_FUNC(0x511f80)
