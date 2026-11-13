@@ -35,26 +35,27 @@ void port_SetFullscreenModeIndex(int index);
 namespace PortSettings
 {
 #if defined(GTA2_UPDATE_CHECK)
-const Id kGeneral[] = {kSfxVolume, kMusicVolume, k3dSound, kTextSpeed, kLanguage, kAutosave, kRetry, kUpdateCheck};
+const Id kGameSettings[] = {kLanguage, kTextSpeed, kAutosave, kRetry, kExplodingScores, kBlood, kUpdateCheck};
 #else
-const Id kGeneral[] = {kSfxVolume, kMusicVolume, k3dSound, kTextSpeed, kLanguage, kAutosave, kRetry};
+const Id kGameSettings[] = {kLanguage, kTextSpeed, kAutosave, kRetry, kExplodingScores, kBlood};
 #endif
-const s32 kNumGeneral = sizeof(kGeneral) / sizeof(kGeneral[0]);
+const s32 kNumGameSettings = sizeof(kGameSettings) / sizeof(kGameSettings[0]);
 #if defined(GTA2_PORT_SDL)
-const Id kScreen[] = {kDisplay, kDisplayMode, kVsync, kFrameLimit, kShowFps, kBrightness, kLighting, kDayLength, kStartTime, kClock, kExplodingScores, kBlood};
+const Id kGraphicsSettings[] =
+    {kPreset, kTrueColour, kPerPixelLighting, kShadows, kHeadlights, kLightEffects, kBloom, kTextureFilter, kAntiAliasing};
+const Id kDayNightSettings[] = {kLighting, kDayLength, kStartTime, kClock};
+const Id kDisplaySettings[] = {kDisplay, kDisplayMode, kVsync, kFrameLimit, kShowFps, kBrightness, kZoom, kHudScale, kSafeArea};
 #else
-const Id kScreen[] = {kDisplay, kFrameLimit, kShowFps, kBrightness, kLighting, kExplodingScores, kBlood};
+// No DAY-NIGHT CYCLE without SDL: its settings would stay greyed.
+const Id kGraphicsSettings[] = {kHeadlights, kLightEffects};
+const Id kDayNightSettings[] = {kLighting};
+const Id kDisplaySettings[] = {kDisplay, kFrameLimit, kShowFps, kBrightness, kZoom, kHudScale, kSafeArea};
 #endif
-const s32 kNumScreen = sizeof(kScreen) / sizeof(kScreen[0]);
-#if defined(GTA2_PORT_SDL)
-const Id kGraphics[] = {kPreset,       kTrueColour, kPerPixelLighting, kShadows,     kHeadlights,
-                        kLightEffects, kBloom,      kTextureFilter,    kAntiAliasing};
-#else
-const Id kGraphics[] = {kHeadlights, kLightEffects};
-#endif
-const s32 kNumGraphics = sizeof(kGraphics) / sizeof(kGraphics[0]);
-const Id kView[] = {kZoom, kHudScale, kSafeArea};
-const s32 kNumView = sizeof(kView) / sizeof(kView[0]);
+const s32 kNumGraphicsSettings = sizeof(kGraphicsSettings) / sizeof(kGraphicsSettings[0]);
+const s32 kNumDayNightSettings = sizeof(kDayNightSettings) / sizeof(kDayNightSettings[0]);
+const s32 kNumDisplaySettings = sizeof(kDisplaySettings) / sizeof(kDisplaySettings[0]);
+const Id kSoundSettings[] = {kSfxVolume, kMusicVolume, k3dSound};
+const s32 kNumSoundSettings = sizeof(kSoundSettings) / sizeof(kSoundSettings[0]);
 
 namespace
 {
@@ -176,9 +177,10 @@ const Translation kTranslations[] = {
     {L"CUSTOM", NULL, {L"PERSO", L"EIGENE", L"PERSONAL.", L"PERSONAL"}},
     {L"ON", NULL, {L"OUI", L"AN", L"SÌ", L"SÍ"}},
     {L"OFF", NULL, {L"NON", L"AUS", L"NO", L"NO"}},
-    {L"SCREEN", NULL, {L"ECRAN", L"BILDSCHIRM", L"SCHERMO", L"PANTALLA"}},
+    {L"GAME", NULL, {L"JEU", L"SPIEL", L"GIOCO", L"JUEGO"}},
     {L"GRAPHICS", NULL, {L"GRAPHISMES", L"GRAFIK", L"GRAFICA", L"GRÁFICOS"}},
-    {L"VIEW", NULL, {L"VUE", L"ANSICHT", L"VISTA", L"VISTA"}},
+    {L"DAY AND NIGHT", NULL, {L"JOUR ET NUIT", L"TAG UND NACHT", L"GIORNO E NOTTE", L"DÍA Y NOCHE"}},
+    {L"SOUND", NULL, {L"SON", L"SOUND", L"AUDIO", L"SONIDO"}},
     {L"NEEDS", NULL, {L"NECESSITE", L"BENÖTIGT", L"RICHIEDE", L"REQUIERE"}},
     {L"CONTROLS", NULL, {L"COMMANDES", L"STEUERUNG", L"COMANDI", L"CONTROLES"}},
     {L"AIM CAMERA", NULL, {L"CAMERA DE VISEE", L"ZIELKAMERA", L"CAMERA DI MIRA", L"CÁMARA DE MIRA"}},

@@ -45,15 +45,17 @@ enum Id
     kCount,
 };
 
-// The pages: sound and text settings sit on the options page itself.
-extern const Id kGeneral[];
-extern const s32 kNumGeneral;
-extern const Id kScreen[];
-extern const s32 kNumScreen;
-extern const Id kGraphics[];
-extern const s32 kNumGraphics;
-extern const Id kView[];
-extern const s32 kNumView;
+// The settings of each options page, in their order.
+extern const Id kGameSettings[];
+extern const s32 kNumGameSettings;
+extern const Id kGraphicsSettings[];
+extern const s32 kNumGraphicsSettings;
+extern const Id kDayNightSettings[];
+extern const s32 kNumDayNightSettings;
+extern const Id kDisplaySettings[];
+extern const s32 kNumDisplaySettings;
+extern const Id kSoundSettings[];
+extern const s32 kNumSoundSettings;
 
 // The port's menu texts in the language of the loaded text table, from their English text.
 const wchar_t* Translate(const wchar_t* pEnglish);

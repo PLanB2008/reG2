@@ -44,9 +44,11 @@ using PortSettings::Translate;
 enum Page
 {
     kMainPage,
-    kScreenPage,
-    kViewPage,
+    kGamePage,
     kGraphicsPage,
+    kDayNightPage,
+    kDisplayPage,
+    kSoundPage,
     kControlsPage,
     kSavesPage,
     kNumPages,
@@ -73,7 +75,8 @@ struct Item
 };
 
 const s32 kMaxItems = 16;
-const wchar_t* const kTitles[kNumPages] = {L"OPTIONS", L"SCREEN", L"VIEW", L"GRAPHICS", L"CONTROLS", L"RESUME SAVED STATUS"};
+const wchar_t* const kTitles[kNumPages] =
+    {L"OPTIONS", L"GAME", L"GRAPHICS", L"DAY AND NIGHT", L"DISPLAY", L"SOUND", L"CONTROLS", L"RESUME SAVED STATUS"};
 
 const s32 kNumControls = 12;
 const s32 kDefaultControls[kNumControls] = {DIK_UP, DIK_DOWN, DIK_LEFT, DIK_RIGHT, DIK_LCONTROL, DIK_RETURN,
@@ -138,12 +141,15 @@ struct KeyName
 };
 std::vector<KeyName> sKeyNames;
 
-s32 AddSettings(Item* pItems, s32 n, const PortSettings::Id* pIds, s32 count, bool gap)
+// A page of settings, then BACK.
+s32 SettingsPage(Item* pItems, const PortSettings::Id* pIds, s32 count)
 {
-    for (s32 i = 0; i < count; i++)
+    s32 n = 0;
+    for (; n < count; n++)
     {
-        pItems[n++] = Item{kSetting, pIds[i], gap && i == 0};
+        pItems[n] = Item{kSetting, pIds[n], false};
     }
+    pItems[n++] = Item{kBack, 0, true};
     return n;
 }
 
@@ -162,25 +168,22 @@ s32 Items(Page page, Item* pItems)
             {
                 pItems[n++] = Item{kResume, 0, false};
             }
-            pItems[n++] = Item{kGoTo, kScreenPage, false};
-            pItems[n++] = Item{kGoTo, kViewPage, false};
-            pItems[n++] = Item{kGoTo, kGraphicsPage, false};
-            pItems[n++] = Item{kGoTo, kControlsPage, false};
-            n = AddSettings(pItems, n, PortSettings::kGeneral, PortSettings::kNumGeneral, true);
+            for (s32 page = kGamePage; page <= kControlsPage; page++)
+            {
+                pItems[n++] = Item{kGoTo, page, false};
+            }
             pItems[n++] = Item{inGame ? kQuit : kBack, 0, true};
             break;
-        case kScreenPage:
-            n = AddSettings(pItems, n, PortSettings::kScreen, PortSettings::kNumScreen, false);
-            pItems[n++] = Item{kBack, 0, true};
-            break;
-        case kViewPage:
-            n = AddSettings(pItems, n, PortSettings::kView, PortSettings::kNumView, false);
-            pItems[n++] = Item{kBack, 0, true};
-            break;
+        case kGamePage:
+            return SettingsPage(pItems, PortSettings::kGameSettings, PortSettings::kNumGameSettings);
         case kGraphicsPage:
-            n = AddSettings(pItems, n, PortSettings::kGraphics, PortSettings::kNumGraphics, false);
-            pItems[n++] = Item{kBack, 0, true};
-            break;
+            return SettingsPage(pItems, PortSettings::kGraphicsSettings, PortSettings::kNumGraphicsSettings);
+        case kDayNightPage:
+            return SettingsPage(pItems, PortSettings::kDayNightSettings, PortSettings::kNumDayNightSettings);
+        case kDisplayPage:
+            return SettingsPage(pItems, PortSettings::kDisplaySettings, PortSettings::kNumDisplaySettings);
+        case kSoundPage:
+            return SettingsPage(pItems, PortSettings::kSoundSettings, PortSettings::kNumSoundSettings);
         case kSavesPage:
             for (s32 i = 0; i < sNumSaves; i++)
             {

@@ -141,7 +141,7 @@ window; closing it cancels the copy.
 
 The game logic always runs in the original's steps of 33 ms (11 ms in fast forward), 30.3 per
 second, on a monotonic clock; the original's `max_frame_rate` (off: the game as fast as the
-machine) is not read. The SCREEN settings page chooses how often frames are drawn:
+machine) is not read. The DISPLAY settings page chooses how often frames are drawn:
 
 - FRAME LIMIT (`port_max_fps`): 30 ORIGINAL draws once after each step, as the original; 60, 120,
   144, 240 or UNLIMITED draw in between, with every sprite and the camera interpolated between the
@@ -294,7 +294,7 @@ To release:
 
 The start menu looks for a newer release at most once a day (`curl`, else `wget`, on
 `api.github.com/repos/reG2-project/reG2/releases/latest`), and shows it beside the version: a click opens the
-release's page. OPTIONS, CHECK FOR UPDATES turns it off; `-DGTA2_UPDATE_CHECK=OFF` leaves it out, as in the
+release's page. OPTIONS, GAME, CHECK FOR UPDATES turns it off; `-DGTA2_UPDATE_CHECK=OFF` leaves it out, as in the
 Flatpak. `GTA2_UPDATE_URL` replaces the API's URL, for tests.
 
 The executable is `reg2` (`reg2.exe`), so that it never replaces a GTA2 folder's `gta2.exe`. The app id of
