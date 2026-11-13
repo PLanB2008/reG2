@@ -76,7 +76,8 @@ void Start()
     sShown = 0;
     sRetrying = false;
     PortSaves::RefreshCheckpoint();
-    if (gScriptManager && !gScriptManager->IsLoadedFromSave() && !IsNetworkGame() && !gGameSession.IsBonusStage())
+    if (gScriptManager && (!gScriptManager->IsLoadedFromSave() || PortSaves::LoadedCheckpoint() == PortSaves::kNoCheckpoint) &&
+        !IsNetworkGame() && !gGameSession.IsBonusStage())
     {
         PortSaves::DeleteCheckpoint();
     }

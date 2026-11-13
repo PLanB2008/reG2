@@ -6,7 +6,7 @@
 
 namespace PortRetry
 {
-// A level starts: a new game in a city deletes the checkpoint.
+// A level starts: a new game in a city, or loading another save, deletes the checkpoint.
 void Start();
 // ScriptThread, as a job is launched or a kill frenzy starts, before either marks anything as started.
 void BeforeStart(PortSaves::Checkpoint kind);

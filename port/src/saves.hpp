@@ -74,6 +74,8 @@ Checkpoint GetCheckpoint(s32* pMoney = NULL, long long* pTime = NULL);
 void RefreshCheckpoint();
 // The level was loaded from an autosave or a checkpoint: the player spawns where he was.
 bool ExactSpawn();
+// What the checkpoint the level was loaded from was taken before, kNoCheckpoint for another save.
+Checkpoint LoadedCheckpoint();
 // Player::UpdateGameFromSave restored the cars: the player back in the one he drove.
 void AfterRestore(Player* pPlayer);
 

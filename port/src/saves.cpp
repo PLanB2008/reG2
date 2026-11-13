@@ -551,6 +551,11 @@ bool ExactSpawn()
     return gGameSave.mUnused50 == kExactSpawn;
 }
 
+Checkpoint LoadedCheckpoint()
+{
+    return ExactSpawn() && gGameSave.mPad4F <= kBeforeFrenzy ? static_cast<Checkpoint>(gGameSave.mPad4F) : kNoCheckpoint;
+}
+
 void AfterRestore(Player* pPlayer)
 {
     Ped* pPed = pPlayer->mPlayerPed;
