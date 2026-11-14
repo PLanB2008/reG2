@@ -1,67 +1,44 @@
 #!/usr/bin/env python3
-# Builds prompts_colour.png, one row of 16 pixel high cells in port/src/prompts.cpp's
-# order, from Kenney's Input Prompts Pixel pack (CC0): prompts_atlas.py <pack folder>.
+# Builds prompts_colour.png (16 pixel cells in prompts.cpp's order) from greatdocbrown's Gamepad UI and, for Switch,
+# Kenney's Input Prompts Pixel (CC0): prompts_atlas.py <Gamepad UI folder> <gdb-playstation-3.png> <Kenney folder>
+import os
 import sys
 from PIL import Image
 
-# Tile numbers in the packs' Tilemap/*_packed.png; a pair overlaid is one picture (PlayStation's symbols).
-XBOX = [4, 5, 6, 7, 553, 554, 616, 617, 551, 552]
-PLAYSTATION = [(567, 568), (563, 564), (565, 566), (561, 562), 631, 632, 767, 768, 629, 630]
+# Cells' top left corners in gdb-xbox-2.png: A B X Y, LB RB, View Menu, LT RT; then the sticks' L and R.
+XBOX = [(16, 48), (16, 80), (16, 32), (16, 64), (336, 80), (336, 96), (16, 96), (16, 112), (336, 48), (336, 64)]
+STICKS = [(216, 32), (280, 32)]
+# In gdb-playstation-3.png: cross circle square triangle, L1 R1, Share Options, L2 R2.
+PLAYSTATION = [(16, 192), (16, 176), (16, 208), (16, 160), (128, 112), (128, 128), (16, 240), (16, 256), (128, 80),
+               (128, 96)]
+# Tile numbers in Kenney's Tilemap/tilemap_packed.png.
 NINTENDO = [13, 14, 15, 16, 627, 628, 684, 685, 625, 626]
-STICKS = [416, 484]
-ESCAPE = 17
-DELETE = (191, 192)
-LETTERS = [120, 159, 157, 122, 87, 123, 124, 125, 92, 126, 127, 128, 161, 160, 93, 94, 85, 88, 121, 89, 91,
-           158, 86, 156, 90, 155]
+# The dark keys (the second set, not pressed) in gdb-keyboard-2.png; Enter is two cells wide.
+ENTER = (240, 176)
+ESCAPE = (32, 128)
+DELETE = (432, 256)
+LETTER_ROWS = [(160, 'QWERTYUIOP'), (176, 'ASDFGHJKL'), (192, 'ZXCVBNM')]
+
+
+def cell(sheet, corner, width=16):
+    return sheet.crop((corner[0], corner[1], corner[0] + width, corner[1] + 16))
 
 
 def tile(sheet, n):
     return sheet.crop((n % 34 * 16, n // 34 * 16, n % 34 * 16 + 16, n // 34 * 16 + 16))
 
 
-def overlaid(sheet, pair):
-    picture = tile(sheet, pair[0])
-    picture.alpha_composite(tile(sheet, pair[1]))
-    return picture
-
-
-def wide(sheet, left, right):
-    picture = Image.new('RGBA', (32, 16))
-    picture.paste(tile(sheet, left), (0, 0))
-    picture.paste(tile(sheet, right), (16, 0))
-    return picture
-
-
-def arrow_rows(picture, top, face):
-    rows = [y for y in range(top, 10) for x in range(3, 13) if picture.getpixel((x, y)) != face]
-    return min(rows), max(rows)
-
-
-def enter(sheet):
-    # Backspace's key with the return arrow of the ISO Enter's lower half, centred as backspace's arrow.
-    picture = wide(sheet, 66, 67)
-    lower = tile(sheet, 134)
-    face = picture.getpixel((5, 3))
-    top, bottom = arrow_rows(picture, 3, face)
-    arrow_top, arrow_bottom = arrow_rows(lower, 0, face)
-    shift = (top + bottom) // 2 - (arrow_top + arrow_bottom) // 2
-    for y in range(top, bottom + 1):
-        for x in range(3, 13):
-            picture.putpixel((x, y), face)
-    for y in range(arrow_top, arrow_bottom + 1):
-        for x in range(3, 13):
-            if lower.getpixel((x, y)) != face:
-                picture.putpixel((x, y + shift), lower.getpixel((x, y)))
-    return picture
-
-
-def atlas(sheet):
-    cells = []
-    for pad in (XBOX, PLAYSTATION, NINTENDO):
-        cells += [overlaid(sheet, n) if isinstance(n, tuple) else tile(sheet, n) for n in pad]
-    cells += [tile(sheet, n) for n in STICKS]
-    cells += [enter(sheet), tile(sheet, ESCAPE), wide(sheet, *DELETE)]
-    cells += [tile(sheet, n) for n in LETTERS]
+def atlas(xbox, playstation, keyboard, kenney):
+    letters = {}
+    for y, keys in LETTER_ROWS:
+        for i, k in enumerate(keys):
+            letters[k] = (64 + i * 16, y)
+    cells = [cell(xbox, c) for c in XBOX]
+    cells += [cell(playstation, c) for c in PLAYSTATION]
+    cells += [tile(kenney, n) for n in NINTENDO]
+    cells += [cell(xbox, c) for c in STICKS]
+    cells += [cell(keyboard, ENTER, 32), cell(keyboard, ESCAPE), cell(keyboard, DELETE)]
+    cells += [cell(keyboard, letters[chr(ord('A') + i)]) for i in range(26)]
     out = Image.new('RGBA', (sum(c.width for c in cells), 16))
     x = 0
     for c in cells:
@@ -70,5 +47,11 @@ def atlas(sheet):
     return out
 
 
-colour = Image.open(sys.argv[1] + '/Tilemap/tilemap_packed.png').convert('RGBA')
-atlas(colour).save(sys.argv[0].rsplit('/', 1)[0] + '/prompts_colour.png', optimize=True)
+def load(path):
+    return Image.open(path).convert('RGBA')
+
+
+gdb = sys.argv[1]
+picture = atlas(load(gdb + '/gdb-xbox-2.png'), load(sys.argv[2]), load(gdb + '/gdb-keyboard-2.png'),
+                load(sys.argv[3] + '/Tilemap/tilemap_packed.png'))
+picture.save(os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), 'prompts_colour.png'), optimize=True)
