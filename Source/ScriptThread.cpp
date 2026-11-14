@@ -6113,14 +6113,31 @@ void ScriptThread::Handle_WARP_CHAR() // WARP_FROM_CAR_TO_POINT
 
     if (pPed != NULL)
     {
-        pPed->StartPedWalking(pCmd->mPos.x, pCmd->mPos.y, pCmd->mPos.z);
+#if defined(GTA2_PORT)
+        // Port: a ped on foot already has its Char and no car to leave; the original allocates a second Char and
+        // crashes in ClearDriver on the NULL car. gtamp.com 11.40 C2.
+        if (pCar == NULL)
+        {
+            pPed->mGameObject->Teleport(pCmd->mPos.x, pCmd->mPos.y, pCmd->mPos.z);
+        }
+        else
+#endif
+        {
+            pPed->StartPedWalking(pCmd->mPos.x, pCmd->mPos.y, pCmd->mPos.z);
+        }
 
         Ang16 rotation = kDegreesToAng16 * pCmd->mRotation;
         rotation.Normalize();
 
         pPointer->mChar->SetRotation(rotation);
-        pCar->ClearDriver();
-        pCar->mDriver = NULL;
+#if defined(GTA2_PORT)
+        // Port: no car to leave for a ped on foot, see above.
+        if (pCar != NULL)
+#endif
+        {
+            pCar->ClearDriver();
+            pCar->mDriver = NULL;
+        }
         gGame_0x40->mLocalPlayer->DisableInputs();
         gGame_0x40->mLocalPlayer->mGameCamera.UpdateFollowPedCamera(pPointer->mChar);
 
