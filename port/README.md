@@ -74,9 +74,11 @@ off shortens their reach as the original's backward walk does). Walking off the 
 are: from 45 to 135 degrees off, the walk frame's legs hidden, behind and in front, his feet, rounded boxes the colour of his shoes, step out from under his torso along the move, one ahead while the other is behind, the rest of him at the aim; further back his legs come back, the trailing one along the move, and his walk plays backward. In a jump the move steers him toward its way, as fast as the
 original's left and right turn him in the air. The machine guns fire straight along the aim: the original bends
 their shots toward a ped up to 16 degrees off the line of fire. The electro weapons keep their lock on a target.
-AIM CAMERA (on by default) moves the view toward the aim on foot, about a third of the way to the
-cursor or the pad's reticle; held, left Shift, LT (instead of SPECIAL 2, while that keeps its default LT)
-or R3 (unless a control is bound to it) looks further, as far as keeps the player on screen.
+AIM CAMERA (on by default) leads the view a little ahead of the player on foot, as Hotline Miami does: 0.3 of
+the half screen height along the aim (the mouse's direction from him or the right stick's), however far the
+cursor or the reticle is, and along the last aim once the stick is released; held, left Shift, LT (instead of
+SPECIAL 2, while that keeps its default LT) or R3 (unless a control is bound to it) looks toward the cursor or
+the reticle, as far as keeps the player on screen.
 In vehicles the controls stay classic, but the fire truck's, the tank's and the gun jeep's roof gun turns
 toward the mouse or the right stick's reticle at the original's turret speed; ATTACK fires it as before, RB
 too (instead of NEXT WEAPON, while that keeps its default RB), and SPECIAL with left or right still turns it
