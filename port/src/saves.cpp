@@ -301,6 +301,44 @@ long long FileTime(const char_type* pFileName)
     return stamp >= 0 ? stamp / 10000000ll : -1;
 }
 
+// The jobs passed in a save and their total, as the pause screen counts them; false if the save or its script
+// cannot be read, or the script counts no jobs (bonus stages).
+bool ReadJobsPassed(const char_type* pFileName, s32* pPassed, s32* pTotal)
+{
+    FILE* pFile = fopen(pFileName, "rb");
+    if (!pFile)
+    {
+        return false;
+    }
+    SaveData save;
+    const bool read = fread(&save, sizeof(save), 1, pFile) == 1;
+    fclose(pFile);
+    Script script;
+    if (!read || !NameOk(save.mScriptName) || !ReadScript(save.mScriptName, &script))
+    {
+        return false;
+    }
+    // As ScriptThread's SCRCMD_SET_MISSIONS_TOTAL and SCRCMD_PASSED_FAILED_FLAGS set them. The counters are saved
+    // ones (COUNTER_SET_SAVE in the three cities' main scripts).
+    *pPassed = 0;
+    *pTotal = 0;
+    bool counted = false;
+    for (u16 idx = 0; idx < script.mBasePointers.size(); idx++)
+    {
+        const SCR_TWO_PARAMS* pCmd = script.Command(idx);
+        if (pCmd && pCmd->mType == SCRCMD_TOTAL_MISSIONS)
+        {
+            *pTotal = pCmd->mSigned2;
+            counted = true;
+        }
+        else if (pCmd && pCmd->mType == SCRCMD_PASSED_FLAG)
+        {
+            *pPassed = CounterValue(save, script, pCmd->mUnsigned1);
+        }
+    }
+    return counted;
+}
+
 bool ReadEntry(const char_type* pFileName, Kind kind, LevelCheck pCheck, Entry* pEntry)
 {
     Header header;
@@ -316,10 +354,11 @@ bool ReadEntry(const char_type* pFileName, Kind kind, LevelCheck pCheck, Entry* 
     pEntry->mMoney = header.mMoney;
     pEntry->mTime = FileTime(pFileName);
     pEntry->mJob = header.mJob;
-    JobsPassed jobs;
-    const bool read = ReadJobsPassed(pFileName, &jobs);
-    pEntry->mJobsPassed = read ? jobs.mPassed : -1;
-    pEntry->mJobsTotal = read ? jobs.mTotal : -1;
+    if (!ReadJobsPassed(pFileName, &pEntry->mJobsPassed, &pEntry->mJobsTotal))
+    {
+        pEntry->mJobsPassed = -1;
+        pEntry->mJobsTotal = -1;
+    }
     return true;
 }
 } // namespace
@@ -440,64 +479,6 @@ bool IsValid(const char_type* pFileName, Header* pHeader)
         pHeader->mJob.mGang = job ? save.mPlayerAndWorldStats.mPad81 : 0;
     }
     return true;
-}
-
-bool ReadJobsPassed(const char_type* pFileName, JobsPassed* pJobs)
-{
-    FILE* pFile = fopen(pFileName, "rb");
-    if (!pFile)
-    {
-        return false;
-    }
-    SaveData save;
-    const bool read = fread(&save, sizeof(save), 1, pFile) == 1;
-    fclose(pFile);
-    Script script;
-    if (!read || !NameOk(save.mScriptName) || !ReadScript(save.mScriptName, &script))
-    {
-        return false;
-    }
-
-    // As ScriptThread::SCRCMD_SET_MISSIONS_TOTAL and SCRCMD_PASSED_FAILED_FLAGS set them for the pause screen.
-    memset(pJobs, 0, sizeof(*pJobs));
-    bool counted = false;
-    for (u16 idx = 0; idx < script.mBasePointers.size(); idx++)
-    {
-        const SCR_TWO_PARAMS* pCmd = script.Command(idx);
-        if (!pCmd)
-        {
-            continue;
-        }
-        switch (pCmd->mType)
-        {
-            case SCRCMD_TOTAL_MISSIONS:
-                pJobs->mTotal = pCmd->mSigned2;
-                counted = true;
-                break;
-            case SCRCMD_GANG_1_MISSION_TOTAL:
-            case SCRCMD_GANG_2_MISSION_TOTAL:
-            case SCRCMD_GANG_3_MISSION_TOTAL:
-                pJobs->mGangTotal[pCmd->mType - SCRCMD_GANG_1_MISSION_TOTAL] = pCmd->mSigned2;
-                break;
-            case SCRCMD_TOTAL_SECRETS:
-                pJobs->mFrenziesTotal = pCmd->mSigned2;
-                break;
-            case SCRCMD_PASSED_FLAG:
-                pJobs->mPassed = CounterValue(save, script, pCmd->mUnsigned1);
-                break;
-            case SCRCMD_1_PASSED_FLAG:
-            case SCRCMD_2_PASSED_FLAG:
-            case SCRCMD_3_PASSED_FLAG:
-                pJobs->mGangPassed[pCmd->mType - SCRCMD_1_PASSED_FLAG] = CounterValue(save, script, pCmd->mUnsigned1);
-                break;
-            case SCRCMD_SECRETS_PASSED:
-                pJobs->mFrenziesPassed = CounterValue(save, script, pCmd->mUnsigned1);
-                break;
-            default:
-                break;
-        }
-    }
-    return counted;
 }
 
 bool HasAutosave(u8 slot, u8 mainStage)

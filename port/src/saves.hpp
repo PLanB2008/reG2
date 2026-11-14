@@ -58,20 +58,6 @@ bool Replaying();
 // level's script.
 bool IsValid(const char_type* pFileName, Header* pHeader = NULL);
 
-// The jobs passed in a save, and the totals, as the pause screen counts them. The counters the
-// level's script names are saved ones (COUNTER_SET_SAVE in the three cities' main scripts).
-struct JobsPassed
-{
-    s32 mPassed;
-    s32 mTotal;
-    s32 mGangPassed[3]; // in the order of the level's gangs
-    s32 mGangTotal[3];
-    s32 mFrenziesPassed;
-    s32 mFrenziesTotal;
-};
-// False if the save or its script cannot be read, or the script counts no jobs (bonus stages).
-bool ReadJobsPassed(const char_type* pFileName, JobsPassed* pJobs);
-
 // A profile's saves in player\, per city: the church save, as plyslotN.svg (the latest, as the original
 // writes it) and a copy, and the autosave, with the one before it kept as a backup. And one retry
 // checkpoint for all cities.
