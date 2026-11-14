@@ -408,8 +408,9 @@ bool UpdateDialog(Frontend* pFrontend)
     for (s32 i = 0; i < 2 && (moved || left); i++)
     {
         const f32 width = static_cast<f32>(Frontend::GetMaxTextWidth(const_cast<wchar_t*>(names[i]), pFrontend->mSelectedFont));
+        // The font's letters fill about 7 to 17 below the y a string is drawn at; each box ends halfway to the next.
         const f32 top = static_cast<f32>(continueTop + i * kChoiceStep);
-        if (Inside(x, y, kQuestionLeft - 4.0f, top - 2.0f, kQuestionLeft + width + 4.0f, top + 18.0f))
+        if (Inside(x, y, kQuestionLeft - 4.0f, top + 2.0f, kQuestionLeft + width + 4.0f, top + 22.0f))
         {
             if (cursor != choices[i])
             {
