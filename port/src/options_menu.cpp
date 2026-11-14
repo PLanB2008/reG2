@@ -170,6 +170,14 @@ bool Inside(f32 x, f32 y, f32 left, f32 top, f32 right, f32 bottom)
     return x >= left && x < right && y >= top && y < bottom;
 }
 
+// Whether the pointer is on a line of text drawn at left, top in font: 20 high, the pages' line step, centred on the
+// font's line, where its letters sit, so the gap between two lines is split halfway.
+bool OnText(f32 x, f32 y, f32 left, f32 top, f32 width, u16 font)
+{
+    const f32 middle = top + GetLineSpacingFromFontType(font) / 2.0f;
+    return Inside(x, y, left - 4.0f, middle - 10.0f, left + width + 4.0f, middle + 10.0f);
+}
+
 // The original pages with the mouse, as their keys: pointing at an option selects it, a click enters
 // it, the right button goes back, the wheel and the arrows beside an option change it.
 void OriginalPageMouse(Frontend* pFrontend)
@@ -220,7 +228,7 @@ void OriginalPageMouse(Frontend* pFrontend)
         const u16 font = i == pPage->mCurrentOptionIdx ? pFrontend->mSelectedFont
                                                         : (item.mFontType != 0xFFFF ? item.mFontType : pFrontend->mNormalFont);
         const f32 width = static_cast<f32>(Frontend::GetMaxTextWidth(pText, font));
-        if (Inside(x, y, item.mXPos - 4.0f, item.mYPos - 2.0f, item.mXPos + width + 4.0f, item.mYPos + 18.0f))
+        if (OnText(x, y, item.mXPos, item.mYPos, width, font))
         {
             option = i;
         }
@@ -408,9 +416,8 @@ bool UpdateDialog(Frontend* pFrontend)
     for (s32 i = 0; i < 2 && (moved || left); i++)
     {
         const f32 width = static_cast<f32>(Frontend::GetMaxTextWidth(const_cast<wchar_t*>(names[i]), pFrontend->mSelectedFont));
-        // The font's letters fill about 7 to 17 below the y a string is drawn at; each box ends halfway to the next.
         const f32 top = static_cast<f32>(continueTop + i * kChoiceStep);
-        if (Inside(x, y, kQuestionLeft - 4.0f, top + 2.0f, kQuestionLeft + width + 4.0f, top + 22.0f))
+        if (OnText(x, y, kQuestionLeft, top, width, pFrontend->mSelectedFont))
         {
             if (cursor != choices[i])
             {
