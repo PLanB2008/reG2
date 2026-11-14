@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# Builds prompts_colour.png, one row of 16 pixel high cells in port/src/prompts.cpp's
-# order, from Kenney's Input Prompts Pixel pack (CC0): prompts_atlas.py <pack folder>.
+# Builds prompts_colour.png and prompts_1bit.png, one row of 16 pixel high cells in port/src/prompts.cpp's
+# order, from Kenney's Input Prompts Pixel packs (CC0): prompts_atlas.py <pack folder> <1-Bit pack folder>.
 import sys
 from PIL import Image
 
@@ -72,3 +72,5 @@ def atlas(sheet):
 
 colour = Image.open(sys.argv[1] + '/Tilemap/tilemap_packed.png').convert('RGBA')
 atlas(colour).save(sys.argv[0].rsplit('/', 1)[0] + '/prompts_colour.png', optimize=True)
+white = Image.open(sys.argv[2] + '/Tilemap/tilemap_white_packed.png').convert('RGBA')
+atlas(white).save(sys.argv[0].rsplit('/', 1)[0] + '/prompts_1bit.png', optimize=True)
