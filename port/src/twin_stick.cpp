@@ -44,10 +44,11 @@ const f32 kMinReach = 0.2f;
 const f32 kPadFollow = 0.5f;
 // AIM CAMERA leads this many half screen heights along the last aim, however far the aim is. While Shift, LT
 // or R3 is held it looks this times the aim's offset on screen from the centre, at most this many half heights
-// (the player stays on screen). It follows by this part per step.
+// and with the player this many inside the screen's edges. It follows by this part per step.
 const f32 kLead = 0.3f;
 const f32 kLookFurther = 2.5f;
-const f32 kMaxLookFurther = 0.9f;
+const f32 kMaxLookFurther = 1.2f;
+const f32 kLookEdge = 0.1f;
 const f32 kLookFollow = 0.12f;
 // A walking ped's sprite faces down, its trailing leg the rows above the torso no wider than this.
 const s32 kLegWidth = 5;
@@ -655,10 +656,12 @@ void AimCamera(Camera* pCamera, Ped* pPed, Fix16& x, Fix16& y)
         const f32 z = ToF(pPed->GetSprite()->mZpos);
         const f32 cx = static_cast<f32>(gViewCamera->mScreenPxCenterX);
         const f32 cy = static_cast<f32>(gViewCamera->mScreenPxCenterY);
-        f32 x0, y0, tx, ty;
+        f32 x0, y0, tx, ty, lx, ly;
         PortView::ScreenToGround(cx, cy, z, &x0, &y0);
         PortView::ScreenToGround(cx, 0.0f, z, &tx, &ty);
+        PortView::ScreenToGround(0.0f, cy, z, &lx, &ly);
         const f32 half = sqrtf((tx - x0) * (tx - x0) + (ty - y0) * (ty - y0));
+        const f32 halfWidth = sqrtf((lx - x0) * (lx - x0) + (ly - y0) * (ly - y0));
         if (port_LookFurther() && (sMouse || sAimSteps))
         {
             // Measured on the screen, not from the aim's world point, which moves with the camera.
@@ -673,9 +676,12 @@ void AimCamera(Camera* pCamera, Ped* pPed, Fix16& x, Fix16& y)
             wantX = (x1 - x0) * kLookFurther;
             wantY = (y1 - y0) * kLookFurther;
             const f32 length = sqrtf(wantX * wantX + wantY * wantY);
-            const f32 max = half * kMaxLookFurther;
-            wantX = length > max ? wantX * max / length : wantX;
-            wantY = length > max ? wantY * max / length : wantY;
+            const f32 edge = half * kLookEdge;
+            f32 scale = fminf(1.0f, half * kMaxLookFurther / fmaxf(length, 1e-6f));
+            scale = fminf(scale, (halfWidth - edge) / fmaxf(fabsf(wantX), 1e-6f));
+            scale = fminf(scale, (half - edge) / fmaxf(fabsf(wantY), 1e-6f));
+            wantX *= scale;
+            wantY *= scale;
         }
         else
         {
