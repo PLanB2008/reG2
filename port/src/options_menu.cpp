@@ -40,11 +40,11 @@ Frontend* sListing;
 char_type sResumeFile[64];
 
 // The delete player dialog's type for a new game that replaces an autosave, past the original's 1, and its
-// choices, NO first.
+// choices, CANCEL first.
 const u8 kReplaceDialog = 2;
-const u16 kYesY = 210;
-const u16 kNoY = 230;
-// REPLACE YOUR <CITY> AUTOSAVE? on the screen's right half under the logo, then YES and NO.
+const u16 kContinueY = 210;
+const u16 kCancelY = 230;
+// YOUR <CITY> AUTOSAVE WILL BE REPLACED on the screen's right half under the logo, then CONTINUE and CANCEL.
 const s32 kQuestionLeft = 300;
 const s32 kQuestionTop = 160;
 const s32 kQuestionWidth = 320;
@@ -358,13 +358,13 @@ bool Update(Frontend* pFrontend)
     return true;
 }
 
-// The question in lines; where YES goes under it.
+// The warning in lines; where CONTINUE goes under it.
 s32 DialogQuestion(Frontend* pFrontend, wchar_t* pLines)
 {
     static const wchar_t* const kCities[PortSaves::kNumCities] = {L"DOWNTOWN", L"RESIDENTIAL", L"INDUSTRIAL"};
     const u8 city = static_cast<u8>(gGameSession.GetMainStageIdx());
     wchar_t text[128];
-    swprintf(text, PortSettings::Translate(L"REPLACE YOUR %ls AUTOSAVE?"),
+    swprintf(text, PortSettings::Translate(L"YOUR %ls AUTOSAVE WILL BE REPLACED"),
              PortSettings::Translate(kCities[city < PortSaves::kNumCities ? city : 0]));
     const s32 count = TextTable::InsertLineBreaksAndGetNumLines(pLines, text, kQuestionWidth, pFrontend->mNormalFont);
     return kQuestionTop + count * GetLineSpacingFromFontType(pFrontend->mNormalFont) + 10;
@@ -382,7 +382,7 @@ void AfterPageInput(Frontend* pFrontend)
     pFrontend->mMenuScreen = sScreenBefore;
     pFrontend->mState = FrontendState::Delete_Player_Dialog_4;
     pFrontend->mDialogType = kReplaceDialog;
-    pFrontend->mDialogCursorYpos = kNoY;
+    pFrontend->mDialogCursorYpos = kCancelY;
 }
 
 bool UpdateDialog(Frontend* pFrontend)
@@ -393,7 +393,7 @@ bool UpdateDialog(Frontend* pFrontend)
     }
     u16& cursor = pFrontend->mDialogCursorYpos;
 #if defined(GTA2_PORT_SDL)
-    // YES and NO with the mouse, as the original pages' options.
+    // CONTINUE and CANCEL with the mouse, as the original pages' options.
     float x;
     float y;
     int left;
@@ -402,13 +402,13 @@ bool UpdateDialog(Frontend* pFrontend)
     const bool moved = port_TakeMouse(&x, &y, &left, &right, &wheel);
     pFrontend->mEscapePressed = pFrontend->mEscapePressed || right;
     wchar_t lines[160];
-    const s32 yesTop = DialogQuestion(pFrontend, lines);
-    const u16 choices[2] = {kYesY, kNoY};
-    const wchar_t* const names[2] = {PortSettings::Translate(L"YES"), PortSettings::Translate(L"NO")};
+    const s32 continueTop = DialogQuestion(pFrontend, lines);
+    const u16 choices[2] = {kContinueY, kCancelY};
+    const wchar_t* const names[2] = {PortSettings::Translate(L"CONTINUE"), PortSettings::Translate(L"CANCEL")};
     for (s32 i = 0; i < 2 && (moved || left); i++)
     {
         const f32 width = static_cast<f32>(Frontend::GetMaxTextWidth(const_cast<wchar_t*>(names[i]), pFrontend->mSelectedFont));
-        const f32 top = static_cast<f32>(yesTop + i * kChoiceStep);
+        const f32 top = static_cast<f32>(continueTop + i * kChoiceStep);
         if (Inside(x, y, kQuestionLeft - 4.0f, top - 2.0f, kQuestionLeft + width + 4.0f, top + 18.0f))
         {
             if (cursor != choices[i])
@@ -420,7 +420,7 @@ bool UpdateDialog(Frontend* pFrontend)
         }
     }
 #endif
-    if (pFrontend->mReturnPressed && cursor == kYesY)
+    if (pFrontend->mReturnPressed && cursor == kContinueY)
     {
         pFrontend->mMenuScreen = sBootScreen;
         pFrontend->mState = FrontendState::Booting_Map_2;
@@ -435,7 +435,7 @@ bool UpdateDialog(Frontend* pFrontend)
     }
     else if (pFrontend->mUpPressed || pFrontend->mDownPressed)
     {
-        cursor = cursor == kYesY ? kNoY : kYesY;
+        cursor = cursor == kContinueY ? kCancelY : kContinueY;
         snd1.mObjectType = pFrontend->mUpPressed ? PortMenu::kMovedUp : PortMenu::kMovedDown;
     }
     return true;
@@ -451,13 +451,13 @@ bool DrawDialog(Frontend* pFrontend)
     DrawStringDefaultPalette(PortSettings::Translate(L"AUTOSAVE"), Fix16(275), Fix16(gText_0x14->LangIsJapanese() ? 16 : 12),
                              pFrontend->mHeadingFont, Fix16(1));
     wchar_t lines[160];
-    const s32 yesTop = DialogQuestion(pFrontend, lines);
+    const s32 continueTop = DialogQuestion(pFrontend, lines);
     DrawStringDefaultPalette(lines, Fix16(kQuestionLeft), Fix16(kQuestionTop), static_cast<s16>(pFrontend->mNormalFont), Fix16(1));
     const u16 cursor = pFrontend->mDialogCursorYpos;
-    DrawStringDefaultPalette(PortSettings::Translate(L"YES"), Fix16(kQuestionLeft), Fix16(yesTop),
-                             cursor == kYesY ? pFrontend->mSelectedFont : static_cast<s16>(pFrontend->mNormalFont), Fix16(1));
-    DrawStringDefaultPalette(PortSettings::Translate(L"NO"), Fix16(kQuestionLeft), Fix16(yesTop + kChoiceStep),
-                             cursor == kNoY ? pFrontend->mSelectedFont : static_cast<s16>(pFrontend->mNormalFont), Fix16(1));
+    DrawStringDefaultPalette(PortSettings::Translate(L"CONTINUE"), Fix16(kQuestionLeft), Fix16(continueTop),
+                             cursor == kContinueY ? pFrontend->mSelectedFont : static_cast<s16>(pFrontend->mNormalFont), Fix16(1));
+    DrawStringDefaultPalette(PortSettings::Translate(L"CANCEL"), Fix16(kQuestionLeft), Fix16(continueTop + kChoiceStep),
+                             cursor == kCancelY ? pFrontend->mSelectedFont : static_cast<s16>(pFrontend->mNormalFont), Fix16(1));
     PortMenu::DrawChoiceHints();
     return true;
 }

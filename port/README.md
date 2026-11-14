@@ -162,8 +162,8 @@ Saves are kept per city, in `player/`:
   money then and how long ago. Passing it, a church save or a new game deletes the checkpoint.
 - RESUME SAVED STATUS opens LOAD GAME when there is more than one save: a tab per city (Left and
   Right, Q and E, or LB and RB), each save with its money, jobs passed and date, newest first.
-- With AUTOSAVE on, a new game in a city that has an autosave asks first: REPLACE YOUR DOWNTOWN
-  AUTOSAVE?
+- With AUTOSAVE on, a new game in a city that has an autosave warns first: YOUR DOWNTOWN AUTOSAVE
+  WILL BE REPLACED, CONTINUE or CANCEL.
 
 ## Frame rate
 

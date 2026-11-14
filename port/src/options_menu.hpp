@@ -38,7 +38,7 @@ bool Resume(Frontend* pFrontend);
 // In LoadMapFilenamesFromSvg: the save to boot in place of plyslotN.svg, if Resume chose one.
 void ResumeFileName(char_type* pFileName);
 // After the original pages took the input: a new game that would replace the city's autosave (AUTOSAVE on) waits
-// for a YES in the delete player dialog's look.
+// for a CONTINUE in the delete player dialog's look.
 void AfterPageInput(Frontend* pFrontend);
 // That dialog's input and drawing; false for the delete player dialog.
 bool UpdateDialog(Frontend* pFrontend);
