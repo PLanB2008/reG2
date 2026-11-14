@@ -762,6 +762,30 @@ void FitText(wchar_t* pText, f32 width)
     }
 }
 
+// The space from index from on that cuts the text in two rows of the most even widths, the first at most maxFirst
+// wide; -1 if there is none.
+s32 BalancedSplit(wchar_t* pText, s32 from, f32 maxFirst = 100000)
+{
+    s32 split = -1;
+    f32 best = 0;
+    for (s32 i = from; pText[i]; i++)
+    {
+        if (pText[i] == L' ')
+        {
+            pText[i] = 0;
+            const f32 first = Width(pText, MenuFont());
+            const f32 longest = Max(first, Width(pText + i + 1, MenuFont()));
+            pText[i] = L' ';
+            if (first <= maxFirst && (split < 0 || longest < best))
+            {
+                split = i;
+                best = longest;
+            }
+        }
+    }
+    return split;
+}
+
 // The main page's width, from its names to the panel's right edge.
 const f32 kRetryWidth = 450;
 
@@ -778,26 +802,10 @@ s32 RetryRows(wchar_t (*pTexts)[kTextLength])
     else
     {
         swprintf(pTexts[0], Translate(sRestart ? L"RESTART: %ls" : L"RETRY: %ls"), title);
-        // Too wide: two rows of about the same width, split in the title.
+        // Too wide: two rows, split in the title.
         const s32 titleStart = static_cast<s32>(wcslen(pTexts[0]) - wcslen(title));
-        const bool wide = Width(pTexts[0], MenuFont()) > kRetryWidth;
-        s32 split = -1;
-        f32 best = 0;
-        for (s32 i = titleStart > 0 ? titleStart - 1 : 0; pTexts[0][i] && wide; i++)
-        {
-            if (pTexts[0][i] == L' ')
-            {
-                pTexts[0][i] = 0;
-                const f32 first = Width(pTexts[0], MenuFont());
-                const f32 longest = Max(first, Width(pTexts[0] + i + 1, MenuFont()));
-                if (first <= kRetryWidth && (split < 0 || longest < best))
-                {
-                    split = i;
-                    best = longest;
-                }
-                pTexts[0][i] = L' ';
-            }
-        }
+        const s32 from = titleStart > 0 ? titleStart - 1 : 0;
+        const s32 split = Width(pTexts[0], MenuFont()) > kRetryWidth ? BalancedSplit(pTexts[0], from, kRetryWidth) : -1;
         if (split > 0)
         {
             wcscpy(pTexts[1], pTexts[0] + split + 1);
@@ -920,23 +928,7 @@ void DrawHelp(const wchar_t* pText, f32 x, f32 y, f32 width)
     wcsncpy(first, pText, 63);
     first[63] = 0;
     const wchar_t* pSecond = L"";
-    s32 split = -1;
-    f32 best = 0;
-    const bool wide = Width(pText, font) > width;
-    for (s32 i = 0; first[i] && wide; i++)
-    {
-        if (first[i] == L' ')
-        {
-            first[i] = 0;
-            const f32 longest = Max(Width(first, font), Width(first + i + 1, font));
-            first[i] = L' ';
-            if (split < 0 || longest < best)
-            {
-                best = longest;
-                split = i;
-            }
-        }
-    }
+    const s32 split = Width(pText, font) > width ? BalancedSplit(first, 0) : -1;
     if (split >= 0)
     {
         first[split] = 0;
