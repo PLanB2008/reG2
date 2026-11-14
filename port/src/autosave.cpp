@@ -80,16 +80,6 @@ bool Safe(bool quitting)
         !gMap_0x370->IsWaterBlockAt(pPed->get_cam_x().ToInt(), pPed->get_cam_y().ToInt(), pPed->get_cam_z().ToInt() - 1);
 }
 
-void Rect(f32 left, f32 top, f32 right, f32 bottom, s32 colour)
-{
-    Vert verts[4] = {};
-    verts[0].x = verts[3].x = left;
-    verts[1].x = verts[2].x = right;
-    verts[0].y = verts[1].y = top;
-    verts[2].y = verts[3].y = bottom;
-    pgbh_DrawFlatRect(verts, colour);
-}
-
 // Font pixels (layout pixels) to whole screen pixels, as the HUD font's own texels land.
 struct FontPixels
 {
@@ -99,8 +89,12 @@ struct FontPixels
 
     void Fill(s32 x, s32 y, s32 w, s32 h, s32 colour) const
     {
-        Rect(floorf(mX0 + x * mScale + 0.5f), floorf(mY0 + y * mScale + 0.5f), floorf(mX0 + (x + w) * mScale + 0.5f),
-             floorf(mY0 + (y + h) * mScale + 0.5f), colour);
+        Vert verts[4] = {};
+        verts[0].x = verts[3].x = floorf(mX0 + x * mScale + 0.5f);
+        verts[1].x = verts[2].x = floorf(mX0 + (x + w) * mScale + 0.5f);
+        verts[0].y = verts[1].y = floorf(mY0 + y * mScale + 0.5f);
+        verts[2].y = verts[3].y = floorf(mY0 + (y + h) * mScale + 0.5f);
+        pgbh_DrawFlatRect(verts, colour);
     }
 };
 
