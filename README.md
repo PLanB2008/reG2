@@ -36,7 +36,8 @@ A few things differ anyway, whatever you pick:
 - it runs at your screen's resolution, and a wide screen shows a bit more on the sides
 - it draws a frame each time your screen refreshes, while the game itself keeps its original speed
 - the settings are in the game: OPTIONS in the start menu replaces GTA2 Manager, the original's separate
-  settings program, and pressing Escape during a game pauses it and opens the same menu
+  settings program, in five pages (GAME, GRAPHICS, DISPLAY, SOUND, CONTROLS), and pressing Escape during
+  a game pauses it and opens the same menu, with the original pause screen's numbers under STATISTICS
 - every menu works with the mouse, the keyboard or a gamepad
 - no intro movie for now
 
@@ -49,7 +50,7 @@ car headlights, light from gunfire, explosions and fires, soft shadows, bloom, a
 
 ![Classic and enhanced graphics](docs/images/pc_compare_graphics.png)
 
-**Day and night.** SCREEN > LIGHTING > DAY-NIGHT CYCLE instead of the fixed dusk.
+**Day and night.** GAME > LIGHTING > DAY-NIGHT CYCLE instead of the fixed dusk.
 
 ![A full day in 20 seconds](docs/images/pc_day_night.gif)
 
