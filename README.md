@@ -76,6 +76,8 @@ copy of the game has it.
 
 ## Saves
 
+reG2 keeps the original church saves, one per city, and adds an optional autosave and job retry.
+
 **Churches.** Church saves work exactly as before: same cost, and the same file the original reads. reG2
 also keeps one per city, so you can go back to a city you left.
 
@@ -95,7 +97,7 @@ each with its money, jobs passed and date.
 ![LOAD GAME](docs/images/pc_load_game.png)
 
 AUTOSAVE and RETRY JOBS are off unless you turn them on, or pick ENHANCED. Purists can ignore all of it:
-with CLASSIC, only churches save, as in 1999.
+with CLASSIC, only churches save, as in the original.
 
 ## Download
 
