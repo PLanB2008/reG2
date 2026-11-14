@@ -11,10 +11,11 @@ namespace PortRetry
 // A level starts, gGameSession's save name still the save it was loaded from: a new game in a city, or loading a
 // save older than the checkpoint, deletes the checkpoint.
 void Start();
-// ScriptThread, as a job is launched or a kill frenzy starts, before either marks anything as started.
-void BeforeStart(PortSaves::Checkpoint kind);
+// ScriptThread, as a job is launched (by that command) or a kill frenzy starts, before either marks anything as
+// started.
+void BeforeStart(PortSaves::Checkpoint kind, const SCR_CMD_HEADER* pCmd = NULL);
 // ScriptThread::launch_mission, once the job's script is loaded at that base pointer: the checkpoint just
-// written gets its title and the gang that gave it.
+// written gets its title and the gang that gave it, or the command that launched it if no phone did.
 void JobLoaded(const SCR_CMD_HEADER* pCmd, u16 base);
 // After each logic step.
 void AfterStep();

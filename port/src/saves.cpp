@@ -146,7 +146,7 @@ bool Move(const char_type* pFrom, const char_type* pTo)
 }
 
 // mUnused50 of an autosave or checkpoint (0 in the original's): the player spawns where he was. mPad4E: 1 if he
-// drove a car; mPad4F: a checkpoint's Checkpoint; a job checkpoint's stats mPadE and mPad81: its JobName.
+// drove a car; mPad4F: a checkpoint's Checkpoint; a job checkpoint's stats mPadE, mPad81 and mPad8E: its JobName.
 const s32 kExactSpawn = 0x32474552;
 
 enum Writing
@@ -478,6 +478,7 @@ bool IsValid(const char_type* pFileName, Header* pHeader)
         const bool job = pHeader->mCheckpoint == kBeforeJob;
         pHeader->mJob.mTitle = job ? save.mPlayerAndWorldStats.mPadE : 0;
         pHeader->mJob.mGang = job ? save.mPlayerAndWorldStats.mPad81 : 0;
+        pHeader->mJob.mLaunch = job ? save.mPlayerAndWorldStats.mPad8E : 0;
     }
     return true;
 }
@@ -520,6 +521,7 @@ void FillSave(SaveData* pSave)
     data.mUnused44 = 0;
     stats.mPadE = 0;
     stats.mPad81 = 0;
+    stats.mPad8E = 0;
     pSave->mPad4E = 0;
     pSave->mPad4F = 0;
     pSave->mUnused50 = 0;
@@ -650,6 +652,7 @@ void SetCheckpointJob(const JobName& job)
     bool ok = fseek(pFile, at, SEEK_SET) == 0 && fread(&stats, sizeof(stats), 1, pFile) == 1;
     stats.mPadE = job.mTitle;
     stats.mPad81 = job.mGang;
+    stats.mPad8E = job.mLaunch;
     ok = ok && fseek(pFile, at, SEEK_SET) == 0 && fwrite(&stats, sizeof(stats), 1, pFile) == 1;
     ok = fclose(pFile) == 0 && ok;
     sCheckpoint.mJob = ok ? job : JobName();
@@ -705,6 +708,11 @@ bool ExactSpawn()
 Checkpoint LoadedCheckpoint()
 {
     return ExactSpawn() && gGameSave.mPad4F <= kBeforeFrenzy ? static_cast<Checkpoint>(gGameSave.mPad4F) : kNoCheckpoint;
+}
+
+u16 LoadedLaunch()
+{
+    return LoadedCheckpoint() == kBeforeJob ? gGameSave.mPlayerAndWorldStats.mPad8E : 0;
 }
 
 void AfterRestore(Player* pPlayer)

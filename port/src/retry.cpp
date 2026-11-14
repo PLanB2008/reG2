@@ -42,6 +42,12 @@ bool sRetrying;
 bool sJobToName;
 // LoadMissionScript loads that many base pointers of a job's script.
 const u32 kJobBasePointers = 0xC00 / sizeof(u16);
+// A checkpoint before a job the script launched itself (a final job, as the job before it ended) loads with the
+// script past that point: its LAUNCH_MISSION runs again once the level's script is in its main loop (Residential's
+// and Industrial's set up a command a step, for about 130 and 100 steps).
+u16 sRelaunch;
+s32 sRelaunchIn;
+const s32 kRelaunchSteps = 150;
 
 // The player's last steady spots, one a second over the last 12 seconds or so. A checkpoint puts him back
 // at one a few steps from what started the job or frenzy, so that it starts again only if he goes back to it.
@@ -178,6 +184,23 @@ PortSaves::Spot RetrySpot()
     }
     return here;
 }
+
+// As the script runs it, in a new thread and from a copy of the command with no next one: the thread ends with the
+// job instead of going on with what launched it (Residential's and Industrial's main loops).
+void Relaunch()
+{
+    const SCR_POINTER* pCmd = static_cast<const SCR_POINTER*>(gScriptManager->GetBasePointer(sRelaunch));
+    str_table_entry* pName = pCmd && pCmd->mType == SCRCMD_LAUNCH_MISSION ? gScriptManager->FindStringById(pCmd->mIndex) : NULL;
+    sRelaunch = 0;
+    if (!pName || !gScriptManager->mMissionFlag || *gScriptManager->mMissionFlag)
+    {
+        return;
+    }
+    Log("the job launched again");
+    SCR_CMD_HEADER launch = *pCmd;
+    launch.mCmdNext = -1;
+    gScriptManager->SpawnThread(launch.mCmdThis, 0)->launch_mission(&launch, pName->get_name());
+}
 } // namespace
 
 void Start()
@@ -188,6 +211,8 @@ void Start()
     sShown = 0;
     sRetrying = false;
     sNumSamples = 0;
+    sRelaunch = PortSaves::LoadedLaunch();
+    sRelaunchIn = kRelaunchSteps;
     PortSaves::RefreshCheckpoint();
     if (gScriptManager && !PortSaves::Replaying() &&
         (!gScriptManager->IsLoadedFromSave() ||
@@ -199,9 +224,11 @@ void Start()
     }
 }
 
-void BeforeStart(PortSaves::Checkpoint kind)
+void BeforeStart(PortSaves::Checkpoint kind, const SCR_CMD_HEADER* pCmd)
 {
-    if (!Enabled() || !gScriptManager->mMissionFlag || *gScriptManager->mMissionFlag || gScriptManager->IsKillFrenzyActive())
+    // The script launches the Downtown tutorial itself before any job is passed: it is no job to retry.
+    if (!Enabled() || !gScriptManager->mMissionFlag || *gScriptManager->mMissionFlag || gScriptManager->IsKillFrenzyActive() ||
+        (pCmd && pCmd->mType == SCRCMD_LAUNCH_MISSION && !PassedCount(kind)))
     {
         return;
     }
@@ -235,6 +262,7 @@ void JobLoaded(const SCR_CMD_HEADER* pCmd, u16 base)
         const Gang* pGang = pName ? gGangPool_CA8->FindGangByName(pName->get_name()) : NULL;
         job.mGang = pGang ? pGang->mArrowColour : 0;
     }
+    job.mLaunch = pCmd->mType == SCRCMD_LAUNCH_MISSION ? pCmd->mCmdThis : 0;
     // The title: in the game's scripts, the job's first DISPLAY_MESSAGE of type 0 (1 and 2 are JOB COMPLETE and
     // JOB FAILED).
     const u32 end = base + kJobBasePointers;
@@ -282,6 +310,10 @@ void AfterStep()
     {
         Log("area complete");
         PortSaves::DeleteCheckpoint();
+    }
+    if (sRelaunch && --sRelaunchIn <= 0)
+    {
+        Relaunch();
     }
 }
 

@@ -31,11 +31,12 @@ enum Checkpoint
 };
 
 // A job's title (a text id) and the gang that gave it (Gang's arrow colour: the text "ganga<colour>"), 0 if
-// none, shown in the language of the moment.
+// none, shown in the language of the moment; for a job no phone gave, the LAUNCH_MISSION command that started it.
 struct JobName
 {
     u16 mTitle;
     u8 mGang;
+    u16 mLaunch;
 };
 
 // What the game reads first from a save: its level's files and stage.
@@ -102,6 +103,8 @@ void RefreshCheckpoint();
 bool ExactSpawn();
 // What the checkpoint the level was loaded from was taken before, kNoCheckpoint for another save.
 Checkpoint LoadedCheckpoint();
+// Its job's LAUNCH_MISSION command, 0 if a phone gave the job or for another save.
+u16 LoadedLaunch();
 // Player::UpdateGameFromSave restored the cars: the player back in the one he drove.
 void AfterRestore(Player* pPlayer);
 

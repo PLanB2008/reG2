@@ -7713,7 +7713,7 @@ void ScriptThread::launch_mission(SCR_CMD_HEADER* pCmd, const char_type* pMissio
 {
 #if defined(GTA2_PORT)
     // Port: RETRY JOBS, the checkpoint written as a job is launched, before anything marks it started.
-    PortRetry::BeforeStart(PortSaves::kBeforeJob);
+    PortRetry::BeforeStart(PortSaves::kBeforeJob, pCmd);
 #endif
     u16 cmd_next;
 #if defined(GTA2_PORT)
