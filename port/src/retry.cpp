@@ -31,8 +31,9 @@ namespace
 // At 30 steps a second, not counting the time the player is wasted or busted.
 const s32 kShowSteps = 240;
 
-// The job or frenzy the checkpoint was taken before, while it runs, and its passed counter then.
+// The job or frenzy the checkpoint was taken before, while it runs, and its passed counter then; the last one over.
 PortSaves::Checkpoint sRunning;
+PortSaves::Checkpoint sEnded;
 s32 sPassedBefore;
 s32 sLastMission;
 bool sLastFrenzy;
@@ -94,6 +95,7 @@ s32 PassedCount(PortSaves::Checkpoint kind)
 
 void End(bool passed)
 {
+    sEnded = sRunning;
     sRunning = PortSaves::kNoCheckpoint;
     if (passed)
     {
@@ -298,6 +300,12 @@ void AfterStep()
         (sRunning == PortSaves::kBeforeFrenzy && sLastFrenzy && !frenzy))
     {
         End(PassedCount(sRunning) > sPassedBefore);
+    }
+    // Residential's and Industrial's final jobs count the pass a few steps after clearing the mission flag.
+    if (sShown > 0 && PassedCount(sEnded) > sPassedBefore)
+    {
+        sShown = 0;
+        End(true);
     }
     sLastMission = mission;
     sLastFrenzy = frenzy;
