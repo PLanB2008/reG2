@@ -121,23 +121,20 @@ All releases are on the [releases page](https://github.com/reG2-project/reG2/rel
   me if it works. The app isn't signed by Apple, so the first time, right-click it and choose Open.
 
 On first start reG2 asks for the game files: it can copy an existing GTA2 install, or install from the
-free Rockstar Classics installer or the CD. Saves and settings go in your user folder.
+free Rockstar Classics installer or the CD. Saves and settings go in your user folder: see [Where files go](#where-files-go).
 
 ## Where files go
 
-reG2 plays from the first of these that holds GTA2's data: the folder in `GTA2_DIR` (if set), the
-current folder, the program's folder. Otherwise it uses its own per-user folder, where the first start
-copies the game. Settings (`gta2_registry.ini`) and saves (`player/`) stay in the folder it plays from.
-`reG2.log` is written only after a crash or an error message, in the program's folder when it can write
-there, else in the per-user folder.
+reG2 looks for the game in `GTA2_DIR`, the current folder and its own folder, else in the per-user folder
+below, where the first start copies it. Settings (`gta2_registry.ini`) and saves (`player/`) sit next to
+the game data; `reG2.log` is written only after a crash or an error.
 
-| Download | Program's folder | Per-user folder | `reG2.log` |
-|---|---|---|---|
-| Windows zip | where you unzipped it | `%APPDATA%\reG2\` | program's folder |
-| Linux AppImage | inside the AppImage (read only) | `~/.local/share/reG2/` | per-user folder |
-| Linux tar.gz | `bin/` in the unpacked folder | `~/.local/share/reG2/` | program's folder |
-| Linux Flatpak | inside the Flatpak (read only) | `~/.var/app/io.github.reG2_project.reG2/data/reG2/` | per-user folder |
-| macOS dmg | inside the app | `~/Library/Application Support/reG2/` | per-user folder |
+| System | Per-user folder |
+|---|---|
+| Windows | `%APPDATA%\reG2\` |
+| Linux (AppImage, tar.gz) | `~/.local/share/reG2/` |
+| Linux (Flatpak) | `~/.var/app/io.github.reG2_project.reG2/data/reG2/` |
+| macOS | `~/Library/Application Support/reG2/` |
 
 ## Building
 
