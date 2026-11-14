@@ -65,8 +65,8 @@ the gamepad.
 
 - **Keyboard and mouse:** the second set is ready to use: WASD to move, F to get in and out of cars,
   left click to shoot, the wheel to change weapon.
-- **Gamepad:** works as soon as it's plugged in. In a car, the triggers accelerate and brake
-  progressively and the stick steers smoothly.
+- **Gamepad:** complete, beyond the original's basic joystick: any pad plugged in, analog driving, every
+  menu, its own button pictures.
 - **Twin stick** (CONTROLS > TWIN STICK), in the style of Hotline Miami: move with one stick or WASD, aim
   with the other or the mouse. Shots go where you aim and the camera leans toward the aim; hold Shift
   (LT on a pad) to look further. The turrets of the fire truck, tank and gun jeep aim the same way.
