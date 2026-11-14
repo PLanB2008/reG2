@@ -313,12 +313,6 @@ void AfterStep()
     {
         TakeSample();
     }
-    if (gGame_0x40->IsExitTimerSet() && gGame_0x40->GetExitType() == GameExitType::AreaCompleted_4 &&
-        PortSaves::GetCheckpoint() != PortSaves::kNoCheckpoint)
-    {
-        Log("area complete");
-        PortSaves::DeleteCheckpoint();
-    }
     if (sRelaunch && --sRelaunchIn <= 0)
     {
         Relaunch();
