@@ -22,7 +22,7 @@ You need your own copy of GTA2 for PC. The free 2004 release works.
 
 ![Downtown at night](docs/images/pc_night_street.png)
 
-## Classic by default
+## Classic or enhanced
 
 On first start, CHOOSE YOUR STYLE asks how you want to play. CLASSIC is the game as it was in 1999:
 same lighting, same controls, saves at churches only. ENHANCED turns on refined lights and shadows, the
