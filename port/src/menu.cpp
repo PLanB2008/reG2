@@ -924,9 +924,9 @@ const f32 kArrowGap = 14;
 void DrawHelp(const wchar_t* pText, f32 x, f32 y, f32 width)
 {
     const s16 font = MenuFont();
-    wchar_t first[64];
-    wcsncpy(first, pText, 63);
-    first[63] = 0;
+    wchar_t first[96];
+    wcsncpy(first, pText, 95);
+    first[95] = 0;
     const wchar_t* pSecond = L"";
     const s32 split = Width(pText, font) > width ? BalancedSplit(first, 0) : -1;
     if (split >= 0)

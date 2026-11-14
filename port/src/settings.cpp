@@ -126,9 +126,11 @@ const Translation kTranslations[] = {
     {L"BLOOD", NULL, {L"SANG", L"BLUT", L"SANGUE", L"SANGRE"}},
     {L"CHECK FOR UPDATES", NULL, {L"MISES A JOUR", L"UPDATES SUCHEN", L"AGGIORNAMENTI", L"ACTUALIZACIONES"}},
     {L"AUTOSAVE", NULL, {L"SAUVEGARDE AUTO", L"AUTOSPEICHERN", L"SALVATAGGIO AUTO", L"GUARDADO AUTO"}},
-    {L"SAVES AFTER EACH JOB OR FRENZY AND WHEN YOU QUIT", NULL,
-     {L"SAUVEGARDE APRES CHAQUE MISSION OU FRENESIE ET EN QUITTANT", L"SPEICHERT NACH JEDEM AUFTRAG ODER AMOKLAUF UND BEIM BEENDEN",
-      L"SALVA DOPO OGNI MISSIONE O FRENESIA E QUANDO ESCI", L"GUARDA TRAS CADA MISIÓN O FRENESÍ Y AL SALIR"}},
+    {L"AFTER EACH JOB OR FRENZY, AND ON QUIT AFTER ONE OR 2 MIN OF PLAY", NULL,
+     {L"FIN DE MISSION OU FRENESIE, ET SORTIE APRES L'UNE OU 2 MIN DE JEU",
+      L"NACH AUFTRAG ODER AMOKLAUF, BEIM BEENDEN NACH EINEM ODER 2 MIN SPIEL",
+      L"DOPO OGNI MISSIONE O FRENESIA, E USCENDO DOPO UNA O 2 MIN DI GIOCO",
+      L"TRAS CADA MISIÓN O FRENESÍ, Y AL SALIR TRAS UNO O 2 MIN DE JUEGO"}},
     {L"YOUR %ls AUTOSAVE WILL BE REPLACED", NULL,
      {L"VOTRE SAUVEGARDE AUTO DE %ls SERA REMPLACEE", L"DEIN AUTOSPEICHERSTAND VON %ls WIRD ERSETZT",
       L"IL TUO SALVATAGGIO AUTO DI %ls SARÀ SOSTITUITO", L"TU GUARDADO AUTO DE %ls SERÁ REEMPLAZADO"}},
@@ -241,7 +243,7 @@ const Translation kTranslations[] = {
 const s32 kNumTranslations = sizeof(kTranslations) / sizeof(kTranslations[0]);
 
 // The texts in the game's font codes, for sCacheLang.
-wchar_t sCache[kNumTranslations][64];
+wchar_t sCache[kNumTranslations][96];
 char sCacheLang;
 
 s32 TranslationLanguage(char code)
@@ -573,8 +575,8 @@ const wchar_t* Translate(const wchar_t* pEnglish)
         for (s32 i = 0; i < kNumTranslations; i++)
         {
             const wchar_t* pText = kTranslations[i].mText[lang];
-            wcsncpy(sCache[i], pText ? pText : kTranslations[i].mEnglish, 63);
-            sCache[i][63] = 0;
+            wcsncpy(sCache[i], pText ? pText : kTranslations[i].mEnglish, 95);
+            sCache[i][95] = 0;
             gText_0x14->RemapExtendedChars(sCache[i]);
         }
     }
@@ -691,7 +693,7 @@ const wchar_t* Help(Id id)
     switch (id)
     {
         case kAutosave:
-            return L"SAVES AFTER EACH JOB OR FRENZY AND WHEN YOU QUIT";
+            return L"AFTER EACH JOB OR FRENZY, AND ON QUIT AFTER ONE OR 2 MIN OF PLAY";
         case kRetry:
             return L"RETRY A FAILED JOB OR FRENZY FROM THE PAUSE MENU";
         default:
