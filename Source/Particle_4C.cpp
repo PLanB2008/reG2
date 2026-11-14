@@ -1442,6 +1442,14 @@ bool Particle_4C::UpdateCollisionBurst_state_31_34()
             {
                 return true;
             }
+#if defined(GTA2_PORT)
+            // Port: a ped who gets into a car while firing the flamethrower leaves this Char behind, and the original
+            // crashes reading his NULL mGameObject below. gtamp.com report X1, not fixed in 11.44.
+            if (pChar->mpPed->mGameObject != pChar)
+            {
+                return true;
+            }
+#endif
             if (!pChar->mpPed->mBf21C.bAttacking)
             {
                 mBf4.bDriverAttacking = false;
