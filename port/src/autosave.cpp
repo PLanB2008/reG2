@@ -12,6 +12,7 @@
 #include "Player.hpp"
 #include "ScriptManager.hpp"
 #include "map_0x370.hpp"
+#include "retry.hpp"
 #include "saves.hpp"
 #include "settings.hpp"
 #include "sprite.hpp"
@@ -50,9 +51,8 @@ s32 sPlayed;
 s32 sFailures;
 s32 sFailedShown;
 
-// As at a church: off a job and out of a kill frenzy. Then on foot and on firm ground, or driving a car
-// out of water (stopped unless quitting), and neither dead, arrested nor burning.
-bool Safe(bool quitting)
+// As at a church: off a job and out of a kill frenzy, and neither dead, arrested nor burning.
+bool SafeState()
 {
     if (!PortSettings::Autosave() || !gGame_0x40 || !gScriptManager || IsNetworkGame() || gGameSession.IsBonusStage() ||
         gGame_0x40->IsExitTimerSet())
@@ -62,11 +62,15 @@ bool Safe(bool quitting)
     const s32* pMission = gScriptManager->mMissionFlag;
     Player* pPlayer = gGame_0x40->mLocalPlayer;
     Ped* pPed = pPlayer ? pPlayer->mPlayerPed : NULL;
-    if (!pMission || *pMission || gScriptManager->IsKillFrenzyActive() || !pPed || pPlayer->mWastedOrBusted ||
-        pPed->get_health() <= 0 || pPed->IsOnFire())
-    {
-        return false;
-    }
+    return pMission && !*pMission && !gScriptManager->IsKillFrenzyActive() && pPed && !pPlayer->mWastedOrBusted &&
+        pPed->get_health() > 0 && !pPed->IsOnFire();
+}
+
+// Then on foot and on firm ground, or driving a car out of water (stopped unless quitting).
+bool SafeSpot(bool quitting)
+{
+    Player* pPlayer = gGame_0x40->mLocalPlayer;
+    Ped* pPed = pPlayer->mPlayerPed;
     if (pPed->mPedState1 == ped_state_1::in_car_10)
     {
         Car* pCar = pPed->mCar;
@@ -78,6 +82,11 @@ bool Safe(bool quitting)
             state == ped_state_1::standing_still_7) &&
         !pPlayer->mJumping &&
         !gMap_0x370->IsWaterBlockAt(pPed->get_cam_x().ToInt(), pPed->get_cam_y().ToInt(), pPed->get_cam_z().ToInt() - 1);
+}
+
+bool Safe(bool quitting)
+{
+    return SafeState() && SafeSpot(quitting);
 }
 
 // Font pixels (layout pixels) to whole screen pixels, as the HUD font's own texels land.
@@ -138,14 +147,24 @@ void DrawSpinner(s32 left, s32 top)
     }
 }
 
-bool Save(const char* pWhy)
+bool Save(const char* pWhy, const PortSaves::Spot* pSpot = NULL)
 {
 #if defined(GTA2_PORT_SDL)
-    SDL_Log("Autosave: %s", pWhy);
+    SDL_Log("Autosave: %s%s", pWhy, pSpot ? ", at the last steady spot" : "");
 #else
     (void)pWhy;
 #endif
-    return PortSaves::Autosave();
+    return PortSaves::Autosave(pSpot);
+}
+
+void LogNone(const char* pWhy, const char* pReason)
+{
+#if defined(GTA2_PORT_SDL)
+    SDL_Log("Autosave: none (%s), %s", pWhy, pReason);
+#else
+    (void)pWhy;
+    (void)pReason;
+#endif
 }
 } // namespace
 
@@ -221,9 +240,29 @@ void Quit(const char* pWhy)
         SDL_Log("Autosave: none (%s), no job or frenzy over and %d seconds played", pWhy, sPlayed / 30);
 #endif
     }
-    else if (Safe(true))
+    else if (!SafeState())
+    {
+        if (PortSettings::Autosave())
+        {
+            LogNone(pWhy, "on a job or a frenzy, or not safe");
+        }
+    }
+    else if (SafeSpot(true))
     {
         Save(pWhy);
+    }
+    else
+    {
+        // Mid-jump, getting into a car, in water: where he last stood or drove steady instead.
+        PortSaves::Spot spot;
+        if (PortRetry::LastSteadySpot(&spot))
+        {
+            Save(pWhy, &spot);
+        }
+        else
+        {
+            LogNone(pWhy, "no steady spot yet");
+        }
     }
 }
 

@@ -158,6 +158,8 @@ enum Writing
 Writing sWriting;
 Checkpoint sWritingCheckpoint;
 Spot sWritingSpot;
+// An autosave puts the player at sWritingSpot instead of where he is.
+bool sAutosaveAtSpot;
 s32 sFailures;
 bool sWritten;
 
@@ -533,7 +535,7 @@ void FillSave(SaveData* pSave)
         stats.mPowerUps[i] = pPlayer->mPowerUpTimers[i];
     }
     Spot spot;
-    if (sWriting == kWritingCheckpoint)
+    if (sWriting == kWritingCheckpoint || sAutosaveAtSpot)
     {
         spot = sWritingSpot;
         stats.mX = spot.mX;
@@ -587,14 +589,20 @@ void GetSpot(Spot* pSpot)
     }
 }
 
-bool Autosave()
+bool Autosave(const Spot* pSpot)
 {
     char_type name[260];
     FileName(gGameSession.GetPlySlotIdx(), "auto", gGameSession.GetMainStageIdx(), name, sizeof(name));
     sWriting = kWritingAutosave;
+    sAutosaveAtSpot = pSpot != NULL;
+    if (pSpot)
+    {
+        sWritingSpot = *pSpot;
+    }
     sWritten = false;
     gScriptManager->SaveGame(name);
     sWriting = kWritingChurchSave;
+    sAutosaveAtSpot = false;
     return sWritten;
 }
 

@@ -68,9 +68,6 @@ bool HasAutosave(u8 slot, u8 mainStage);
 // SaveGame, as it fills the header: the exact position, power-ups and car of an autosave or a checkpoint,
 // or none of them in a church save, as the original.
 void FillSave(SaveData* pSave);
-// The autosave of the current city, written now; false if it failed.
-bool Autosave();
-
 // Where the player is, and the car he drives if a save can restore it.
 struct Spot
 {
@@ -85,6 +82,9 @@ struct Spot
     u32 mCarDamagedAreas;
 };
 void GetSpot(Spot* pSpot);
+
+// The autosave of the current city, written now with the player where he is or at pSpot; false if it failed.
+bool Autosave(const Spot* pSpot = NULL);
 
 // The retry checkpoint, written now with the player put back at that spot, or deleted.
 void CheckpointName(u8 slot, char_type* pOut, size_t size);

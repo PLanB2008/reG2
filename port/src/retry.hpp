@@ -18,6 +18,9 @@ void BeforeStart(PortSaves::Checkpoint kind);
 void JobLoaded(const SCR_CMD_HEADER* pCmd, u16 base);
 // After each logic step.
 void AfterStep();
+// The player's latest steady spot (one a second on foot on the ground or driving on a road, with RETRY JOBS or
+// AUTOSAVE on), false if none since the level started or he was last wasted or busted.
+bool LastSteadySpot(PortSaves::Spot* pSpot);
 // With the HUD.
 void Draw();
 // The pause menu's RETRY: right after a failure it comes selected; RESTART while the job or frenzy runs.

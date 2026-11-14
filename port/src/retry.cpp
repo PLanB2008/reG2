@@ -70,9 +70,14 @@ void Log(const char* pWhat)
 #endif
 }
 
+bool InGame()
+{
+    return !PortSaves::Replaying() && gGame_0x40 && gScriptManager && !IsNetworkGame() && !gGameSession.IsBonusStage();
+}
+
 bool Enabled()
 {
-    return PortSettings::Retry() && !PortSaves::Replaying() && gGame_0x40 && gScriptManager && !IsNetworkGame() && !gGameSession.IsBonusStage();
+    return PortSettings::Retry() && InGame();
 }
 
 s32 PassedCount(PortSaves::Checkpoint kind)
@@ -268,7 +273,7 @@ void AfterStep()
     }
     sLastMission = mission;
     sLastFrenzy = frenzy;
-    if (Enabled() && ++sSteps % kSampleSteps == 0)
+    if ((PortSettings::Retry() || PortSettings::Autosave()) && InGame() && ++sSteps % kSampleSteps == 0)
     {
         TakeSample();
     }
@@ -278,6 +283,16 @@ void AfterStep()
         Log("area complete");
         PortSaves::DeleteCheckpoint();
     }
+}
+
+bool LastSteadySpot(PortSaves::Spot* pSpot)
+{
+    if (!sNumSamples)
+    {
+        return false;
+    }
+    *pSpot = sSamples[(sNumSamples - 1) % kNumSamples].mSpot;
+    return true;
 }
 
 void Draw()
