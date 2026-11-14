@@ -23,6 +23,7 @@
 #include "car_surface_type_more.hpp"
 
 #if defined(GTA2_PORT_SDL)
+// Port: the gamepad's analog triggers and stick for the player's car (port/compat/src/pad.cpp).
 void port_PadVehicleInput(float* pForward, float* pBackward, float* pSteer);
 #endif
 
@@ -3330,8 +3331,8 @@ void CarPhysics::ApplyThrottleInput()
         }
     }
 #if defined(GTA2_PORT_SDL)
-    // A trigger pressed part way stops the player's pedal at that part of its travel once the car rolls: from a
-    // standstill it goes all the way, as a car only starts past about two thirds of it.
+    // Port: analog triggers. One pressed part way stops the player's pedal at that part of its travel once the car
+    // rolls; from a standstill it goes all the way, as a car only starts past about two thirds of it.
     float forward, backward, steer;
     port_PadVehicleInput(&forward, &backward, &steer);
     const Fix16 cap = kFpFive * Fix16(mIsForwardGasOn ? forward : backward);
@@ -3358,7 +3359,7 @@ void CarPhysics::ApplyBrakePhysics()
             mBrakePressure = kBrakePressureMax; // 0x4000 fp16
         }
 #if defined(GTA2_PORT_SDL)
-        // A trigger pressed part way brakes the player's car that much.
+        // Port: analog triggers, one pressed part way brakes the player's car that much.
         float forward, backward, steer;
         port_PadVehicleInput(&forward, &backward, &steer);
         const Fix16 cap = kBrakePressureMax * Fix16(forward < backward ? forward : backward);
@@ -3404,7 +3405,7 @@ void CarPhysics::UpdateSteeringAngle()
         }
         mPointingAngRad = GetScaledTurnRatio(speed_factor / (kFpPoint6 * kFpPoint8), mTurnDirection);
 #if defined(GTA2_PORT_SDL)
-        // The stick pushed part way steers that much.
+        // Port: analog steering, the stick pushed part way steers that much; keys and the d-pad give 1.
         float forward, backward, steer;
         port_PadVehicleInput(&forward, &backward, &steer);
         mPointingAngRad = mPointingAngRad * Fix16(steer);

@@ -1,5 +1,6 @@
 #include "Car.hpp"
 #if defined(GTA2_PORT)
+// Port: TWIN STICK aims the roof gun (HandleUserInput).
 #include "../port/src/twin_stick.hpp"
 #endif
 #include "car_shop_event.hpp"
@@ -264,6 +265,7 @@ char_type CarThreadTriggers::AddThreadTrigger(const s32& type, const s32& param,
             pIter->mType = type;
             pIter->mAction = param;
 #if defined(GTA2_PORT_64BIT)
+            // Port: 64-bit, the script thread pointer at full width (port/docs/64bit.md).
             pIter->mpScriptCmd = reinterpret_cast<intptr_t>(pScriptThread);
 #else
             pIter->mpScriptCmd = reinterpret_cast<s32>(pScriptThread);
@@ -4954,6 +4956,7 @@ void Car::HandleUserInput(char_type forward_gas_on,
         bRotated = Car::HandleRoofTurretRotation(left_on);
     }
 #if defined(GTA2_PORT)
+    // Port: TWIN STICK turns the fire truck's, tank's or gun jeep's roof gun toward the aim while SPECIAL does not.
     else
     {
         PortTwinStick::AimTurret(this);

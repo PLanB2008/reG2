@@ -1,5 +1,6 @@
 #include "Ped.hpp"
 #if defined(GTA2_PORT)
+// Port: TWIN STICK's free aim (ComputeAimAngle).
 #include "../port/src/twin_stick.hpp"
 #endif
 #include "ped_move_target_type.hpp"
@@ -1539,6 +1540,7 @@ Ang16 Ped::ComputeAimAngle()
     if (PedTypeIs(ped_type::player_2))
     {
 #if defined(GTA2_PORT)
+        // Port: TWIN STICK, the machine guns fire where the player faces, without the original's lock on a nearby ped.
         if (PortTwinStick::FreeAim(this))
         {
             mTargetFacingAngle = mFacingAngle;

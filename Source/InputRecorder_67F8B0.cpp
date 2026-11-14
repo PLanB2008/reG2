@@ -348,8 +348,8 @@ void InputDevices::flush_keyboard_and_gamepad()
         gGamePadDevice->GetDeviceData(16, NULL, &sDeviceDataCount, 0);
     }
 #if defined(GTA2_PORT)
-    // The flushed events can hold key releases (after a focus loss, for one): the held keys are read back from the
-    // keyboard, since a stuck Alt drops every Enter, Space and Tab.
+    // Port: keys stuck after Alt+Tab. The flushed events can hold key releases, so the held keys are read back from
+    // the keyboard: a stuck Alt drops every Enter, Space and Tab.
     BYTE keys[256];
     if (gKeyboardDevice && SUCCEEDED(gKeyboardDevice->GetDeviceState(sizeof(keys), keys)))
     {

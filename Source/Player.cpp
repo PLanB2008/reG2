@@ -1,5 +1,6 @@
 #include "Player.hpp"
 #if defined(GTA2_PORT)
+// Port: the autosave's restore and TWIN STICK.
 #include "../port/src/saves.hpp"
 #include "../port/src/twin_stick.hpp"
 #endif
@@ -1617,6 +1618,7 @@ void Player::DoPedControlInputs(Ped* pPed)
         }
     }
 #if defined(GTA2_PORT)
+    // Port: TWIN STICK controls on foot, after the original's.
     PortTwinStick::PedControls(this, pPed);
 #endif
 }
@@ -2805,6 +2807,7 @@ void Player::UpdateGameFromSave(SavedPlayerStats* pSave)
     Player::RestorePowerUpsFromSave(pSave);
     Player::RestoreCarsFromSave();
 #if defined(GTA2_PORT)
+    // Port: an autosave or a retry checkpoint puts the player back in the car he drove.
     PortSaves::AfterRestore(this);
 #endif
 }
