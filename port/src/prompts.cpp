@@ -20,9 +20,6 @@ namespace
 const unsigned char kColourPng[] = {
 #embed "../resources/prompts_colour.png"
 };
-const unsigned char k1BitPng[] = {
-#embed "../resources/prompts_1bit.png"
-};
 
 enum Cell
 {
@@ -40,18 +37,13 @@ const s32 kSlot = 3;
 std::vector<u32> sPixels;
 s32 sWidth;
 bool sLoaded;
-// GTA2_PROMPTS=1bit: Kenney's 1-Bit pack, white, drawn in the text's colour.
-bool sTinted;
 
 bool Load()
 {
     if (!sLoaded)
     {
         sLoaded = true;
-        const char* pPack = SDL_getenv("GTA2_PROMPTS");
-        sTinted = pPack && !strcmp(pPack, "1bit");
-        SDL_Surface* pLoaded = sTinted ? SDL_LoadPNG_IO(SDL_IOFromConstMem(k1BitPng, sizeof(k1BitPng)), true)
-                                       : SDL_LoadPNG_IO(SDL_IOFromConstMem(kColourPng, sizeof(kColourPng)), true);
+        SDL_Surface* pLoaded = SDL_LoadPNG_IO(SDL_IOFromConstMem(kColourPng, sizeof(kColourPng)), true);
         SDL_Surface* pSurface = pLoaded ? SDL_ConvertSurface(pLoaded, SDL_PIXELFORMAT_RGBA32) : NULL;
         SDL_DestroySurface(pLoaded);
         if (pSurface && pSurface->h == 16)
@@ -197,7 +189,8 @@ void Draw(Glyph glyph, f32 x, f32 y, f32 size, s32 colour, bool dim)
     const f32 u1 = static_cast<f32>(CellX(cell) + texels) / sWidth;
     const f32 xyuv[24] = {left, top, u0, 0, right, top, u1, 0, right, bottom, u1, 1,
                           left, top, u0, 0, right, bottom, u1, 1, left, bottom, u0, 1};
-    const u32 rgb = sTinted ? static_cast<u32>(colour) : (dim ? 0x707070u : 0xFFFFFFu);
+    (void)colour;
+    const u32 rgb = dim ? 0x707070u : 0xFFFFFFu;
     const u32 rgba = ((rgb >> 16) & 0xFF) | (rgb & 0xFF00) | ((rgb & 0xFF) << 16) | 0xFF000000u;
     const u32 colours[6] = {rgba, rgba, rgba, rgba, rgba, rgba};
     port_DrawPicture(kSlot, sWidth, 16, sPixels.data(), xyuv, colours, 6, true);
