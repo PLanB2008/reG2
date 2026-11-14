@@ -1631,7 +1631,7 @@ void Frontend::Update()
                 snd1.mbStatus = false;
                 UpdatePageFromUserInput();
 #if defined(GTA2_PORT)
-                // Port: with AUTOSAVE on, a new game that would replace the city's autosave asks ARE YOU SURE? first.
+                // Port: with AUTOSAVE on, a new game that would replace the city's autosave warns first, CONTINUE or CANCEL.
                 PortOptionsMenu::AfterPageInput(this);
 #endif
             }
@@ -1643,7 +1643,7 @@ void Frontend::Update()
 
         case FrontendState::Delete_Player_Dialog_4:
 #if defined(GTA2_PORT)
-            // Port: that ARE YOU SURE? dialog, the delete player dialog with a type of its own.
+            // Port: that autosave warning, the delete player dialog with a type of its own.
             if (PortOptionsMenu::UpdateDialog(this))
             {
                 break;
@@ -3048,7 +3048,7 @@ void Frontend::DrawCurrentState()
     {
         case FrontendState::Delete_Player_Dialog_4:
 #if defined(GTA2_PORT)
-            // Port: the ARE YOU SURE? dialog of a new game that would replace the city's autosave.
+            // Port: the warning of a new game that would replace the city's autosave.
             if (PortOptionsMenu::DrawDialog(this))
             {
                 break;
