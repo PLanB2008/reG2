@@ -5,6 +5,7 @@
 #include "Gang.hpp"
 #include "GameSession.hpp"
 #include "Globals.hpp"
+#include "Camera.hpp"
 #include "Hud.hpp"
 #include "Ped.hpp"
 #include "Player.hpp"
@@ -14,6 +15,7 @@
 #include "map_0x370.hpp"
 #include "menu.hpp"
 #include "pause_menu.hpp"
+#include "prompts.hpp"
 #include "settings.hpp"
 #include "winmain.hpp"
 #include <math.h>
@@ -286,10 +288,24 @@ void Draw()
     }
     // Under SAVING, above a job's titles.
     const s32 kTop = 78;
+    const PortPrompts::Glyph glyph = PortMenu::PadMode() ? PortPrompts::kPadStart : PortPrompts::kKeyEscape;
     wchar_t text[64];
-    swprintf(text, PortSettings::Translate(L"%ls: RETRY"), PortMenu::PadMode() ? L"START" : PortSettings::Translate(L"ESC"));
-    const s32 left = 320 - Frontend::GetMaxTextWidth(text, gDebugFont) / 2;
-    DrawStringScaled(text, Fix16(left), Fix16(kTop), gDebugFont);
+    if (!PortPrompts::Available())
+    {
+        swprintf(text, PortSettings::Translate(L"%ls: RETRY"), PortSettings::Translate(L"ESC"));
+        DrawStringScaled(text, Fix16(320 - Frontend::GetMaxTextWidth(text, gDebugFont) / 2), Fix16(kTop), gDebugFont);
+        return;
+    }
+    // Escape's or Start's picture, then RETRY, centred; the picture placed as the HUD places its layout.
+    wcscpy(text, PortSettings::Translate(L"RETRY"));
+    const f32 ui = gViewCamera->mUiScale.ToFloat();
+    const f32 size = PortPrompts::Size(16 * ui);
+    const f32 glyphWidth = PortPrompts::Width(glyph, size) / ui;
+    const f32 kGap = 5;
+    const s32 kYellow = 0xAD9A52; // the text's, for a white picture
+    const s32 left = static_cast<s32>(320 - (glyphWidth + kGap + Frontend::GetMaxTextWidth(text, gDebugFont)) / 2);
+    PortPrompts::Draw(glyph, PortUiX(Fix16(left)).ToFloat(), PortUiY(Fix16(kTop)).ToFloat() + 11 * ui, size, kYellow, false);
+    DrawStringScaled(text, Fix16(static_cast<s32>(left + glyphWidth + kGap)), Fix16(kTop), gDebugFont);
 }
 
 bool JustFailed()
