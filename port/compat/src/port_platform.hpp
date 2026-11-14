@@ -57,6 +57,7 @@ enum
 };
 void port_OpenGamepad();
 bool port_PadMode(); // the gamepad gave the last input
+SDL_Gamepad* port_ActivePad(); // the last pad to give an input, NULL without one
 bool port_MouseMode(); // the mouse gave the last input
 int port_GetPadBinding(int control);
 void port_SetPadBinding(int control, int code);

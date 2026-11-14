@@ -376,6 +376,11 @@ bool port_PadMode()
     return sMode == kPadMode;
 }
 
+SDL_Gamepad* port_ActivePad()
+{
+    return sActivePad;
+}
+
 bool port_MouseMode()
 {
     return sMode == kMouseMode;

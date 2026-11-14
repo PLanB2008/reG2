@@ -11,6 +11,8 @@
 //                                                   the wheel one notch; "focus.lost" and "focus.gained"
 //                                                   for the window's keyboard focus, as with Alt+Tab
 //   GTA2_EXIT_AT=<frame>                            quit at that frame
+//   GTA2_TEST_PAD=<vendor>:<product>                the virtual gamepads' USB ids in hex, for a make's
+//                                                   type and button labels ("54c:ce6" a DualSense)
 // Frames count Vid_FlipBuffers calls, but logic steps while the game runs (port_FrameCount), so the same
 // script presses the same keys on the same game step at any frame rate.
 #include "port_platform.hpp"
@@ -48,6 +50,16 @@ void AttachPad(int pad)
     desc.naxes = SDL_GAMEPAD_AXIS_COUNT;
     desc.nbuttons = SDL_GAMEPAD_BUTTON_COUNT;
     desc.name = pad ? "GTA2 test pad 2" : "GTA2 test pad";
+    unsigned vendor = 0;
+    unsigned product = 0;
+    if (const char* pIds = getenv("GTA2_TEST_PAD"))
+    {
+        if (sscanf(pIds, "%x:%x", &vendor, &product) == 2)
+        {
+            desc.vendor_id = static_cast<Uint16>(vendor);
+            desc.product_id = static_cast<Uint16>(product);
+        }
+    }
     SDL_setenv_unsafe("GTA2_GAMEPAD", "GTA2 test pad", 1);
     const SDL_JoystickID id = SDL_AttachVirtualJoystick(&desc);
     sPads[pad] = id ? SDL_OpenJoystick(id) : NULL;
