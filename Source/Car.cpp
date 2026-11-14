@@ -4500,7 +4500,18 @@ void Car::FireCarBomb(char_type instant_bomb)
 {
     if (instant_bomb)
     {
+#if defined(GTA2_PORT)
+        // Port: a bomb fired from a truck cab goes off in its trailer, which has no driver, and the original crashes
+        // on the NULL mDriver. The bomber is the cab's driver. gtamp.com report X2, not fixed in 11.44.
+        Ped* pBomber = mDriver;
+        if (pBomber == NULL && IsTrailerCar())
+        {
+            pBomber = mpTrailer->mTruckCab->mDriver;
+        }
+        s32 ped_id = pBomber ? gPedRefTable_7F8->GetPedId(pBomber->get_ped_ref_idx()) : 0;
+#else
         s32 ped_id = gPedRefTable_7F8->GetPedId(mDriver->get_ped_ref_idx());
+#endif
         if (ped_id)
         {
             this->mExploderPedId = ped_id;
