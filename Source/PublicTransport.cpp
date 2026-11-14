@@ -867,6 +867,10 @@ void PublicTransport::SetupTrainAndBusStops()
     char_type track_name[8];
     sBusSpawned = false;
     sBusSpawnDelay = 0;
+#if defined(GTA2_PORT)
+    // Port: the count only grows, so GetBusStopOnScreen reads past mStations (reG2 QA: crash after about 10 level loads).
+    sStationCount = 0;
+#endif
     if (!bSkip_trains)
     {
         for (u8 track_idx = 0; track_idx < 5; track_idx++)
