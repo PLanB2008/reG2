@@ -1096,7 +1096,7 @@ void GLRenderer::Flush()
     }
     gl.glUseProgram(mScene[scene].mId);
     gl.glUniform2f(mScene[scene].mScale, 2.0f / mLogicalW, 2.0f / mLogicalH);
-    gl.glUniform1i(mScene[scene].mSmooth, mSmoothMagnify ? 1 : 0);
+    gl.glUniform1i(mScene[scene].mSmooth, mSmoothMagnify && !(mBatchState & RS_TEXELS) ? 1 : 0);
     gl.glBindVertexArray(mVao);
     gl.glBindBuffer(GL_ARRAY_BUFFER, mVbo);
     gl.glBufferData(GL_ARRAY_BUFFER, kMaxBatchVerts * sizeof(RVertex), NULL, GL_STREAM_DRAW);

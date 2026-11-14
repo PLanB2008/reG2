@@ -94,6 +94,7 @@ void port_MousePos(float* pX, float* pY);
 
 // The size of the frame the game draws (video_port.cpp).
 void port_FrameSize(int* pW, int* pH);
+float port_PixelScale();
 
 // Keyboard events for the game (dinput.cpp).
 DWORD port_DikFromScancode(SDL_Scancode sc);

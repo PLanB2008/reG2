@@ -146,6 +146,13 @@ void port_FrameSize(int* pW, int* pH)
     }
 }
 
+// The window's pixels per pixel of the frame the game draws.
+float port_PixelScale()
+{
+    const int height = sVidSystem ? sVidSystem->Renderer().LogicalHeight() : 0;
+    return height > 0 ? static_cast<float>(sVidSystem->Renderer().TargetHeight()) / height : 1.0f;
+}
+
 // The frontend's frame, 480 lines high: as wide as the window's shape for a page drawn across the whole window
 // (port/src/welcome.cpp), else its own 640. The new width.
 int port_SetFrameWidth(bool wide)

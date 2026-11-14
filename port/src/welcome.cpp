@@ -22,7 +22,7 @@ EXTERN_GLOBAL(SoundObject, snd1);
 #if defined(GTA2_PORT_SDL)
 int port_SetFrameWidth(bool wide);
 bool port_TakeMouse(float* pX, float* pY, int* pLeft, int* pRight, int* pWheel);
-void port_DrawPicture(s32 slot, s32 width, s32 height, const u32* pRgba, const f32* pXyuv, const u32* pColours, s32 count);
+void port_DrawPicture(s32 slot, s32 width, s32 height, const u32* pRgba, const f32* pXyuv, const u32* pColours, s32 count, bool nearest);
 void port_FreePictures();
 #endif
 
@@ -155,7 +155,7 @@ void Quad(s32 slot, const f32* pCorners, const u32* pColours, f32 left = 0, f32 
     }
     const Picture* pPicture = slot >= 0 ? &sPictures[slot] : NULL;
     port_DrawPicture(slot, pPicture ? pPicture->mWidth : 0, pPicture ? pPicture->mHeight : 0, pPicture ? pPicture->mPixels.data() : NULL,
-                     xyuv, colours, 6);
+                     xyuv, colours, 6, false);
 }
 
 void Rect(f32 left, f32 top, f32 right, f32 bottom, u32 colour)

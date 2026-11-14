@@ -1165,15 +1165,16 @@ void port_DrawReticle(f32 x, f32 y, f32 size, f32 alpha)
 
 namespace
 {
-// The port's own pictures (port/src/welcome.cpp), by slot.
+// The port's own pictures (port/src/welcome.cpp, port/src/prompts.cpp), by slot.
 const s32 kNumPictures = 4;
 RTexture* gPictures[kNumPictures];
 IRenderer* gPicturesOwner;
 } // namespace
 
 // Triangles with a colour (bytes r, g, b, a) per vertex and x, y, u, v from pXyuv, of a picture uploaded from
-// pRgba (RGBA8, top row first) the first time, or with no texture for slot -1.
-void port_DrawPicture(s32 slot, s32 width, s32 height, const u32* pRgba, const f32* pXyuv, const u32* pColours, s32 count)
+// pRgba (RGBA8, top row first) the first time, or with no texture for slot -1. Nearest: texels copied as they
+// are, for a picture at a whole multiple of its size on whole pixels.
+void port_DrawPicture(s32 slot, s32 width, s32 height, const u32* pRgba, const f32* pXyuv, const u32* pColours, s32 count, bool nearest)
 {
     if (!gRenderer || slot >= kNumPictures || count > 12)
     {
@@ -1199,7 +1200,7 @@ void port_DrawPicture(s32 slot, s32 width, s32 height, const u32* pRgba, const f
         v[i].rhw = 1.0f;
         v[i].rgba = pColours[i];
     }
-    gRenderer->DrawTriangles(v, count, slot >= 0 ? gPictures[slot] : NULL, RS_BLEND_ALPHA | RS_FILTER_LINEAR);
+    gRenderer->DrawTriangles(v, count, slot >= 0 ? gPictures[slot] : NULL, RS_BLEND_ALPHA | (nearest ? RS_PIXEL_EXACT | RS_TEXELS : RS_FILTER_LINEAR));
 }
 
 void port_FreePictures()
