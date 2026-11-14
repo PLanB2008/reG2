@@ -51,6 +51,7 @@ NetPlay::NetPlay()
     mpDPlay3 = NULL;
     mpDPlayLobby2 = NULL;
 #if defined(GTA2_PORT_64BIT)
+    // Port: 64-bit, the buffers' pointers at full width, else the destructor frees truncated pointers at exit.
     mpReceivedDataBuffer = reinterpret_cast<intptr_t>(operator new(0x1800));
     mpSendDataBuffer = reinterpret_cast<intptr_t>(operator new(0x1800));
 #else

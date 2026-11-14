@@ -88,6 +88,7 @@ class CarThreadTrigger
 {
   public:
 #if defined(GTA2_PORT_64BIT)
+    // Port: 64-bit, a script command pointer kept in an integer, at full width (port/docs/64bit.md).
     intptr_t mpScriptCmd;
 #else
     s32 mpScriptCmd; // 0x0

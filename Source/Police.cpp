@@ -64,6 +64,7 @@ void Police::Init()
         mPursuitTargets[i].mWantedTimer = 0;
 
 #if defined(GTA2_PORT_64BIT)
+        // Port: 64-bit, the six crew pointers cleared whole; the original clears 0x18 bytes.
         memset(mPursuitTargets[i].mCrews, 0, sizeof(mPursuitTargets[i].mCrews));
 #else
         memset(mPursuitTargets[i].mCrews, 0, 0x18);

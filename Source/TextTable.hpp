@@ -4,6 +4,7 @@
 #include <windows.h>
 
 #if defined(GTA2_PORT_64BIT)
+// Port: 64-bit, TextKeyEntry's pointer is 8 bytes, so TKEY_Load reads the file's 12-byte records into it.
 struct TextKeyEntry
 {
     wchar_t* mPwstr;

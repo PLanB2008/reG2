@@ -21,8 +21,9 @@ class Hud_Arrow;
 class AttachedSprite;
 
 #if defined(GTA2_PORT_64BIT)
+// Port: 64-bit, the script file holds the objects its commands declare in 4-byte slots: a handle into a
+// table of pointers (port/docs/64bit.md).
 #include "../port/src/ptr_slot.hpp"
-// The script file holds the objects its commands declare in 4-byte slots.
 #define SCR_SLOT(type) PtrSlot32<type>
 #else
 #define SCR_SLOT(type) type*

@@ -126,7 +126,7 @@ struct gmp_header
 struct DmapInfoList;
 
 #if defined(GTA2_PORT_64BIT)
-// One 4-byte word of the .gmp file's column data (the original types it as a pointer).
+// Port: 64-bit, one 4-byte word of the .gmp file's column data (the original types it as a pointer).
 typedef u32 gmp_column_word;
 #else
 typedef u16* gmp_column_word;
@@ -570,7 +570,7 @@ class Map_0x370
                            DmapInfoList** outSubObj,
                            s32* outSubObjBytes);
 #if defined(GTA2_PORT_64BIT)
-    // ScriptManager::LoadSave passes size_t sizes, the same type as u32 on 32-bit targets.
+    // Port: 64-bit, ScriptManager::LoadSave passes size_t sizes, the same type as u32 on 32-bit targets.
     void GetModifiedMapData(gmp_column_word** outColumnPtr, size_t* outColumnBytes, gmp_block_info** outBlockPtr,
                             size_t* outBlockBytes, DmapInfoList** outSubObj, s32* outSubObjBytes)
     {

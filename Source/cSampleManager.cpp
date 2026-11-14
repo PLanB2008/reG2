@@ -758,7 +758,8 @@ bool cSampleManager::Open3DProvider(s32 provider_idx)
         // The attribute is read into the same local: a second local doesn't match
         AIL_3D_provider_attribute(m3dProvider, "EAX environment selection", &result);
 #if defined(GTA2_PORT_64BIT)
-        // Miles writes 32 bits; M3DRESULT is a long.
+        // Port: 64-bit, Miles writes 32 bits into the long M3DRESULT, sign-extended so that -1 (no EAX reverb) still
+        // turns EAX off.
         result = static_cast<s32>(result);
 #endif
         if (result != -1)
@@ -779,6 +780,8 @@ void cSampleManager::Close3DProvider()
         AIL_close_3D_provider(m3dProvider);
         m3dProvider = 0;
 #if !defined(GTA2_PORT_SDL)
+        // Port: SDL builds skip this wait for the DirectSound3D drivers of the day; the SDL device and OpenAL stay
+        // open, so 3D sound switches at once.
         Sleep(1500u);
 #endif
     }

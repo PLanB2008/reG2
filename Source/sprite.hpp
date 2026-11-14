@@ -46,6 +46,7 @@ class SpriteShape
     bool CollisionIdIs(u32 id) const
     {
 #if defined(GTA2_PORT_64BIT)
+        // Port: 64-bit, mpNext doubles as the collision id, compared at full width.
         return reinterpret_cast<uintptr_t>(mpNext) == id;
 #else
         return reinterpret_cast<u32>(mpNext) == id;

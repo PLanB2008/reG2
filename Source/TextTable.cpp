@@ -8,6 +8,7 @@
 #include "gtx_0x106C.hpp"
 #include "enums.hpp"
 #if defined(GTA2_PORT)
+// Port: English when the chosen language's text file is missing.
 #include "../port/src/settings.hpp"
 #endif
 
@@ -88,6 +89,8 @@ MATCH_FUNC(0x5B5960)
 void TextTable::TKEY_Load(u32 chunk_size)
 {
 #if defined(GTA2_PORT_64BIT)
+    // Port: 64-bit, the file's TKEY records hold a 4-byte offset where TextKeyEntry keeps a pointer: read into
+    // wider entries.
     mTKey.mTKeyCount = chunk_size / sizeof(TextKeyRecord);
     mTKey.mTKey = new TextKeyEntry[mTKey.mTKeyCount];
     TextKeyRecord* pRecords = new TextKeyRecord[mTKey.mTKeyCount];
@@ -422,6 +425,8 @@ TextTable::TextTable()
         mLangCode = 'e';
     }
 #if defined(GTA2_PORT)
+    // Port: English when the chosen language's .gxt is missing, which stops the original at start; the 2004
+    // freeware has only e.gxt and s.gxt.
     if (!PortSettings::LanguageInstalled(mLangCode))
     {
         mLangCode = 'e';

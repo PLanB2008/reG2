@@ -297,6 +297,7 @@ struct NetPlay
     Network_Game_Session mN2; // 0x758
     NetPlayerBuffer_0x800* mNotUsed8C8[MAX_PLAYERS]; // 0x8C8
 #if defined(GTA2_PORT_64BIT)
+    // Port: 64-bit, the buffers' pointers at full width: NetPlay is a global, freed at every exit.
     intptr_t mpSendDataBuffer;
     intptr_t mpReceivedDataBuffer;
 #else
