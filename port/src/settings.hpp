@@ -91,7 +91,7 @@ f32 HudScale();
 
 // CONTROLS: TWIN STICK moves and aims apart on foot (twin_stick.hpp).
 bool TwinStick();
-// AIM CAMERA: with TWIN STICK, the view looks ahead toward the aim.
+// AIM CAMERA: with TWIN STICK, the view leads along the aim.
 bool AimCamera();
 
 // CHECK FOR UPDATES: the start menu shows a newer release (options_menu.hpp).

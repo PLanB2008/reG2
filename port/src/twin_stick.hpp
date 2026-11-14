@@ -34,6 +34,6 @@ void AimTurret(Car* pCar);
 bool FreeAim(const Ped* pPed);
 // With the HUD.
 void DrawReticle();
-// AIM CAMERA: after Camera::ApplyPanOffset in Camera::UpdateFollowPedCamera, the target moved toward the aim.
+// AIM CAMERA: after Camera::ApplyPanOffset in Camera::UpdateFollowPedCamera, the target moved along the aim.
 void AimCamera(Camera* pCamera, Ped* pPed, Fix16& x, Fix16& y);
 } // namespace PortTwinStick

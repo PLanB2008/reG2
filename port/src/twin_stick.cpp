@@ -42,12 +42,11 @@ const s32 kAimSteps = 10;
 // to the power 1.5; it follows the stick by this part per step. The camera's look-ahead never changes the reach.
 const f32 kMinReach = 0.2f;
 const f32 kPadFollow = 0.5f;
-// AIM CAMERA: the look-ahead is this times the aim's offset on screen from the centre (the stick's
-// reticle's offset from the ped), further while Shift, LT or R3 is held, at most this many half
-// heights (the player stays on screen); it follows by this part per step.
-const f32 kLook = 0.45f;
+// AIM CAMERA leads this many half screen heights along the last aim, however far the aim is. While Shift, LT
+// or R3 is held it looks this times the aim's offset on screen from the centre, at most this many half heights
+// (the player stays on screen). It follows by this part per step.
+const f32 kLead = 0.3f;
 const f32 kLookFurther = 2.5f;
-const f32 kMaxLook = 0.6f;
 const f32 kMaxLookFurther = 0.9f;
 const f32 kLookFollow = 0.12f;
 // A walking ped's sprite faces down, its trailing leg the rows above the torso no wider than this.
@@ -79,6 +78,8 @@ s32 sAim;
 s32 sAimSteps;
 f32 sPadX; // the pad's reticle on screen from the ped, in pixels
 f32 sPadY;
+f32 sAimDirX; // the last aim's direction in the world, zero before any aim
+f32 sAimDirY;
 f32 sLookX; // in blocks
 f32 sLookY;
 
@@ -129,6 +130,20 @@ Ped* OnFootPed()
     return pPed && pPed->mGameObject && !pPed->get_car() ? pPed : NULL;
 }
 
+void SetAim(const Sprite* pSprite, f32 x, f32 y)
+{
+    const f32 dx = x - ToF(pSprite->mXy.x);
+    const f32 dy = y - ToF(pSprite->mXy.y);
+    sAim = Angle(dx, dy);
+    sAimSteps = kAimSteps;
+    const f32 m = sqrtf(dx * dx + dy * dy);
+    if (m > 1e-3f)
+    {
+        sAimDirX = dx / m;
+        sAimDirY = dy / m;
+    }
+}
+
 // The aim from pSprite this step, into sAim and sAimSteps: the mouse, the right stick, or the stick's last aim.
 void Aim(const Sprite* pSprite, f32 ax, f32 ay)
 {
@@ -138,8 +153,7 @@ void Aim(const Sprite* pSprite, f32 ax, f32 ay)
         f32 x, y;
         port_MousePos(&x, &y);
         PortView::ScreenToGround(x, y, ToF(pSprite->mZpos), &x, &y);
-        sAim = Angle(x - ToF(pSprite->mXy.x), y - ToF(pSprite->mXy.y));
-        sAimSteps = kAimSteps;
+        SetAim(pSprite, x, y);
     }
     else if ((ax || ay) && gViewCamera)
     {
@@ -153,8 +167,7 @@ void Aim(const Sprite* pSprite, f32 ax, f32 ay)
         sPadX += (ax / m * r - sPadX) * kPadFollow;
         sPadY += (ay / m * r - sPadY) * kPadFollow;
         PortView::ScreenToGround(x + sPadX, y + sPadY, ToF(pSprite->mZpos), &x, &y);
-        sAim = Angle(x - ToF(pSprite->mXy.x), y - ToF(pSprite->mXy.y));
-        sAimSteps = kAimSteps;
+        SetAim(pSprite, x, y);
     }
     else if (sAimSteps > 0)
     {
@@ -639,27 +652,36 @@ void AimCamera(Camera* pCamera, Ped* pPed, Fix16& x, Fix16& y)
     f32 wantY = 0.0f;
     if (PortSettings::AimCamera() && pPed == OnFootPed())
     {
-        // Measured on the screen, not from the aim's world point, which moves with the camera.
         const f32 z = ToF(pPed->GetSprite()->mZpos);
         const f32 cx = static_cast<f32>(gViewCamera->mScreenPxCenterX);
         const f32 cy = static_cast<f32>(gViewCamera->mScreenPxCenterY);
-        f32 sx = sAimSteps ? cx + sPadX : cx;
-        f32 sy = sAimSteps ? cy + sPadY : cy;
-        if (sMouse)
-        {
-            port_MousePos(&sx, &sy);
-        }
-        f32 x0, y0, x1, y1, tx, ty;
+        f32 x0, y0, tx, ty;
         PortView::ScreenToGround(cx, cy, z, &x0, &y0);
-        PortView::ScreenToGround(sx, sy, z, &x1, &y1);
         PortView::ScreenToGround(cx, 0.0f, z, &tx, &ty);
-        const bool further = port_LookFurther();
-        wantX = (x1 - x0) * (further ? kLookFurther : kLook);
-        wantY = (y1 - y0) * (further ? kLookFurther : kLook);
-        const f32 length = sqrtf(wantX * wantX + wantY * wantY);
-        const f32 max = sqrtf((tx - x0) * (tx - x0) + (ty - y0) * (ty - y0)) * (further ? kMaxLookFurther : kMaxLook);
-        wantX = length > max ? wantX * max / length : wantX;
-        wantY = length > max ? wantY * max / length : wantY;
+        const f32 half = sqrtf((tx - x0) * (tx - x0) + (ty - y0) * (ty - y0));
+        if (port_LookFurther() && (sMouse || sAimSteps))
+        {
+            // Measured on the screen, not from the aim's world point, which moves with the camera.
+            f32 sx = cx + sPadX;
+            f32 sy = cy + sPadY;
+            if (sMouse)
+            {
+                port_MousePos(&sx, &sy);
+            }
+            f32 x1, y1;
+            PortView::ScreenToGround(sx, sy, z, &x1, &y1);
+            wantX = (x1 - x0) * kLookFurther;
+            wantY = (y1 - y0) * kLookFurther;
+            const f32 length = sqrtf(wantX * wantX + wantY * wantY);
+            const f32 max = half * kMaxLookFurther;
+            wantX = length > max ? wantX * max / length : wantX;
+            wantY = length > max ? wantY * max / length : wantY;
+        }
+        else
+        {
+            wantX = sAimDirX * kLead * half;
+            wantY = sAimDirY * kLead * half;
+        }
     }
     sLookX += (wantX - sLookX) * kLookFollow;
     sLookY += (wantY - sLookY) * kLookFollow;
