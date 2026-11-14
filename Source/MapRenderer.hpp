@@ -198,7 +198,7 @@ class MapRenderer
     u8 mTriDiagDownLeftColour; // 0x1A
     u8 mTriDiagDownRightColour; // 0x1B
 #if defined(GTA2_PORT)
-    // Room for a zoomed out camera on wide screens.
+    // Port: room for a zoomed out or turned view on wide screens, which can need about 4800 blocks.
     DrawListBlock mDrawList[8192];
 #else
     DrawListBlock mDrawList[1500]; // 0x1C

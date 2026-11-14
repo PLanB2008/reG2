@@ -1,6 +1,7 @@
 #include "MapRenderer.hpp"
 #include "Camera.hpp"
 #if defined(GTA2_PORT)
+// Port: frames between logic steps, the port's lights (headlights, light effects) and the day and night cycle.
 #include "../port/src/frame_loop.hpp"
 #include "../port/src/lights.hpp"
 #include "../port/src/day_night.hpp"
@@ -3507,6 +3508,7 @@ void MapRenderer::ClearDrawnTileCount()
 static inline void AddToDrawListByVal(MapRenderer* pThis, s32 x, s32 y)
 {
 #if defined(GTA2_PORT)
+    // Port: the draw list stops at its end instead of overflowing, as a wide or zoomed out view can fill it.
     if (pThis->mCurrDrawLayerSize >= static_cast<s32>(GTA2_COUNTOF(pThis->mDrawList)))
     {
         return;
@@ -3518,7 +3520,8 @@ static inline void AddToDrawListByVal(MapRenderer* pThis, s32 x, s32 y)
 
     DrawListBlock* pIter = &pThis->mDrawList[pThis->mCurrDrawLayerSize - 1];
 #if defined(GTA2_PORT)
-    // Draw adds four blocks at a time and only these can repeat, so the last three are enough to look at.
+    // Port: a short duplicate check for the 8192 entry list. Draw adds four blocks at a time and only these can
+    // repeat, so the last three are enough to look at.
     const s32 first = pThis->mCurrDrawLayerSize > 3 ? pThis->mCurrDrawLayerSize - 3 : 0;
     for (s32 i = pThis->mCurrDrawLayerSize - 1; i >= first; i--, pIter--)
 #else
@@ -3541,8 +3544,9 @@ void MapRenderer::Draw()
     if (gLighting)
     {
 #if defined(GTA2_PORT)
+        // Port: the DAY-NIGHT CYCLE's ambient, and the fade advanced once per logic step, however often the frame
+        // is drawn (FRAME LIMIT).
         PortDayNight::SetAmbient(mAmbient.ToFloat());
-        // The fade advances once per logic step, however often the frame is drawn.
         for (u32 steps = PortFrameLoop::StepsBeforeDraw(); steps; steps--)
         {
             MapRenderer::ambient_light_tick();
@@ -3571,6 +3575,7 @@ void MapRenderer::Draw()
             {
             }
 #if defined(GTA2_PORT)
+            // Port: CAMERA ZOOM setting, the block range as wide as the zoomed view.
             Fix16 layer_row_width = z_distance / PortCameraZoom(gViewCamera->mCurPos.mZoom);
 #else
             Fix16 layer_row_width = z_distance / gViewCamera->mCurPos.mZoom;
@@ -3579,7 +3584,7 @@ void MapRenderer::Draw()
             // narrow the y direction because of assymetric monitor resolution
             Fix16 layer_column_width = layer_row_width * kScreenAspectRatio;
 #if defined(GTA2_PORT)
-            // Wider than 4:3: the view widens (Camera::UpdateBoundaries).
+            // Port: widescreen, the block range widens as the view does (Camera::UpdateBoundaries).
             layer_row_width = layer_row_width * PortViewWidthFactor();
 #endif
 
@@ -3649,6 +3654,7 @@ void MapRenderer::Draw()
                 pgbh_SetCamera(static_cast<f32>(min_x), static_cast<f32>(min_y), static_cast<f32>(max_x), static_cast<f32>(max_y));
                 LightGrid::SubmitLightsInArea(min_x, min_y, max_x, max_y);
 #if defined(GTA2_PORT)
+                // Port: the port's car headlights and light effects, among the level's lights.
                 PortLights::Submit(min_x, min_y, max_x, max_y);
 #endif
             }
