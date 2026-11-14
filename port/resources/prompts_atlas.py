@@ -8,6 +8,8 @@ from PIL import Image
 # Cells' top left corners in gdb-xbox-2.png: A B X Y, LB RB, View Menu, LT RT; then the sticks' L and R.
 XBOX = [(16, 48), (16, 80), (16, 32), (16, 64), (336, 80), (336, 96), (16, 96), (16, 112), (336, 48), (336, 64)]
 STICKS = [(216, 32), (280, 32)]
+# The d-pad's left arm, from the large block's separate pieces.
+DPAD_LEFT = (128, 95)
 # In gdb-playstation-3.png: cross circle square triangle, L1 R1, Share Options, L2 R2.
 PLAYSTATION = [(16, 192), (16, 176), (16, 208), (16, 160), (128, 112), (128, 128), (16, 240), (16, 256), (128, 80),
                (128, 96)]
@@ -33,6 +35,7 @@ def atlas(xbox, playstation, keyboard):
     cells = [cell(xbox, c) for c in XBOX]
     cells += [cell(playstation, c) for c in PLAYSTATION]
     cells += [cell(xbox, c) for c in STICKS]
+    cells += [cell(xbox, DPAD_LEFT)]
     cells += [cell(keyboard, ENTER, 32), cell(keyboard, ESCAPE), cell(keyboard, DELETE)]
     cells += [cell(keyboard, LEFT), cell(keyboard, RIGHT), cell(keyboard, BACKSPACE, 32)]
     cells += [cell(keyboard, letters[chr(ord('A') + i)]) for i in range(26)]

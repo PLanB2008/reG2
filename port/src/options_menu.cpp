@@ -551,9 +551,9 @@ s32 DrawKeyHint(u8 hint, wchar_t* pText, u16 x, u16 y, u16 font, s32 palette)
     // Whether the last key hint was a picture; its label follows it.
     static bool sPicture;
     const bool pad = PortMenu::PadMode();
-    // ESC, DEL, ENTER and BACKSPACE; the pad deletes a letter with left, which has no picture.
+    // ESC, DEL, ENTER and BACKSPACE; the pad deletes a letter with the d-pad's left.
     const Glyph kKeys[4] = {kKeyEscape, kKeyDelete, kKeyEnter, kKeyBackspace};
-    const Glyph kButtons[4] = {kPadEast, kPadWest, kPadSouth, kNoGlyph};
+    const Glyph kButtons[4] = {kPadEast, kPadWest, kPadSouth, kPadDpadLeft};
     if (hint < 4)
     {
         const Glyph glyph = pad ? kButtons[hint] : kKeys[hint];

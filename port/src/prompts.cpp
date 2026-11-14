@@ -16,8 +16,8 @@ namespace
 {
 #if defined(GTA2_PORT_SDL)
 // One row of 16 pixel cells, by port/resources/prompts_atlas.py: each pad's A, B, X and Y (or their symbols),
-// shoulders, Back, Start and triggers, the sticks, then Enter (two cells), Escape, Delete, Left, Right, Backspace
-// (two cells) and the letters.
+// shoulders, Back, Start and triggers, the sticks, the d-pad's left, then Enter (two cells), Escape, Delete, Left, Right,
+// Backspace (two cells) and the letters.
 const unsigned char kColourPng[] = {
 #embed "../resources/prompts_colour.png"
 };
@@ -27,9 +27,10 @@ enum Cell
     kXboxCells = 0,
     kPlayStationCells = 10,
     kStickCells = 20,
-    kEnterCell = 22,
-    kBackspaceCell = 27,
-    kLetterCells = 28,
+    kDpadLeftCell = 22,
+    kEnterCell = 23,
+    kBackspaceCell = 28,
+    kLetterCells = 29,
 };
 // After the welcome screen's.
 const s32 kSlot = 3;
@@ -97,6 +98,10 @@ s32 CellOf(Glyph glyph)
     }
     SDL_Gamepad* pPad = port_ActivePad();
     const s32 cells = PadCells(pPad);
+    if (glyph == kPadDpadLeft)
+    {
+        return kDpadLeftCell;
+    }
     if (glyph == kPadLeftStick || glyph == kPadRightStick)
     {
         return kStickCells + glyph - kPadLeftStick;

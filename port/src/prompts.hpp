@@ -23,6 +23,8 @@ enum Glyph
     kPadRightStick,
     kPadLeftTrigger,
     kPadRightTrigger,
+    // The d-pad's left, past the binding codes.
+    kPadDpadLeft,
     kKeyEnter,
     kKeyEscape,
     kKeyDelete,
