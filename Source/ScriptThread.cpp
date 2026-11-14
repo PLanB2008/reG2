@@ -56,6 +56,7 @@
 #include "ped_death_cause.hpp"
 #include "ped_graphic_type.hpp"
 #if defined(GTA2_PORT)
+// Port: RETRY JOBS and the autosave's spawn.
 #include "../port/src/retry.hpp"
 #include "../port/src/saves.hpp"
 #endif
@@ -428,7 +429,8 @@ void ScriptThread::Handle_PLAYER_PED(SCR_PLAYER_PED* pCmd)
         if (gScriptManager->IsLoadedFromSave())
         {
 #if defined(GTA2_PORT)
-            // A church save puts the player one block south, out of the church; an autosave where he was.
+            // Port: a church save puts the player one block south, out of the church; an autosave where he was, since a
+            // block south can be off a roof edge or inside a building.
             const SavedPlayerStats& saved = gGameSave.mPlayerAndWorldStats;
             const bool exact = PortSaves::ExactSpawn();
             pPed = gPedManager->SpawnPedAt(exact ? saved.mX : kFpHalf_6F75F0 + saved.mX.GetFloorValue(),
@@ -6674,6 +6676,7 @@ void ScriptThread::Handle_START_BASIC_KF() // START_BASIC_KF_TEMPLATE
     else
     {
 #if defined(GTA2_PORT)
+        // Port: RETRY JOBS, the checkpoint written as a kill frenzy starts, before anything marks it started.
         PortRetry::BeforeStart(PortSaves::kBeforeFrenzy);
 #endif
         gScriptManager->SetKillFrenzyActive(true);
@@ -7709,10 +7712,12 @@ MATCH_FUNC(0x5119a0)
 void ScriptThread::launch_mission(SCR_CMD_HEADER* pCmd, const char_type* pMissionName)
 {
 #if defined(GTA2_PORT)
+    // Port: RETRY JOBS, the checkpoint written as a job is launched, before anything marks it started.
     PortRetry::BeforeStart(PortSaves::kBeforeJob);
 #endif
     u16 cmd_next;
 #if defined(GTA2_PORT)
+    // Port: RETRY JOBS, the checkpoint gets the job's title and the gang that gave it, from its script.
     PortRetry::JobLoaded(pCmd, gScriptManager->LoadMissionScript(pMissionName, &cmd_next));
 #else
     gScriptManager->LoadMissionScript(pMissionName, &cmd_next);

@@ -65,6 +65,7 @@
 #include "sprite.hpp"
 #include "TextTable.hpp"
 #if defined(GTA2_PORT)
+// Port: AUTOSAVE, the frame loop, the settings menu and RETRY JOBS.
 #include "../port/src/autosave.hpp"
 #include "../port/src/frame_loop.hpp"
 #include "../port/src/options_menu.hpp"
@@ -383,6 +384,7 @@ EXPORT void __stdcall ResetFrameTimer()
     sMatchStartTime = timeGetTime();
     sFramesSinceDraw = 0;
 #if defined(GTA2_PORT)
+    // Port: the frame loop's backlog and interpolation start over.
     PortFrameLoop::Reset();
 #endif
 }
@@ -393,7 +395,8 @@ void UpdateGameScreenSize()
     if (gGame_0x40)
     {
 #if defined(GTA2_PORT)
-        // The cache keeps one dimension only, which the port's sizes can share (the frontend's 640x480, then 800x480).
+        // Port: the game resized on every screen size update. The cache keeps one dimension only, which the port's
+        // sizes can share (the frontend's 640x480, then 800x480).
         gCachedScreenDimension = 0;
 #endif
         if (gVidSys->field_40_full_screen == -2)
@@ -449,7 +452,8 @@ EXPORT void __stdcall Init_FrameRateLightingAndExplodingScores()
 
     bExplodingScoresOff = gRegistry.Get_Screen_Setting("exploding_on", 1) != 1;
 #if defined(GTA2_PORT)
-    // The port's BLOOD option: the pool under the dead, the original's GOREFEST cheat.
+    // Port: the BLOOD option (on by default): the pool under the dead, which the original leaves to the do_blood
+    // debug key and the GOREFEST cheat.
     bDo_blood = gRegistry.Get_Screen_Setting("blood", 1) != 0;
 #endif
 }
@@ -980,9 +984,10 @@ EXPORT void __stdcall InitializeGame()
 
     gGame_0x40->LoadGameFiles();
 #if defined(GTA2_PORT)
+    // Port: AUTOSAVE and RETRY JOBS start with the level; a church save goes to plyslotN.svg, never over the file
+    // the level was loaded from (an autosave, a copy or a checkpoint).
     PortAutosave::Start();
     PortRetry::Start();
-    // A church save goes to plyslotN.svg, whichever file was loaded.
     gGameSession.SetSaveFileName("");
 #endif
     gGame_0x40->BootGame();
@@ -992,6 +997,7 @@ EXPORT void __stdcall InitializeGame()
     sbForceGameUpdate = false;
     sbInputsPending = true;
 #if defined(GTA2_PORT)
+    // Port: the frame loop's backlog and interpolation start over with the game.
     PortFrameLoop::Reset();
 #endif
 }
@@ -1470,8 +1476,8 @@ EXPORT void __stdcall do_network_and_local_inputs()
 }
 
 #if defined(GTA2_PORT)
-// The original's order (inputs, step, draw) on the port's pacing; one action per call, so that the
-// message loop runs between them.
+// Port: logic steps of the original's length on a monotonic clock, frames drawn between them, in the original's
+// order (inputs, step, draw), one action per call so that the message loop runs between them.
 static bool PortRunGameFrame()
 {
     bool exit_requested = false;
@@ -1518,6 +1524,7 @@ MATCH_FUNC(0x4DA850)
 EXPORT bool RunGameFrame()
 {
 #if defined(GTA2_PORT)
+    // Port: the port's frame loop for local games; a network game keeps the original's.
     if (!bStartNetworkGame)
     {
         return PortRunGameFrame();
@@ -1633,7 +1640,7 @@ EXPORT void __stdcall GetDirectXVersion(u32* pDXVer, u32* osKind)
     struct _OSVERSIONINFOA osVersionInfo;
 
 #if defined(GTA2_PORT_SDL)
-    // No DirectX to probe: the renderer and input are built in.
+    // Port: SDL builds have no DirectX to probe; the renderer and input are built in.
     *pDXVer = 0x601;
     *osKind = VER_PLATFORM_WIN32_NT;
     return;
@@ -2175,6 +2182,7 @@ EXPORT LRESULT __stdcall WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM l
 
         case WM_DESTROY:
 #if defined(GTA2_PORT)
+            // Port: closing the window autosaves as QUIT GAME does.
             PortAutosave::Quit("window closed");
 #endif
             if (bStartNetworkGame)
@@ -2417,6 +2425,7 @@ s32 __stdcall GameWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lp
             Frontend::create();
             gFrontend->ChangeMenuPage(state);
 #if defined(GTA2_PORT)
+            // Port: if RETRY ended the game, the frontend boots the checkpoint at once.
             PortOptionsMenu::AfterGame(gFrontend);
 #endif
         }
@@ -2515,7 +2524,8 @@ s32 __stdcall GameWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lp
 
                                     case GameExitType::PlayerQuit_2:
 #if defined(GTA2_PORT)
-                                        // RETRY: the game it leaves for the checkpoint is not scored.
+                                        // Port: RETRY ends the game as QUIT GAME does; the game it leaves
+                                        // for the checkpoint is not scored.
                                         if (!PortRetry::Retrying())
 #endif
                                         {

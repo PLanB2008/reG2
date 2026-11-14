@@ -35,6 +35,7 @@
 #include <wchar.h>
 
 #if defined(GTA2_PORT)
+// Port: the settings menu in place of GTA2 Manager, the saves list and CHOOSE YOUR STYLE.
 #include "../port/src/options_menu.hpp"
 #include "../port/src/saves.hpp"
 #include "../port/src/welcome.hpp"
@@ -545,6 +546,8 @@ void Frontend::ChangeMenuPage(u16 menu_page_idx)
 
         MenuPage* pPage = &mMenuPagesArray[menu_page_idx];
 #if defined(GTA2_PORT)
+        // Port: RESUME on this page with any of the profile's saves of the stage just played (church save, its copy or
+        // autosave), where the original compares plyslotN.svg's stage.
         if (PortOptionsMenu::HasSave(this, main_stage_idx, bonus_stage_idx))
 #else
         if (main_stage_idx == saved_main_stage && bonus_stage_idx == saved_bonus_code)
@@ -993,12 +996,15 @@ void Frontend::DrawMenu()
     if (mCurrentPageIdx == MENUPAGE_START_MENU)
     {
 #if defined(GTA2_PORT)
+        // Port: the corner names reG2 and its version; the port's executable has no version resource, so the
+        // original's line would read GTA2 V0.0.
         PortOptionsMenu::VersionText(tmpBuff);
 #else
         swprintf(tmpBuff, L"GTA2 V%d.%d", gGTA2VersionMajor, gGTA2VersionMinor);
 #endif
         DrawStringDefaultPalette(tmpBuff, 300, 460, gFrontendFont7, 1);
 #if defined(GTA2_PORT)
+        // Port: a newer reG2 release, if the start menu's update check found one, in red after the version.
         PortOptionsMenu::DrawUpdate(tmpBuff, gFrontendFont7);
 #endif
     }
@@ -1209,6 +1215,8 @@ void Frontend::DrawMenu()
                             last_xpos = DrawKeyHint(2, 0x12Cu, 0x1B8u, mFontType, 0xFFFF);
                             DrawKeyHint(8, last_xpos + 300, 0x1B8u, mFontType, 0xFFFF);
 #if !defined(GTA2_PORT)
+                            // Port: the port leaves out DELETE PLAYER on the player row
+                            // (UpdatePageFromUserInput), and so its key hint.
                             last_xpos = DrawKeyHint(1, 0x12Cu, 0x1CCu, mFontType, 0xFFFF);
                             DrawKeyHint(9, last_xpos + 300, 0x1CCu, mFontType, 0xFFFF);
 #endif
@@ -1413,6 +1421,7 @@ void Frontend::DrawMenu()
         DrawStringDefaultPalette(tmpBuff, x_pos, y_pos, mNormalFont, 1);
     }
 #if defined(GTA2_PORT)
+    // Port: the settings menu's page (port/src/menu.cpp), reached from Options in place of GTA2 Manager.
     PortOptionsMenu::Draw(this);
 #endif
 }
@@ -1591,6 +1600,7 @@ void Frontend::Update()
     {
         case FrontendState::User_Typing_New_Player_Name_3:
 #if defined(GTA2_PORT)
+            // Port: the player name typed with the gamepad, as on consoles; false with the keyboard.
             if (PortOptionsMenu::UpdateNameEntry(this))
             {
                 break;
@@ -1605,6 +1615,7 @@ void Frontend::Update()
 
         case FrontendState::Menu_Navigation_1:
 #if defined(GTA2_PORT)
+            // Port: CHOOSE YOUR STYLE and the settings menu's pages take the input; false on the original's pages.
             if (PortOptionsMenu::Update(this))
             {
                 break;
@@ -1620,6 +1631,7 @@ void Frontend::Update()
                 snd1.mbStatus = false;
                 UpdatePageFromUserInput();
 #if defined(GTA2_PORT)
+                // Port: with AUTOSAVE on, a new game that would replace the city's autosave asks ARE YOU SURE? first.
                 PortOptionsMenu::AfterPageInput(this);
 #endif
             }
@@ -1631,6 +1643,7 @@ void Frontend::Update()
 
         case FrontendState::Delete_Player_Dialog_4:
 #if defined(GTA2_PORT)
+            // Port: that ARE YOU SURE? dialog, the delete player dialog with a type of its own.
             if (PortOptionsMenu::UpdateDialog(this))
             {
                 break;
@@ -1911,6 +1924,8 @@ void Frontend::UpdatePageFromUserInput()
                     break;
                 case MENUPAGE_LOADING_SAVE: // 260
 #if defined(GTA2_PORT)
+                    // Port: RESUME SAVED STATUS lists the profile's saves when it has several, or boots
+                    // one other than plyslotN.svg.
                     if (PortOptionsMenu::Resume(this))
                     {
                         break;
@@ -2104,6 +2119,8 @@ void Frontend::UpdatePageFromUserInput()
         }
     }
 #if !defined(GTA2_PORT)
+    // Port: the port leaves out the DELETE PLAYER dialog: a key next to the name edit would lose a profile, its
+    // progress and its save.
     if (mDeletePressed && mCurrentPageIdx == MENUPAGE_PLAY && !pMenuPage->mCurrentOptionIdx)
     {
         mState = FrontendState::Delete_Player_Dialog_4;
@@ -2537,6 +2554,7 @@ void Frontend::UpdateMenuForCurrPlayer()
     Frontend::UpdateBonusStageArrows();
     Frontend::UpdateMainStageArrows();
 #if defined(GTA2_PORT)
+    // Port: RESUME SAVED STATUS on the Play page with any of the profile's saves (church, copy or autosave).
     if (PortOptionsMenu::HasSaves(this))
 #else
     if (Frontend::PlySlotSvgExists(PlySlotIdx_4C59B0))
@@ -2906,6 +2924,7 @@ s32 Frontend::DrawKeyHint(u8 str_id_idx, u16 text_xpos, u16 text_ypos, u16 fontT
     }
 
 #if defined(GTA2_PORT)
+    // Port: the hint shows the gamepad's button once the pad was used last.
     PortOptionsMenu::PadKeyHint(str_id_idx, tmpBuff);
 #endif
     if (static_cast<u16>(palette) == 0xFFFF)
@@ -3029,6 +3048,7 @@ void Frontend::DrawCurrentState()
     {
         case FrontendState::Delete_Player_Dialog_4:
 #if defined(GTA2_PORT)
+            // Port: the ARE YOU SURE? dialog of a new game that would replace the city's autosave.
             if (PortOptionsMenu::DrawDialog(this))
             {
                 break;
@@ -3117,6 +3137,7 @@ void Frontend::Render()
 
     pgbh_BeginScene();
 #if defined(GTA2_PORT)
+    // Port: the first start's CHOOSE YOUR STYLE screen, drawn in place of the page while it shows.
     if (!PortWelcome::Draw())
     {
         DrawBackground();
@@ -4153,6 +4174,7 @@ void Frontend::SetupMenuStringsOptionsElements()
     pPage->mDefaultOptionIdx = 0;
     mCredits.LoadCredits();
 #if defined(GTA2_PORT)
+    // Port: the settings menu on page 12, which the original leaves unused.
     PortOptionsMenu::Setup(this);
 #endif
 }
@@ -4434,7 +4456,8 @@ bool Frontend::PlySlotSvgExists(u8 idx)
 
     _findclose(hFind);
 #if defined(GTA2_PORT)
-    // LoadMapFilenamesFromSvg stops the game on a save of other levels.
+    // Port: save checks. A broken save counts as missing, and one of other levels too, since
+    // LoadMapFilenamesFromSvg stops the game on it.
     PortSaves::Header header;
     return PortSaves::IsValid(FileName, &header) && PortOptionsMenu::IsLevel(this, header);
 #else
@@ -5133,6 +5156,7 @@ void Frontend::LoadMapFilenamesFromSvg()
         GetPlySlotSvgName(plySlotIdx, FileName);
     }
 #if defined(GTA2_PORT)
+    // Port: the save chosen in the RESUME SAVED STATUS list, in place of plyslotN.svg.
     PortOptionsMenu::ResumeFileName(FileName);
 #endif
     File::Global_Open(FileName);

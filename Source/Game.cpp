@@ -67,6 +67,7 @@
 #include "TextTable.hpp"
 #include "winmain.hpp"
 #if defined(GTA2_PORT)
+// Port: save checks (PortSaves::IsValid).
 #include "../port/src/saves.hpp"
 #endif
 
@@ -165,6 +166,7 @@ void Game::LoadGameFiles()
     gScriptManager->Load(script_name);
 
 #if defined(GTA2_PORT)
+    // Port: a save that fails PortSaves::IsValid (cut short, or not of this script) is skipped as missing.
     if (strlen(gGameSession.GetSaveName()) != 0 && PortSaves::IsValid(gGameSession.GetSaveName()))
 #else
     if (strlen(gGameSession.GetSaveName()) != 0)

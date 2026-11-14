@@ -21,6 +21,7 @@
 #include "ped_death_cause.hpp"
 #include "PublicTransport.hpp"
 #if defined(GTA2_PORT)
+// Port: the saves, written whole and checked, and none while a replay plays.
 #include "../port/src/saves.hpp"
 #endif
 
@@ -259,6 +260,7 @@ char_type ScriptManager::AddCranePowerupTrigger(s16 idx)
     return gCarThreadTriggers_214->AddThreadTrigger(car_thread_trigger_type::any_car_1,
                                        car_thread_trigger_action::set_generator_car_type_3,
 #if defined(GTA2_PORT_64BIT)
+                                       // Port: 64-bit, mGenerator is a PtrSlot32 handle, read as its pointer.
                                        reinterpret_cast<SCR_THREAD*>(static_cast<Generator*>(pGenerator->mGenerator)),
 #else
                                        reinterpret_cast<SCR_THREAD*>(pGenerator->mGenerator),
@@ -352,6 +354,8 @@ void ScriptManager::SaveGame(const char_type* pFileName)
     }
 
 #if defined(GTA2_PORT)
+    // Port: no save while the attract demo or a replay plays; the name kept for PortSaves::Write, as pFileName can
+    // be the shared gTmpBuffer.
     if (PortSaves::Replaying())
     {
         return;
@@ -382,6 +386,8 @@ void ScriptManager::SaveGame(const char_type* pFileName)
 
     ScriptManager::SaveMapInfo();
 #if defined(GTA2_PORT)
+    // Port: the save written whole to a temporary file then moved over it, so a crash or a full disk keeps the
+    // previous one; FillSave adds the autosave's exact position, power-ups and car.
     PortSaves::FillSave(&gGameSave);
     const PortSaves::Part parts[] = {{&gGameSave, sizeof(SaveData)},
                                      {&colBytes, sizeof(colBytes)},

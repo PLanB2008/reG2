@@ -3650,7 +3650,8 @@ MATCH_FUNC(0x52A500)
 void Object_5C::SaveObjects(SavedObjectData* pData)
 {
 #if defined(GTA2_PORT)
-    // The entries after the last pickup must not keep those of an earlier save.
+    // Port: saves. The entries after the last pickup are cleared, else they keep those of an earlier save and a
+    // load brings them back.
     memset(pData, 0, offsetof(SavedObjectData, mObj5CBUnCollectedTokens));
 #endif
     u16 saved_count = 0;

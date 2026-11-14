@@ -258,6 +258,7 @@ struct Frontend
     u16 mCurrentPageIdx; // 0x132
     s16 mUnused134; // 0x134
 #if defined(GTA2_PORT)
+    // Port: one page more, the settings menu's GRAPHICS page.
     MenuPage mMenuPagesArray[18]; // 0x136, the port's graphics page last
 #else
     MenuPage mMenuPagesArray[17]; // 0x136
