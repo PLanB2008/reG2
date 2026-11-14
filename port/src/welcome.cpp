@@ -332,15 +332,36 @@ void DrawTexts()
     }
 
     Text(Translate(L"YOU CAN CHANGE THIS AND MUCH MORE IN OPTIONS"), sWidth / 2, 429, gFrontendFont7, scale, 0, box * 0.96f);
-    // Enter's or the pad's A button's picture, then SELECT, centred.
-    const PortPrompts::Glyph select = PortMenu::PadMode() ? PortPrompts::kPadSouth : PortPrompts::kKeyEnter;
+    // The keys' or the pad's pictures: Left and Right (LB and RB) for STYLE, then Enter (A) for SELECT, centred.
+    const bool pad = PortMenu::PadMode();
+    const PortPrompts::Glyph glyphs[2][2] = {
+        {pad ? PortPrompts::kPadLeftShoulder : PortPrompts::kKeyLeft, pad ? PortPrompts::kPadRightShoulder : PortPrompts::kKeyRight},
+        {pad ? PortPrompts::kPadSouth : PortPrompts::kKeyEnter, PortPrompts::kNoGlyph}};
+    const wchar_t* const labels[2] = {Translate(L"STYLE"), Translate(L"SELECT")};
     const f32 size = PortPrompts::Size(12 * Scale());
-    const f32 glyphWidth = PortPrompts::Width(select, size);
+    const f32 between = 2 * Scale();
     const f32 space = 5 * Scale();
-    const wchar_t* pSelect = Translate(L"SELECT");
-    const f32 left = sWidth / 2 - (glyphWidth + space + Width(pSelect, gFrontendFont7) * scale) / 2;
-    PortPrompts::Draw(select, left, 449 + 8 * scale, size, 0xFFFFFF, false);
-    Text(pSelect, left + glyphWidth + space, 449, gFrontendFont7, scale, -1);
+    const f32 hintGap = 28 * Scale();
+    f32 widths[2];
+    f32 hintsWidth = hintGap;
+    for (s32 i = 0; i < 2; i++)
+    {
+        widths[i] = PortPrompts::Width(glyphs[i][0], size) + space + Width(labels[i], gFrontendFont7) * scale;
+        widths[i] += glyphs[i][1] != PortPrompts::kNoGlyph ? between + PortPrompts::Width(glyphs[i][1], size) : 0;
+        hintsWidth += widths[i];
+    }
+    f32 left = sWidth / 2 - hintsWidth / 2;
+    for (s32 i = 0; i < 2; i++)
+    {
+        f32 x = left;
+        for (s32 g = 0; g < 2 && glyphs[i][g] != PortPrompts::kNoGlyph; g++)
+        {
+            PortPrompts::Draw(glyphs[i][g], x, 449 + 8 * scale, size, 0xFFFFFF, false);
+            x += PortPrompts::Width(glyphs[i][g], size) + between;
+        }
+        Text(labels[i], x - between + space, 449, gFrontendFont7, scale, -1);
+        left += widths[i] + hintGap;
+    }
 }
 
 // Which half of the screen the mouse is over, along the slanted line.
@@ -411,9 +432,18 @@ bool Update(Frontend* pFrontend)
         sMouseY = y;
     }
     const PortSettings::Style before = sSelected;
-    if (pFrontend->mLeftPressed || pFrontend->mRightPressed)
+    // Also LB and RB, as on LOAD GAME, which the pad gives as Page Up and Page Down.
+    static bool sPageDown[2];
+    bool pages[2] = {};
+    for (s32 i = 0; i < 2; i++)
     {
-        sSelected = pFrontend->mLeftPressed ? PortSettings::kClassicStyle : PortSettings::kEnhancedStyle;
+        const bool down = (pFrontend->mKeys[i ? DIK_NEXT : DIK_PRIOR] & 0x80) != 0;
+        pages[i] = down && !sPageDown[i];
+        sPageDown[i] = down;
+    }
+    if (pFrontend->mLeftPressed || pFrontend->mRightPressed || pages[0] || pages[1])
+    {
+        sSelected = pFrontend->mLeftPressed || pages[0] ? PortSettings::kClassicStyle : PortSettings::kEnhancedStyle;
     }
     else if (pointed || left)
     {

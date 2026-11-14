@@ -26,6 +26,8 @@ enum Glyph
     kKeyEnter,
     kKeyEscape,
     kKeyDelete,
+    kKeyLeft,
+    kKeyRight,
     kKeyA, // to kKeyA + 25 for Z
 };
 

@@ -142,7 +142,8 @@ window; closing it cancels the copy.
 The first start shows CHOOSE YOUR STYLE before the start menu. CLASSIC is the game as it was: its
 look, its controls and church saves only. ENHANCED, selected at first, turns on the new lights and
 shadows, the day and night cycle, twin stick controls, AUTOSAVE and RETRY JOBS. Pick one with the
-keys, the mouse or a pad; every setting can be changed later. `GTA2_WELCOME=1` shows the screen again.
+keys, the mouse or a pad (Left and Right, or LB and RB, as the hint under it shows); every setting can
+be changed later. `GTA2_WELCOME=1` shows the screen again.
 
 OPTIONS has five pages: GAME (language, text speed, AUTOSAVE, RETRY JOBS, blood, lighting and the
 day and night cycle), GRAPHICS, DISPLAY (full screen, frame rate, zoom, HUD), SOUND and CONTROLS.

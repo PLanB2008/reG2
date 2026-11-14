@@ -15,6 +15,8 @@ PLAYSTATION = [(16, 192), (16, 176), (16, 208), (16, 160), (128, 112), (128, 128
 ENTER = (240, 176)
 ESCAPE = (32, 128)
 DELETE = (432, 256)
+LEFT = (304, 208)
+RIGHT = (336, 208)
 LETTER_ROWS = [(160, 'QWERTYUIOP'), (176, 'ASDFGHJKL'), (192, 'ZXCVBNM')]
 
 
@@ -31,6 +33,7 @@ def atlas(xbox, playstation, keyboard):
     cells += [cell(playstation, c) for c in PLAYSTATION]
     cells += [cell(xbox, c) for c in STICKS]
     cells += [cell(keyboard, ENTER, 32), cell(keyboard, ESCAPE), cell(keyboard, DELETE)]
+    cells += [cell(keyboard, LEFT), cell(keyboard, RIGHT)]
     cells += [cell(keyboard, letters[chr(ord('A') + i)]) for i in range(26)]
     out = Image.new('RGBA', (sum(c.width for c in cells), 16))
     x = 0
