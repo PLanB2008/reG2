@@ -5697,6 +5697,15 @@ void ScriptThread::Handle_PUT_CAR_ON_TRAILER()
     SCR_POINTER* pDstCarPointer = static_cast<SCR_POINTER*>(gScriptManager->GetBasePointer(pCmd->mTrailerCarIdx));
 
     Car* pDstCar = pDstCarPointer->mCar;
+#if defined(GTA2_PORT)
+    // Port: loading a save made after a trailer kill frenzy started deletes the frenzy car (DisableBasicKfsFromSave),
+    // and the original crashes here on the NULL car. gtamp.com 11.44 C1.
+    if (pDstCar == NULL || pCarPointer->mCar == NULL)
+    {
+        ScriptThread::Next(gBasePtr);
+        return;
+    }
+#endif
     if (pDstCar->mDespawnStatus != car_despawn_status::despawned_6)
     {
         if (pDstCar->IsTrailerCab())
