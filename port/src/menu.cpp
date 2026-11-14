@@ -1061,10 +1061,10 @@ bool MouseMode()
 #endif
 }
 
-// A key's or button's picture at x, its middle on that of a line of text at y, if drawn; its width. Smaller in a list,
-// where it must fit its line.
+// A key's or button's picture at x, its middle on that of a line of text at y, if drawn; its width. Smaller in a list:
+// the whole multiple of the cell whose button, 14 of its 16 texels, is nearest the letters' height of about 10.
 const f32 kGlyphHeight = 16;
-const f32 kListGlyphHeight = 12;
+const f32 kListGlyphHeight = 10.0f * 16 / 14;
 const f32 kTextMiddle = 10;
 f32 GlyphAt(PortPrompts::Glyph glyph, f32 x, f32 y, bool draw, bool selected = false, f32 height = kGlyphHeight)
 {
