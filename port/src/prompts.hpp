@@ -1,5 +1,5 @@
-// Pictures of the keys and gamepad buttons as printed on the player's pad (greatdocbrown's Gamepad UI; Switch's from
-// Kenney's Input Prompts Pixel), for the menus' hints. Sizes and positions in the frame the game draws.
+// Pictures of the keys and gamepad buttons as printed on the player's pad (greatdocbrown's Gamepad UI), for the
+// menus' hints. Sizes and positions in the frame the game draws.
 #pragma once
 
 #include "types.hpp"

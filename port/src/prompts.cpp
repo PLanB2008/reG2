@@ -25,10 +25,9 @@ enum Cell
 {
     kXboxCells = 0,
     kPlayStationCells = 10,
-    kNintendoCells = 20,
-    kStickCells = 30,
-    kEnterCell = 32,
-    kLetterCells = 35,
+    kStickCells = 20,
+    kEnterCell = 22,
+    kLetterCells = 25,
 };
 // After the welcome screen's.
 const s32 kSlot = 3;
@@ -78,12 +77,7 @@ s32 PadCells(SDL_Gamepad* pPad)
         case SDL_GAMEPAD_TYPE_PS4:
         case SDL_GAMEPAD_TYPE_PS5:
             return kPlayStationCells;
-        case SDL_GAMEPAD_TYPE_NINTENDO_SWITCH_PRO:
-        case SDL_GAMEPAD_TYPE_NINTENDO_SWITCH_JOYCON_LEFT:
-        case SDL_GAMEPAD_TYPE_NINTENDO_SWITCH_JOYCON_RIGHT:
-        case SDL_GAMEPAD_TYPE_NINTENDO_SWITCH_JOYCON_PAIR:
-        case SDL_GAMEPAD_TYPE_GAMECUBE:
-            return kNintendoCells;
+        // Nintendo pads too: their face buttons' letters come from the labels below.
         default:
             return kXboxCells;
     }

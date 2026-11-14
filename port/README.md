@@ -148,7 +148,8 @@ OPTIONS has five pages: GAME (language, text speed, AUTOSAVE, RETRY JOBS, blood,
 day and night cycle), GRAPHICS, DISPLAY (full screen, frame rate, zoom, HUD), SOUND and CONTROLS.
 In a game, Escape opens the same menu as a pause menu, with RESUME, STATISTICS (the original pause
 screen's lines) and QUIT GAME. The hints under the pages show the keys, or once a pad is used its
-buttons as printed on it: Xbox, PlayStation or Nintendo, from SDL's pad type and button labels.
+buttons: PlayStation's symbols on a PlayStation pad, otherwise Xbox's pictures with the letters
+printed on the pad (a Nintendo pad's bottom button is B), from SDL's pad type and button labels.
 
 Saves are kept per city, in `player/`:
 
@@ -231,8 +232,7 @@ Then add `-DGTA2_OPENAL_DIR=$PWD/openal_linux32` (or `openal_mingw32`) to the po
 | [zlib](https://github.com/madler/zlib/releases/tag/v1.3.2), [xz](https://github.com/tukaani-project/xz/releases/tag/v5.8.4) | 1.3.2, 5.8.4 | zlib, 0BSD | their compression, where the system has none (MinGW) |
 
 The key and button pictures (`resources/prompts_*.png`, made by `resources/prompts_atlas.py`) are from
-[Gamepad UI / Controller Prompts Pack](https://greatdocbrown.itch.io/gamepad-ui) by greatdocbrown (CC0), and
-the Switch ones from Input Prompts Pixel by [Kenney](https://www.kenney.nl) (CC0).
+[Gamepad UI / Controller Prompts Pack](https://greatdocbrown.itch.io/gamepad-ui) by greatdocbrown (CC0).
 
 ### Setup libraries
 
