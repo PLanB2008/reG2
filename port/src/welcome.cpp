@@ -5,6 +5,7 @@
 #include "SoundObject.hpp"
 #include "gbh_graphics.hpp"
 #include "menu.hpp"
+#include "prompts.hpp"
 #include "registry.hpp"
 #include "settings.hpp"
 #include <math.h>
@@ -331,9 +332,15 @@ void DrawTexts()
     }
 
     Text(Translate(L"YOU CAN CHANGE THIS AND MUCH MORE IN OPTIONS"), sWidth / 2, 429, gFrontendFont7, scale, 0, box * 0.96f);
-    wchar_t keys[64];
-    swprintf(keys, L"%ls %ls", PortMenu::PadMode() ? L"A" : Translate(L"ENTER"), Translate(L"SELECT"));
-    Text(keys, sWidth / 2, 449, gFrontendFont7, scale, 0);
+    // Enter's or the pad's A button's picture, then SELECT, centred.
+    const PortPrompts::Glyph select = PortMenu::PadMode() ? PortPrompts::kPadSouth : PortPrompts::kKeyEnter;
+    const f32 size = PortPrompts::Size(12 * Scale());
+    const f32 glyphWidth = PortPrompts::Width(select, size);
+    const f32 space = 5 * Scale();
+    const wchar_t* pSelect = Translate(L"SELECT");
+    const f32 left = sWidth / 2 - (glyphWidth + space + Width(pSelect, gFrontendFont7) * scale) / 2;
+    PortPrompts::Draw(select, left, 449 + 8 * scale, size, 0xFFFFFF, false);
+    Text(pSelect, left + glyphWidth + space, 449, gFrontendFont7, scale, -1);
 }
 
 // Which half of the screen the mouse is over, along the slanted line.
