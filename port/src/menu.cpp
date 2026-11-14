@@ -1061,15 +1061,17 @@ bool MouseMode()
 #endif
 }
 
-// A key's or button's picture at x, its middle on that of a line of text at y, if drawn; its width.
+// A key's or button's picture at x, its middle on that of a line of text at y, if drawn; its width. Smaller in a list,
+// where it must fit its line.
 const f32 kGlyphHeight = 16;
+const f32 kListGlyphHeight = 12;
 const f32 kTextMiddle = 10;
-f32 GlyphAt(PortPrompts::Glyph glyph, f32 x, f32 y, bool draw)
+f32 GlyphAt(PortPrompts::Glyph glyph, f32 x, f32 y, bool draw, bool selected = false, f32 height = kGlyphHeight)
 {
-    const f32 size = PortPrompts::Size(kGlyphHeight * sScale);
+    const f32 size = PortPrompts::Size(height * sScale);
     if (draw)
     {
-        PortPrompts::Draw(glyph, sLeft + x * sScale, sTop + (y + kTextMiddle) * sScale, size, TextColour(false, false), false);
+        PortPrompts::Draw(glyph, sLeft + x * sScale, sTop + (y + kTextMiddle) * sScale, size, TextColour(selected, false), false);
     }
     return PortPrompts::Width(glyph, size) / sScale;
 }
@@ -1655,7 +1657,16 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
         }
         for (s32 c = 1; c < layout.mColumns && (item.mKind == kBinding || item.mKind == kSave); c++)
         {
-            Text(texts[c], layout.mColumnX[c], y, normal, selected);
+            // A pad button's picture, as printed on the pad used last; the directions in words.
+            const s32 code = item.mKind == kBinding && c == kPadColumn && sCapturing != item.mArg ? GetBinding(c, item.mArg) : -1;
+            if (code >= 0 && code < 12 && PortPrompts::Available())
+            {
+                GlyphAt(static_cast<PortPrompts::Glyph>(code), layout.mColumnX[c], y, true, selected, kListGlyphHeight);
+            }
+            else
+            {
+                Text(texts[c], layout.mColumnX[c], y, normal, selected);
+            }
         }
         if (selected && item.mKind == kBinding && layout.mColumns > 1)
         {
