@@ -24,12 +24,17 @@ You need your own copy of GTA2 for PC. The free 2004 release works.
 
 ## Classic by default
 
-Out of the box it looks and plays like the original: same lighting, same controls, 30 fps. All the
-extras below are off until you turn them on in OPTIONS (start menu, or Escape in game).
+On first start, CHOOSE YOUR STYLE asks how you want to play. CLASSIC is the game as it was in 1999:
+same lighting, same controls, saves at churches only. ENHANCED turns on refined lights and shadows, the
+day and night cycle, twin stick controls, autosave and job retry. Nothing is forced: every extra below
+can be turned on or off later in OPTIONS (start menu, or Escape in game), one by one.
 
-A few things differ anyway:
+![CHOOSE YOUR STYLE](docs/images/pc_welcome.png)
+
+A few things differ anyway, whatever you pick:
 
 - it runs at your screen's resolution, and a wide screen shows a bit more on the sides
+- it draws a frame each time your screen refreshes, while the game itself keeps its original speed
 - the settings are in the game: OPTIONS in the start menu replaces GTA2 Manager, the original's separate
   settings program, and pressing Escape during a game pauses it and opens the same menu
 - every menu works with the mouse, the keyboard or a gamepad
@@ -48,8 +53,9 @@ car headlights, light from gunfire, explosions and fires, soft shadows, bloom, a
 
 ![A full day in 20 seconds](docs/images/pc_day_night.gif)
 
-**Frame rate.** Up to 240 fps. The game still runs at its 30 steps per second and the frames in between
-are interpolated, so it plays exactly the same, just smoother.
+**Frame rate.** As fast as your screen, or a fixed limit up to 240 fps (DISPLAY > FRAME LIMIT, where
+30 ORIGINAL brings back the original's rate). The game still runs at its 30 steps per second and the
+frames in between are interpolated, so it plays exactly the same, just smoother.
 
 **Controls.** CONTROLS lets you change every key, in three columns: the original keys, a second set of
 keys and the gamepad. The second set comes ready for keyboard and mouse: WASD to move, F to get in and
