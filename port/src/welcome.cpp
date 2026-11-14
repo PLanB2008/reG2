@@ -208,18 +208,10 @@ void DrawBackground()
     const f32 leftCorners[8] = {0, 0, top - fade / 2, 0, bottom - fade / 2, kHeight, 0, kHeight};
     const u32 leftColours[4] = {classic, classic, classic, classic};
     Quad(kClassicSlot, leftCorners, leftColours, left.mLeft, left.mTop, left.mWidth, left.mHeight);
-    const s32 kStrips = 4;
-    for (s32 i = 0; i < kStrips; i++)
-    {
-        const f32 a = fade * (static_cast<f32>(i) / kStrips - 0.5f);
-        const f32 b = fade * (static_cast<f32>(i + 1) / kStrips - 0.5f);
-        const u32 alphaA = static_cast<u32>(255 * (1 - SmoothStep(static_cast<f32>(i) / kStrips)));
-        const u32 alphaB = static_cast<u32>(255 * (1 - SmoothStep(static_cast<f32>(i + 1) / kStrips)));
-        const f32 corners[8] = {top + a, 0, top + b, 0, bottom + b, kHeight, bottom + a, kHeight};
-        const u32 colours[4] = {(classic & 0xFFFFFFu) | (alphaA << 24), (classic & 0xFFFFFFu) | (alphaB << 24),
-                                (classic & 0xFFFFFFu) | (alphaB << 24), (classic & 0xFFFFFFu) | (alphaA << 24)};
-        Quad(kClassicSlot, corners, colours, left.mLeft, left.mTop, left.mWidth, left.mHeight);
-    }
+    const f32 edgeCorners[8] = {top - fade / 2, 0, top + fade / 2, 0, bottom + fade / 2, kHeight, bottom - fade / 2, kHeight};
+    const u32 clear = classic & 0xFFFFFFu;
+    const u32 edgeColours[4] = {classic, clear, clear, classic};
+    Quad(kClassicSlot, edgeCorners, edgeColours, left.mLeft, left.mTop, left.mWidth, left.mHeight);
 
     const s32 kShades = 6;
     for (s32 i = 0; i < kShades; i++)
