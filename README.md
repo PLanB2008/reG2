@@ -72,6 +72,29 @@ looks further. The turrets of the fire truck, tank and gun jeep aim the same way
 **And also** 3D sound, camera zoom, HUD scale, a frame rate counter. The new menus follow the game's language, as far as your
 copy of the game has it.
 
+## Saves
+
+**Churches.** Church saves work exactly as before: same cost, and the same file the original reads. reG2
+also keeps one per city, so you can go back to a city you left.
+
+**Autosave.** GAME > AUTOSAVE saves after each job or kill frenzy, and when you quit after playing a
+while. A small SAVING sign shows while it writes.
+
+![The SAVING sign](docs/images/pc_saving.gif)
+
+**Retry jobs.** GAME > RETRY JOBS: when a job or a kill frenzy fails, retry it from the pause menu, a few
+steps from where it started, with the money you had then.
+
+![RETRY in the pause menu](docs/images/pc_retry.png)
+
+**Load game.** RESUME SAVED STATUS shows your saves with a tab per city: church save, autosave and retry,
+each with its money, jobs passed and date.
+
+![LOAD GAME](docs/images/pc_load_game.png)
+
+AUTOSAVE and RETRY JOBS are off unless you turn them on, or pick ENHANCED. Purists can ignore all of it:
+with CLASSIC, only churches save, as in 1999.
+
 ## Download
 
 | System | Download |
