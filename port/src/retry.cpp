@@ -170,21 +170,17 @@ void TakeSample()
     sNumSamples++;
 }
 
-// The latest steady spot of the last seconds far enough from where the player is, else where he is.
+// SpotAway, else where the player is.
 PortSaves::Spot RetrySpot()
 {
-    PortSaves::Spot here;
-    PortSaves::GetSpot(&here);
-    for (s32 i = sNumSamples - 1; i >= 0 && i >= sNumSamples - kNumSamples; i--)
+    PortSaves::Spot spot;
+    if (SpotAway(&spot))
     {
-        const Sample& sample = sSamples[i % kNumSamples];
-        if (sSteps - sample.mStep <= kNumSamples * kSampleSteps && Distance(sample.mSpot, here) >= kMinTriggerDistance)
-        {
-            Log("put back a few steps away");
-            return sample.mSpot;
-        }
+        Log("put back a few steps away");
+        return spot;
     }
-    return here;
+    PortSaves::GetSpot(&spot);
+    return spot;
 }
 
 // As the script runs it, in a new thread and from a copy of the command with no next one: the thread ends with the
@@ -204,6 +200,22 @@ void Relaunch()
     gScriptManager->SpawnThread(launch.mCmdThis, 0)->launch_mission(&launch, pName->get_name());
 }
 } // namespace
+
+bool SpotAway(PortSaves::Spot* pSpot)
+{
+    PortSaves::Spot here;
+    PortSaves::GetSpot(&here);
+    for (s32 i = sNumSamples - 1; i >= 0 && i >= sNumSamples - kNumSamples; i--)
+    {
+        const Sample& sample = sSamples[i % kNumSamples];
+        if (sSteps - sample.mStep <= kNumSamples * kSampleSteps && Distance(sample.mSpot, here) >= kMinTriggerDistance)
+        {
+            *pSpot = sample.mSpot;
+            return true;
+        }
+    }
+    return false;
+}
 
 void Start()
 {

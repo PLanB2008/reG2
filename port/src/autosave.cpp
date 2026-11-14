@@ -266,6 +266,19 @@ void Quit(const char* pWhy)
     }
 }
 
+void AreaFinished()
+{
+    PortSaves::Spot spot;
+    if (SafeState() && PortRetry::SpotAway(&spot))
+    {
+        Save("area finished", &spot);
+    }
+    else if (PortSettings::Autosave())
+    {
+        LogNone("area finished", "not safe or no steady spot away from the arrow");
+    }
+}
+
 void Draw()
 {
     // Under the zone name and the wanted level, above a job's titles; the spinner level with the letters.

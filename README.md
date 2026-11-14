@@ -83,8 +83,8 @@ reG2 keeps the original church saves, one per city, and adds an optional autosav
 **Churches.** Church saves work exactly as before: same cost, and the same file the original reads. reG2
 also keeps one per city, so you can go back to a city you left.
 
-**Autosave.** GAME > AUTOSAVE saves after each job or kill frenzy, and when you quit after playing a
-while. A small SAVING sign shows while it writes.
+**Autosave.** GAME > AUTOSAVE saves after each job or kill frenzy, as you leave a city, and when you
+quit after playing a while. A small SAVING sign shows while it writes.
 
 ![The SAVING sign](docs/images/pc_saving.gif)
 

@@ -22,6 +22,8 @@ void AfterStep();
 // The player's latest steady spot (one a second on foot on the ground or driving on a road, with RETRY JOBS or
 // AUTOSAVE on), false if none since the level started or he was last wasted or busted.
 bool LastSteadySpot(PortSaves::Spot* pSpot);
+// The latest of the last seconds a few steps from where the player is, out of what he walked into; false if none.
+bool SpotAway(PortSaves::Spot* pSpot);
 // With the HUD.
 void Draw();
 // The pause menu's RETRY: right after a failure it comes selected; RESTART while the job or frenzy runs.

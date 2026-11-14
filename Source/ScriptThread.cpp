@@ -56,7 +56,8 @@
 #include "ped_death_cause.hpp"
 #include "ped_graphic_type.hpp"
 #if defined(GTA2_PORT)
-// Port: RETRY JOBS and the autosave's spawn.
+// Port: RETRY JOBS, the autosave at the area's end and the autosave's spawn.
+#include "../port/src/autosave.hpp"
 #include "../port/src/retry.hpp"
 #include "../port/src/saves.hpp"
 #endif
@@ -5783,6 +5784,10 @@ void ScriptThread::Handle_FINISH_LEVEL()
     {
         bonus_type = 2;
     }
+#if defined(GTA2_PORT)
+    // Port: AUTOSAVE, the city as the player leaves it through the exit arrow, saved before the level ends at once.
+    PortAutosave::AreaFinished();
+#endif
     if (bonus_type)
     {
         gGame_0x40->ExitGame(0, GameExitType::AreaCompleted_4, bonus_type);

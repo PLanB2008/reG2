@@ -156,8 +156,9 @@ Saves are kept per city, in `player/`:
 
 - A church save goes to `plyslotN.svg`, as in the original, and to a copy for its city.
 - AUTOSAVE (`port_autosave`) saves the city after each job or kill frenzy, once the player is safe,
-  and on QUIT GAME or closing the window after one, or after two minutes of play. SAVING shows at the
-  top of the screen, SAVE FAILED in red if the file could not be written; the game goes on.
+  as he leaves it through the exit arrow (a few steps back from it), and on QUIT GAME or closing the
+  window after one, or after two minutes of play. SAVING shows at the top of the screen, SAVE FAILED
+  in red if the file could not be written; the game goes on.
 - RETRY JOBS (`port_retry`) keeps a checkpoint taken as a job or a kill frenzy starts. After a failure,
   the pause menu offers RETRY JOB or RETRY FRENZY (RESTART while it runs), with the job's name, the
   money then and how long ago. Passing it, a church save or a new game deletes the checkpoint.
