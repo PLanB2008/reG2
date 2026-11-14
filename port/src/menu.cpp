@@ -1694,4 +1694,12 @@ void DrawChoiceHints()
                            {{pad ? PortPrompts::kPadEast : PortPrompts::kKeyEscape, kNoGlyph}, L"ESC", L"BACK"}};
     DrawHintRow(kHints, 2, 440);
 }
+
+f32 DrawHintGlyph(PortPrompts::Glyph glyph, f32 x, f32 y)
+{
+    sScale = 1;
+    sLeft = 0;
+    sTop = 0;
+    return GlyphAt(glyph, x, y, true, false, kListGlyphHeight) + 6;
+}
 } // namespace PortMenu

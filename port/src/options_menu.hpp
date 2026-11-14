@@ -24,8 +24,9 @@ void Draw(Frontend* pFrontend);
 // removes one, A keeps the name, B cancels. False when the keyboard is in use.
 bool UpdateNameEntry(Frontend* pFrontend);
 
-// The frontend's key hints (ENTER, ESC, DEL, BACKSPACE) as the gamepad's buttons once it was used last.
-void PadKeyHint(u8 hint, wchar_t* pText);
+// Frontend::DrawKeyHint's drawing of pText, hint's text; its width. ENTER, ESC, DEL and BACKSPACE are the pictures of
+// the keys, or of the gamepad's buttons once it was used last, and the labels after them lose their colon.
+s32 DrawKeyHint(u8 hint, wchar_t* pText, u16 x, u16 y, u16 font, s32 palette);
 
 // The current profile's saves (saves.hpp). RESUME SAVED STATUS is offered on the Play page with any, on
 // the Wasted, Quit and Area complete pages with one of that stage.

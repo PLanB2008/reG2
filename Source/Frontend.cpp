@@ -2924,9 +2924,9 @@ s32 Frontend::DrawKeyHint(u8 str_id_idx, u16 text_xpos, u16 text_ypos, u16 fontT
     }
 
 #if defined(GTA2_PORT)
-    // Port: the hint shows the gamepad's button once the pad was used last.
-    PortOptionsMenu::PadKeyHint(str_id_idx, tmpBuff);
-#endif
+    // Port: the keys' pictures, or the pad's buttons' once it was used last, as on the port's own pages.
+    return PortOptionsMenu::DrawKeyHint(str_id_idx, tmpBuff, text_xpos, text_ypos, fontType, palette);
+#else
     if (static_cast<u16>(palette) == 0xFFFF)
     {
         DrawStringDefaultPalette(tmpBuff, text_xpos, text_ypos, fontType, 1);
@@ -2936,6 +2936,7 @@ s32 Frontend::DrawKeyHint(u8 str_id_idx, u16 text_xpos, u16 text_ypos, u16 fontT
         DrawString(tmpBuff, text_xpos, text_ypos, fontType, 1, palette_types_enum::font_remaps_8, palette, 0, 0);
     }
     return GetMaxTextWidth(tmpBuff, fontType);
+#endif
 }
 
 MATCH_FUNC(0x4B7FB0)

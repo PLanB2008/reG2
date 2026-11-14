@@ -545,29 +545,55 @@ bool UpdateNameEntry(Frontend* pFrontend)
     return true;
 }
 
-void PadKeyHint(u8 hint, wchar_t* pText)
+s32 DrawKeyHint(u8 hint, wchar_t* pText, u16 x, u16 y, u16 font, s32 palette)
 {
-    if (!PortMenu::PadMode())
+    using namespace PortPrompts;
+    // Whether the last key hint was a picture; its label follows it.
+    static bool sPicture;
+    const bool pad = PortMenu::PadMode();
+    // ESC, DEL, ENTER and BACKSPACE; the pad deletes a letter with left, which has no picture.
+    const Glyph kKeys[4] = {kKeyEscape, kKeyDelete, kKeyEnter, kKeyBackspace};
+    const Glyph kButtons[4] = {kPadEast, kPadWest, kPadSouth, kNoGlyph};
+    if (hint < 4)
     {
-        return;
+        const Glyph glyph = pad ? kButtons[hint] : kKeys[hint];
+        sPicture = glyph != kNoGlyph && Available();
+        if (sPicture)
+        {
+            return static_cast<s32>(PortMenu::DrawHintGlyph(glyph, x, y));
+        }
+        if (pad)
+        {
+            static const wchar_t* const kButtonNames[4] = {L"B", L"X", L"A", NULL};
+            if (kButtonNames[hint])
+            {
+                wcscpy(pText, kButtonNames[hint]);
+            }
+            else
+            {
+                wcscpy(pText, gText_0x14->Find("left_i"));
+            }
+        }
     }
-    switch (hint)
+    // The labels start with the font's colon and two spaces.
+    else if (sPicture && pText[0] == L';')
     {
-        case 0: // ESC
-            wcscpy(pText, L"B");
-            break;
-        case 1: // DEL
-            wcscpy(pText, L"X");
-            break;
-        case 2: // ENTER
-            wcscpy(pText, L"A");
-            break;
-        case 3: // BACKSPACE
-            wcscpy(pText, L"LEFT");
-            break;
-        default:
-            break;
+        const wchar_t* pLabel = pText + 1;
+        while (*pLabel == L' ')
+        {
+            pLabel++;
+        }
+        memmove(pText, pLabel, (wcslen(pLabel) + 1) * sizeof(wchar_t));
     }
+    if (static_cast<u16>(palette) == 0xFFFF)
+    {
+        DrawStringDefaultPalette(pText, x, y, font, 1);
+    }
+    else
+    {
+        DrawString(pText, x, y, font, 1, palette_types_enum::font_remaps_8, palette, 0, 0);
+    }
+    return Frontend::GetMaxTextWidth(pText, font);
 }
 
 bool IsLevel(Frontend* pFrontend, const PortSaves::Header& header)

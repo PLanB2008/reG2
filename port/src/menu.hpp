@@ -2,6 +2,7 @@
 // pages, navigation, settings, key and pad bindings, and its drawing with the frontend's fonts.
 #pragma once
 
+#include "prompts.hpp"
 #include "saves.hpp"
 #include "types.hpp"
 
@@ -72,4 +73,7 @@ void Draw(f32 scale, f32 left, f32 top, bool panel);
 
 // The frontend's hints for a question's choices, SELECT and BACK, where its pages have theirs.
 void DrawChoiceHints();
+// A key's or button's picture in the frontend at a list's size, for the original pages' smaller hints, at x with its
+// middle on a line of text at y; the width it takes with the space before a label.
+f32 DrawHintGlyph(PortPrompts::Glyph glyph, f32 x, f32 y);
 } // namespace PortMenu
