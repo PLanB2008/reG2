@@ -69,4 +69,7 @@ const wchar_t* Title();
 // The 640x480 layout at that scale and screen position, on a black panel sized to the page if asked.
 // Needs the frontend's style.
 void Draw(f32 scale, f32 left, f32 top, bool panel);
+
+// The frontend's hints for a question's choices, SELECT and BACK, where its pages have theirs.
+void DrawChoiceHints();
 } // namespace PortMenu

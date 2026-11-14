@@ -458,6 +458,7 @@ bool DrawDialog(Frontend* pFrontend)
                              cursor == kYesY ? pFrontend->mSelectedFont : static_cast<s16>(pFrontend->mNormalFont), Fix16(1));
     DrawStringDefaultPalette(PortSettings::Translate(L"NO"), Fix16(kQuestionLeft), Fix16(yesTop + kChoiceStep),
                              cursor == kNoY ? pFrontend->mSelectedFont : static_cast<s16>(pFrontend->mNormalFont), Fix16(1));
+    PortMenu::DrawChoiceHints();
     return true;
 }
 

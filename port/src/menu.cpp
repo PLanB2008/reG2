@@ -1680,4 +1680,16 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
     }
     DrawHints(hintsY);
 }
+
+void DrawChoiceHints()
+{
+    using PortPrompts::kNoGlyph;
+    sScale = 1;
+    sLeft = 0;
+    sTop = 0;
+    const bool pad = PadMode();
+    const Hint kHints[] = {{{pad ? PortPrompts::kPadSouth : PortPrompts::kKeyEnter, kNoGlyph}, L"ENTER", L"SELECT"},
+                           {{pad ? PortPrompts::kPadEast : PortPrompts::kKeyEscape, kNoGlyph}, L"ESC", L"BACK"}};
+    DrawHintRow(kHints, 2, 440);
+}
 } // namespace PortMenu
