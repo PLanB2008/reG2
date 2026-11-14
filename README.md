@@ -60,14 +60,16 @@ car headlights, light from gunfire, explosions and fires, soft shadows, bloom, a
 30 ORIGINAL brings back the original's rate). The game still runs at its 30 steps per second and the
 frames in between are interpolated, so it plays exactly the same, just smoother.
 
-**Controls.** CONTROLS lets you change every key, in three columns: the original keys, a second set of
-keys and the gamepad. The second set comes ready for keyboard and mouse: WASD to move, F to get in and
-out of cars, left click to shoot, the wheel to change weapon. A gamepad works as soon as it's plugged in,
-and in a car the triggers accelerate and brake progressively and the stick steers smoothly.
+**Controls.** CONTROLS lets you change every key, in three columns: the original keys, a second set and
+the gamepad.
 
-CONTROLS > TWIN STICK is a Hotline Miami style mode: move with one stick (or WASD), aim with the other
-(or the mouse). Shots go where you aim, the camera leans toward the aim, and holding Shift (LT on a pad)
-looks further. The turrets of the fire truck, tank and gun jeep aim the same way.
+- **Keyboard and mouse:** the second set is ready to use: WASD to move, F to get in and out of cars,
+  left click to shoot, the wheel to change weapon.
+- **Gamepad:** works as soon as it's plugged in. In a car, the triggers accelerate and brake
+  progressively and the stick steers smoothly.
+- **Twin stick** (CONTROLS > TWIN STICK), in the style of Hotline Miami: move with one stick or WASD, aim
+  with the other or the mouse. Shots go where you aim and the camera leans toward the aim; hold Shift
+  (LT on a pad) to look further. The turrets of the fire truck, tank and gun jeep aim the same way.
 
 ![Twin stick](docs/images/pc_twin_stick.gif)
 
