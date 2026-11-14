@@ -231,7 +231,8 @@ Then add `-DGTA2_OPENAL_DIR=$PWD/openal_linux32` (or `openal_mingw32`) to the po
 | [zlib](https://github.com/madler/zlib/releases/tag/v1.3.2), [xz](https://github.com/tukaani-project/xz/releases/tag/v5.8.4) | 1.3.2, 5.8.4 | zlib, 0BSD | their compression, where the system has none (MinGW) |
 
 The key and button pictures (`resources/prompts_*.png`, made by `resources/prompts_atlas.py`) are from
-Input Prompts Pixel by [Kenney](https://www.kenney.nl) (CC0).
+[Gamepad UI / Controller Prompts Pack](https://greatdocbrown.itch.io/gamepad-ui) by greatdocbrown (CC0), and
+the Switch ones from Input Prompts Pixel by [Kenney](https://www.kenney.nl) (CC0).
 
 ### Setup libraries
 
