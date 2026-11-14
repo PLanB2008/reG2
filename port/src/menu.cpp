@@ -1249,18 +1249,20 @@ s32 TabAt(f32 x, f32 y)
     return -1;
 }
 
-// The next city that can be chosen that way, its newest save selected.
+// That city, or with a step the next one that can be chosen that way, round the row; its newest save selected.
 Result ChangeTab(s32 tab, s32 step)
 {
-    while (tab >= 0 && tab < PortSaves::kNumCities && !sTabEnabled[tab])
+    const s32 n = PortSaves::kNumCities;
+    tab = (tab % n + n) % n;
+    for (s32 i = 0; i < n && step && !sTabEnabled[tab]; i++)
     {
-        tab += step;
+        tab = (tab + step + n) % n;
     }
-    if (tab < 0 || tab >= PortSaves::kNumCities || tab == sTab)
+    if (!sTabEnabled[tab] || tab == sTab)
     {
         return kNothing;
     }
-    const Result result = tab < sTab ? kLowered : kRaised;
+    const Result result = (step ? step < 0 : tab < sTab) ? kLowered : kRaised;
     sTab = tab;
     sSelected[kSavesPage] = 0;
     return result;
