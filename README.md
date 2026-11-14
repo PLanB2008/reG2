@@ -39,8 +39,8 @@ A few things differ anyway, whatever you pick:
   settings program, in five pages (GAME, GRAPHICS, DISPLAY, SOUND, CONTROLS), and pressing Escape during
   a game pauses it and opens the same menu, with the original pause screen's numbers under STATISTICS
 - every menu works with the mouse, the keyboard or a gamepad
-- a few crashes of the original are fixed, some of them still there in
-  [Vike's GTA2 11.44](https://gtamp.com/gta2/), the gtamp.com community patch; the game plays the same
+- a few crashes of the original are fixed, among them some the community found
+  ([Vike's GTA2 11.44](https://gtamp.com/gta2/) patch, gtamp.com); the game plays the same
 - no intro movie for now
 
 ![The options menu](docs/images/pc_options_menu.png)
