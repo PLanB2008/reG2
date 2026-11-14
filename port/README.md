@@ -147,7 +147,8 @@ keys, the mouse or a pad; every setting can be changed later. `GTA2_WELCOME=1` s
 OPTIONS has five pages: GAME (language, text speed, AUTOSAVE, RETRY JOBS, blood, lighting and the
 day and night cycle), GRAPHICS, DISPLAY (full screen, frame rate, zoom, HUD), SOUND and CONTROLS.
 In a game, Escape opens the same menu as a pause menu, with RESUME, STATISTICS (the original pause
-screen's lines) and QUIT GAME.
+screen's lines) and QUIT GAME. The hints under the pages show the keys, or once a pad is used its
+buttons as printed on it: Xbox, PlayStation or Nintendo, from SDL's pad type and button labels.
 
 Saves are kept per city, in `player/`:
 

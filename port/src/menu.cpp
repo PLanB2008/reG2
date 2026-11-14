@@ -6,6 +6,7 @@
 #include "InputRecorder_67F8B0.hpp"
 #include "KeyboardLayout.hpp"
 #include "input.hpp"
+#include "prompts.hpp"
 #include "registry.hpp"
 #include "settings.hpp"
 #include "TextTable.hpp"
@@ -118,8 +119,7 @@ f32 sSaveNameWidth = 200;
 const s32 kMaxTexts = 4;
 const s32 kTextLength = 64;
 
-// The frontend's user sprites: a disc behind a pad button's name, arrows.
-const s16 kDiscSprite = 2;
+// The frontend's user sprites: arrows.
 const s16 kLeftArrowSprite = 37;
 const s16 kArrowSprite = 38;
 
@@ -1061,50 +1061,55 @@ bool MouseMode()
 #endif
 }
 
-// The keys at y, or the pad's buttons in the frontend's red discs once the pad was used last. Back on the pause
-// menu's main page resumes the game.
-void DrawHints(f32 y)
+// A key's or button's picture at x, its middle on that of a line of text at y, if drawn; its width.
+const f32 kGlyphHeight = 16;
+const f32 kTextMiddle = 10;
+f32 GlyphAt(PortPrompts::Glyph glyph, f32 x, f32 y, bool draw)
 {
-    struct Hint
+    const f32 size = PortPrompts::Size(kGlyphHeight * sScale);
+    if (draw)
     {
-        const wchar_t* mKey;
-        const wchar_t* mButton;
-        const wchar_t* mLabel;
-    };
-    const bool resume = port_GameRunning() && sPage == kMainPage;
-    const bool pad = PadMode();
-    // LOAD GAME's other keys for the city: Q and E where they are on this keyboard.
-    wchar_t cityKeys[8] = L"Q E";
-#if defined(GTA2_PORT_SDL)
-    const s32 q = port_KeyLetter(DIK_Q);
-    const s32 e = port_KeyLetter(DIK_E);
-    if (q && e)
-    {
-        swprintf(cityKeys, L"%lc %lc", static_cast<wchar_t>(q), static_cast<wchar_t>(e));
+        PortPrompts::Draw(glyph, sLeft + x * sScale, sTop + (y + kTextMiddle) * sScale, size, TextColour(false, false), false);
     }
-#endif
-    const Hint kNavigate[] = {
-        {L"ENTER", L"A", L"SELECT"}, {L"ESC", L"B", resume ? L"RESUME" : L"BACK"}, {pad ? L"LB RB" : cityKeys, NULL, L"CITY"}};
-    // Capture: B cancels on the keyboard columns, Back on the pad column (B can be bound there); Delete
-    // clears a second key or a pad input.
-    const bool padColumn = sColumn == kPadColumn;
-    const Hint kCapture[] = {{pad && padColumn ? L"BACK" : L"ESC", pad && !padColumn ? L"B" : NULL, L"CANCEL"},
-                             {L"DEL", NULL, L"CLEAR"}};
-    const bool capturing = sCapturing >= 0;
-    const Hint* pHints = capturing ? kCapture : kNavigate;
-    const s32 count = capturing && sColumn == kKeyColumn ? 1 : (!capturing && sPage == kSavesPage ? 3 : 2);
+    return PortPrompts::Width(glyph, size) / sScale;
+}
+
+// The pictures of one or two keys or buttons, or the keys' names without them, then what they do.
+struct Hint
+{
+    PortPrompts::Glyph mGlyphs[2];
+    const wchar_t* mKeys;
+    const wchar_t* mLabel;
+};
+
+// The hint at x if drawn; its width.
+f32 HintAt(const Hint& hint, f32 x, f32 y, bool draw)
+{
     const s16 font = MenuFont();
-    const s16 buttonFont = gFrontendHeadingFont;
-    // Between the frontend's two logos (x 70 to 550): longer translations start further left, then
-    // come closer together.
+    const f32 start = x;
+    if (hint.mGlyphs[0] != PortPrompts::kNoGlyph && PortPrompts::Available())
+    {
+        x += GlyphAt(hint.mGlyphs[0], x, y, draw);
+        x += hint.mGlyphs[1] != PortPrompts::kNoGlyph ? 2 + GlyphAt(hint.mGlyphs[1], x + 2, y, draw) : 0;
+        x += 6;
+    }
+    else
+    {
+        x += TextAt(Translate(hint.mKeys), x, y, font, false, false, draw) + 10;
+    }
+    return x - start + TextAt(Translate(hint.mLabel), x, y, font, false, false, draw);
+}
+
+// The hints at y, between the frontend's two logos (x 70 to 550): longer translations start further left, then
+// come closer together.
+void DrawHintRow(const Hint* pHints, s32 count, f32 y)
+{
     const f32 kLeft = 70;
     const f32 kRight = 550;
-    const f32 kDisc = 34;
     f32 width = 0;
     for (s32 i = 0; i < count; i++)
     {
-        const bool button = pad && pHints[i].mButton;
-        width += (button ? kDisc : Width(Translate(pHints[i].mKey), font) + 10) + Width(Translate(pHints[i].mLabel), font);
+        width += HintAt(pHints[i], 0, y, false);
     }
     f32 gap = 40;
     f32 x = kRight - width - gap * (count - 1);
@@ -1113,25 +1118,44 @@ void DrawHints(f32 y)
     {
         gap = kRight - x - width > 10 ? kRight - x - width : 10;
     }
-
     for (s32 i = 0; i < count; i++)
     {
-        if (pad && pHints[i].mButton)
-        {
-            Sprite(kDiscSprite, x + 10, y + 12);
-            Text(pHints[i].mButton, x + 10 - Width(pHints[i].mButton, buttonFont) / 2, y, buttonFont);
-            x += kDisc;
-        }
-        else
-        {
-            const wchar_t* pKey = Translate(pHints[i].mKey);
-            Text(pKey, x, y, font);
-            x += Width(pKey, font) + 10;
-        }
-        const wchar_t* pLabel = Translate(pHints[i].mLabel);
-        Text(pLabel, x, y, font);
-        x += Width(pLabel, font) + gap;
+        x += HintAt(pHints[i], x, y, true) + gap;
     }
+}
+
+// The keys, or the pad's buttons once the pad was used last. Back on the pause menu's main page resumes the game.
+void DrawHints(f32 y)
+{
+    using PortPrompts::kNoGlyph;
+    const bool resume = port_GameRunning() && sPage == kMainPage;
+    const bool pad = PadMode();
+    // LOAD GAME's other keys for the city: Q and E where they are on this keyboard.
+    wchar_t cityKeys[8] = L"Q E";
+    PortPrompts::Glyph cityGlyphs[2] = {kNoGlyph, kNoGlyph};
+#if defined(GTA2_PORT_SDL)
+    const s32 q = port_KeyLetter(DIK_Q);
+    const s32 e = port_KeyLetter(DIK_E);
+    if (q && e)
+    {
+        swprintf(cityKeys, L"%lc %lc", static_cast<wchar_t>(q), static_cast<wchar_t>(e));
+        cityGlyphs[0] = PortPrompts::Letter(q);
+        cityGlyphs[1] = PortPrompts::Letter(e);
+    }
+#endif
+    const Hint kNavigate[] = {
+        {{pad ? PortPrompts::kPadSouth : PortPrompts::kKeyEnter, kNoGlyph}, L"ENTER", L"SELECT"},
+        {{pad ? PortPrompts::kPadEast : PortPrompts::kKeyEscape, kNoGlyph}, L"ESC", resume ? L"RESUME" : L"BACK"},
+        {{pad ? PortPrompts::kPadLeftShoulder : cityGlyphs[0], pad ? PortPrompts::kPadRightShoulder : cityGlyphs[1]}, cityKeys, L"CITY"}};
+    // Capture: B cancels on the keyboard columns, Back on the pad column (B can be bound there); Delete
+    // clears a second key or a pad input.
+    const bool padColumn = sColumn == kPadColumn;
+    const PortPrompts::Glyph cancel = pad ? (padColumn ? PortPrompts::kPadBack : PortPrompts::kPadEast) : PortPrompts::kKeyEscape;
+    const Hint kCapture[] = {{{cancel, kNoGlyph}, pad && padColumn ? L"BACK" : L"ESC", L"CANCEL"},
+                             {{PortPrompts::kKeyDelete, kNoGlyph}, L"DEL", L"CLEAR"}};
+    const bool capturing = sCapturing >= 0;
+    const s32 count = capturing && sColumn == kKeyColumn ? 1 : (!capturing && sPage == kSavesPage ? 3 : 2);
+    DrawHintRow(capturing ? kCapture : kNavigate, count, y);
 }
 
 // The saves page's tabs, centred on a row: where each starts and its width.
@@ -1168,8 +1192,8 @@ void DrawTabs(const Layout& layout)
     const f32 right = x[PortSaves::kNumCities - 1] + widths[PortSaves::kNumCities - 1] + kTabMarkerGap;
     if (PadMode())
     {
-        Text(L"LB", left - Width(L"LB", MenuFont()) / 2, y, MenuFont());
-        Text(L"RB", right - Width(L"RB", MenuFont()) / 2, y, MenuFont());
+        GlyphAt(PortPrompts::kPadLeftShoulder, left - GlyphAt(PortPrompts::kPadLeftShoulder, 0, y, false) / 2, y, true);
+        GlyphAt(PortPrompts::kPadRightShoulder, right - GlyphAt(PortPrompts::kPadRightShoulder, 0, y, false) / 2, y, true);
     }
     else
     {
