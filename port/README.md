@@ -137,6 +137,32 @@ draws the question in a window of its own. The folder and file pickers are SDL's
 xdg-desktop-portal on Linux, else zenity). The progress is a small SDL
 window; closing it cancels the copy.
 
+## Welcome screen, options and saves
+
+The first start shows CHOOSE YOUR STYLE before the start menu. CLASSIC is the game as it was: its
+look, its controls and church saves only. ENHANCED, selected at first, turns on the new lights and
+shadows, the day and night cycle, twin stick controls, AUTOSAVE and RETRY JOBS. Pick one with the
+keys, the mouse or a pad; every setting can be changed later. `GTA2_WELCOME=1` shows the screen again.
+
+OPTIONS has five pages: GAME (language, text speed, AUTOSAVE, RETRY JOBS, blood, lighting and the
+day and night cycle), GRAPHICS, DISPLAY (full screen, frame rate, zoom, HUD), SOUND and CONTROLS.
+In a game, Escape opens the same menu as a pause menu, with RESUME, STATISTICS (the original pause
+screen's lines) and QUIT GAME.
+
+Saves are kept per city, in `player/`:
+
+- A church save goes to `plyslotN.svg`, as in the original, and to a copy for its city.
+- AUTOSAVE (`port_autosave`) saves the city after each job or kill frenzy, once the player is safe,
+  and on QUIT GAME or closing the window after one, or after two minutes of play. SAVING shows at the
+  top of the screen, SAVE FAILED in red if the file could not be written; the game goes on.
+- RETRY JOBS (`port_retry`) keeps a checkpoint taken as a job or a kill frenzy starts. After a failure,
+  the pause menu offers RETRY JOB or RETRY FRENZY (RESTART while it runs), with the job's name, the
+  money then and how long ago. Passing it, a church save or a new game deletes the checkpoint.
+- RESUME SAVED STATUS opens LOAD GAME when there is more than one save: a tab per city (Left and
+  Right, Q and E, or LB and RB), each save with its money, jobs passed and date, newest first.
+- With AUTOSAVE on, a new game in a city that has an autosave asks first: REPLACE YOUR DOWNTOWN
+  AUTOSAVE?
+
 ## Frame rate
 
 The game logic always runs in the original's steps of 33 ms (11 ms in fast forward), 30.3 per
