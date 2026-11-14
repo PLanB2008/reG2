@@ -58,9 +58,8 @@ bool Replaying();
 // level's script.
 bool IsValid(const char_type* pFileName, Header* pHeader = NULL);
 
-// A profile's saves in player\, per city: the church save, as plyslotN.svg (the latest, as the original
-// writes it) and a copy, and the autosave, with the one before it kept as a backup. And one retry
-// checkpoint for all cities.
+// A profile's saves in player\, per city: the church save (plyslotN.svg, the latest as the original writes it, and
+// a copy) and the autosave with a backup of the one before; and one retry checkpoint for all cities.
 const s32 kNumCities = 3;
 
 // The profile has an autosave of that city, or its backup.

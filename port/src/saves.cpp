@@ -145,9 +145,8 @@ bool Move(const char_type* pFrom, const char_type* pTo)
 #endif
 }
 
-// An autosave's or a checkpoint's mUnused50, which the original leaves 0: the player spawns where he was.
-// Its mPad4E is 1 if he drove a car, a checkpoint's mPad4F what it was taken before, and a job checkpoint's
-// player stats mPadE and mPad81 its JobName.
+// mUnused50 of an autosave or checkpoint (0 in the original's): the player spawns where he was. mPad4E: 1 if he
+// drove a car; mPad4F: a checkpoint's Checkpoint; a job checkpoint's stats mPadE and mPad81: its JobName.
 const s32 kExactSpawn = 0x32474552;
 
 enum Writing

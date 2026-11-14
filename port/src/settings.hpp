@@ -118,9 +118,8 @@ s32 MaxFps();
 // The renderer's options from the registry, at start-up.
 void ApplyRenderOptions();
 
-// The first start's two styles (welcome.hpp). CLASSIC: the CLASSIC preset, lighting as the original's, the
-// classic controls and only church saves; ENHANCED: the ENHANCED preset, the day-night cycle, twin stick, AUTOSAVE
-// and RETRY JOBS. Both draw a frame each refresh of the screen.
+// The first start's styles (welcome.hpp), both drawing a frame per screen refresh. CLASSIC: its preset, original
+// lighting and controls, church saves only; ENHANCED: its preset, day-night cycle, twin stick, AUTOSAVE, RETRY JOBS.
 enum Style
 {
     kClassicStyle,
