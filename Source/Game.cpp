@@ -1278,6 +1278,11 @@ Game::~Game()
     {
         GTA2_DELETE_AND_NULL(mPlayers[i]);
     }
+#if defined(GTA2_PORT)
+    // Port: unset as before a session's first game. It pointed into a player deleted here, and AIM CAMERA reads it in
+    // the next game's first logic step, before Game::Draw sets it again.
+    gViewCamera = NULL;
+#endif
 
     GTA2_DELETE_AND_NULL(gpRng);
     GTA2_DELETE_AND_NULL(gText_0x14);
