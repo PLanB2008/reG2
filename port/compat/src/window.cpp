@@ -11,6 +11,7 @@
 #include <string>
 #include "port_platform.hpp"
 #include "../../setup/setup.hpp"
+#include "../../src/net_hooks.hpp" // gPortIdleHook
 
 namespace
 {
@@ -151,7 +152,8 @@ HWND WINAPI CreateWindowExA(DWORD exStyle, LPCSTR className, LPCSTR title, DWORD
     int windowW;
     int windowH;
     port_GetWindowSize(&windowW, &windowH);
-    SDL_Window* pSdl = SDL_CreateWindow(title, windowW, windowH, SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE);
+    const SDL_WindowFlags flags = port_Headless() ? SDL_WINDOW_HIDDEN : SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE;
+    SDL_Window* pSdl = SDL_CreateWindow(title, windowW, windowH, flags);
     if (!pSdl)
     {
         SDL_Log("Window %dx%d: %s", windowW, windowH, SDL_GetError());
@@ -233,6 +235,12 @@ BOOL WINAPI PeekMessageA(MSG* pMsg, HWND, UINT, UINT, UINT flags)
     }
     if (Queue().empty())
     {
+        // A network game paces itself as the original does, spinning on this and RunGameFrame: the netcode polls the
+        // network here (a ping answered at once) and sleeps while the next step is far enough away
+        if (gPortIdleHook)
+        {
+            gPortIdleHook();
+        }
         return FALSE;
     }
     *pMsg = Queue().front();

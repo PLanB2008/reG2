@@ -7,6 +7,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <string>
+#include <vector>
+#include "../../net/net_main.hpp"
+#include "../../src/net_hooks.hpp" // gPortCrashHook
+#if !defined(_WIN32)
+    #include <execinfo.h>
+    #include <signal.h>
+    #include <unistd.h>
+#endif
 
 void port_RegisterRenderer();
 
@@ -51,6 +59,43 @@ __attribute__((constructor(101))) static void EnterGameFolderAtStart(int argc, c
 }
 #endif
 
+#if !defined(_WIN32)
+// A crash prints the faulting address and its backtrace to stderr (macOS throttles its crash reports), and the network
+// game's view of the game, then dies as it would have
+static void OnCrash(int sig, siginfo_t* info, void*)
+{
+    char line[160];
+    const int n0 =
+        snprintf(line, sizeof(line), "\nreg2: crashed (signal %d) at address %p; backtrace:\n", sig, info ? info->si_addr : NULL);
+    write(2, line, n0 > 0 ? (size_t)n0 : 0);
+    void* frames[64];
+    backtrace_symbols_fd(frames, backtrace(frames, 64), 2);
+    static bool sOnce;
+    if (!sOnce && gPortCrashHook) // not signal-safe, but worth it once
+    {
+        sOnce = true;
+        gPortCrashHook();
+    }
+    signal(sig, SIG_DFL);
+    raise(sig);
+}
+#endif
+
+void port_InstallCrashReport()
+{
+#if !defined(_WIN32)
+    void* frame;
+    backtrace(&frame, 1); // loads what backtrace needs now, not in the handler
+    struct sigaction sa = {};
+    sa.sa_sigaction = OnCrash;
+    sa.sa_flags = SA_SIGINFO;
+    for (int sig : {SIGSEGV, SIGBUS, SIGABRT, SIGTRAP, SIGILL, SIGFPE})
+    {
+        sigaction(sig, &sa, NULL);
+    }
+#endif
+}
+
 int main(int argc, char** argv)
 {
     // Wine drops SDL_* variables before a Windows program sees them.
@@ -62,17 +107,38 @@ int main(int argc, char** argv)
     {
         SDL_SetHint(SDL_HINT_AUDIO_DISK_OUTPUT_FILE, file);
     }
-    std::string cmdLine;
+    std::vector<std::string> args;
     for (int i = 1; i < argc; i++)
     {
         if (!IsSetupArg(argv[i]))
         {
-            cmdLine += (cmdLine.empty() ? "" : " ");
-            cmdLine += argv[i];
+            args.push_back(argv[i]);
         }
     }
+    const int net = NetMain_Init(args); // --server, --connect (port/docs/netcode.md)
+    if (net < 0)
+    {
+        port_LogExit(1);
+        return 1;
+    }
+    if (net > 0)
+    {
+        args.push_back("-N"); // the game's switch for a network game
+    }
+    std::string cmdLine;
+    for (const std::string& arg : args)
+    {
+        cmdLine += (cmdLine.empty() ? "" : " ");
+        cmdLine += arg;
+    }
 
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | SDL_INIT_EVENTS))
+    if (port_Headless())
+    {
+        SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "dummy");
+        SDL_SetHint(SDL_HINT_AUDIO_DRIVER, "dummy");
+    }
+    // Headless: no gamepads, as their every event poll asks the system for new ones
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | (port_Headless() ? 0 : SDL_INIT_GAMEPAD)))
     {
         SDL_Log("SDL_Init: %s", SDL_GetError());
         port_LogExit(1);
