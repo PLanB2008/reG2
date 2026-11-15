@@ -1924,8 +1924,8 @@ void Frontend::UpdatePageFromUserInput()
                     break;
                 case MENUPAGE_LOADING_SAVE: // 260
 #if defined(GTA2_PORT)
-                    // Port: RESUME SAVED STATUS lists the profile's saves when it has several, or boots
-                    // one other than plyslotN.svg.
+                    // Port: RESUME SAVED STATUS lists the profile's saves, even a single one, to pick
+                    // from rather than loading one unseen.
                     if (PortOptionsMenu::Resume(this))
                     {
                         break;

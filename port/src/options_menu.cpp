@@ -635,14 +635,7 @@ bool Resume(Frontend* pFrontend)
 {
     PortSaves::Entry saves[PortSaves::kMaxSaves];
     const s32 count = ListSaves(pFrontend, saves);
-    char_type latest[64];
-    snprintf(latest, sizeof(latest), "player\\plyslot%d.svg", gGameSession.GetPlySlotIdx());
-    if (count == 1 && strcmp(saves[0].mFileName, latest))
-    {
-        Boot(pFrontend, saves[0].mFileName);
-        return true;
-    }
-    if (count < 2)
+    if (!count)
     {
         return false;
     }

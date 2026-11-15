@@ -33,8 +33,8 @@ s32 DrawKeyHint(u8 hint, wchar_t* pText, u16 x, u16 y, u16 font, s32 palette);
 bool IsLevel(Frontend* pFrontend, const PortSaves::Header& header);
 bool HasSaves(Frontend* pFrontend);
 bool HasSave(Frontend* pFrontend, u8 mainStage, u8 bonusStage);
-// RESUME SAVED STATUS chosen: several saves are listed on the menu's page, a single one other than
-// plyslotN.svg is booted. False to go on as the original.
+// RESUME SAVED STATUS chosen: the saves are listed on the menu's page, even a single one. False to go on as the
+// original if there is none to list.
 bool Resume(Frontend* pFrontend);
 // In LoadMapFilenamesFromSvg: the save to boot in place of plyslotN.svg, if Resume chose one.
 void ResumeFileName(char_type* pFileName);
