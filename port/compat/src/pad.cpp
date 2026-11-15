@@ -47,7 +47,7 @@ bool sPrevCode[256];
 int sCapturedKey = -1;
 int sCapturedPad = -1;
 bool sMigrated;
-bool sMenuBlocked; // back from a game with a button still down: the menus wait for its release
+bool sMenuBlocked; // back from a game with a button or W, A, S or D still down: the menus wait for its release
 bool sAccelHeld; // RT held since the player drove or was getting into a vehicle: it attacks once pressed again
 bool sMouseAims; // the mouse was used in game after the pad
 bool sKeyDown[256]; // by DIK code
@@ -503,6 +503,12 @@ void port_AddPadMenuKeys(BYTE* pKeys)
             pKeys[k.mDik] = 0x80;
         }
     }
+    // W, S, A and D by position as the arrows, whatever the controls.
+    const DWORD kMoveKeys[4][2] = {{DIK_W, DIK_UP}, {DIK_S, DIK_DOWN}, {DIK_A, DIK_LEFT}, {DIK_D, DIK_RIGHT}};
+    for (int i = 0; i < 4 && port_FrontendActive() && !port_FrontendTyping(); i++)
+    {
+        pKeys[kMoveKeys[i][1]] |= pKeys[kMoveKeys[i][0]] & 0x80;
+    }
 }
 
 void port_PadEvent(const SDL_Event& e)
@@ -662,6 +668,7 @@ void port_UpdatePad()
         {
             anyDown |= CodeDown(codes[i]);
         }
+        anyDown |= sKeyDown[DIK_W] || sKeyDown[DIK_S] || sKeyDown[DIK_A] || sKeyDown[DIK_D];
         sMenuBlocked = anyDown;
     }
     const bool quitShown = inGame && port_QuitMessageShown();

@@ -58,7 +58,9 @@ In a vehicle, with FORWARD and BACKWARD on the pad's up and down (the default), 
 or reverses, both as far as they are pressed, the left stick only steers, more gently when pushed part
 way, and the d-pad works as on foot; SPECIAL 2 (the camera pan, LT
 by default) is then on L3, unless a control uses it.
-The menus also take the mouse: pointing selects, a click enters or changes a value, the right
+The menus, the pause menu too, move with the arrows or WASD by their position (ZQSD on AZERTY), whatever the
+controls, except while a player name is typed.
+They also take the mouse: pointing selects, a click enters or changes a value, the right
 button goes back, the wheel changes a value; the cursor shows while the mouse is in use over a menu.
 Each control has a key, a second key (ALTERNATE: a key, a mouse button or a wheel notch, by default
 WASD by their position (ZQSD on AZERTY) to move, F to enter or exit, the left button to attack and the

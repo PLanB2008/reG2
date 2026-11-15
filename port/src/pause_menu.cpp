@@ -332,18 +332,22 @@ bool HandleKey(s32 action, Player* pPlayer)
     {
         return true;
     }
+    // W, A, S and D by position too, whatever the controls: the game's own bindings are off while the menu is open.
     const struct
     {
         s32 mDik;
         PortMenu::Input mInput;
     } kInputs[] = {{DIK_UP, PortMenu::kUp},       {DIK_DOWN, PortMenu::kDown},     {DIK_LEFT, PortMenu::kLeft},
-                   {DIK_RIGHT, PortMenu::kRight}, {DIK_RETURN, PortMenu::kSelect}, {DIK_ESCAPE, PortMenu::kCancel}};
+                   {DIK_RIGHT, PortMenu::kRight}, {DIK_RETURN, PortMenu::kSelect}, {DIK_ESCAPE, PortMenu::kCancel},
+                   {DIK_W, PortMenu::kUp},        {DIK_S, PortMenu::kDown},        {DIK_A, PortMenu::kLeft},
+                   {DIK_D, PortMenu::kRight}};
+    const s32 count = sizeof(kInputs) / sizeof(kInputs[0]);
     s32 i = 0;
-    while (i < 6 && kInputs[i].mDik != action)
+    while (i < count && kInputs[i].mDik != action)
     {
         i++;
     }
-    if (i == 6)
+    if (i == count)
     {
         return true;
     }
