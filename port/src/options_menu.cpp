@@ -298,6 +298,23 @@ void Setup(Frontend* pFrontend)
 
     // The start menu's "Options" opened GTA2 Manager.
     pFrontend->mMenuPagesArray[MENUPAGE_START_MENU].mOptionsArray[1].mMenuPageTarget = kMenuPage;
+
+    // RESUME SAVED STATUS named as the page it opens; the Japanese text stays, the port has no translation for it.
+    const struct
+    {
+        s32 mPage;
+        s32 mOption;
+    } kLoadGame[] = {{MENUPAGE_PLAY, 1}, {MENUPAGE_RESULTS_PLAYER_QUIT, 0}, {MENUPAGE_DEAD, 0}, {MENUPAGE_AREA_COMPLETE, 1}};
+    for (s32 i = 0; i < 4 && !gText_0x14->LangIsJapanese(); i++)
+    {
+        MenuItem& option = pFrontend->mMenuPagesArray[kLoadGame[i].mPage].mOptionsArray[kLoadGame[i].mOption];
+        wcsncpy(option.mOptionNameStr, PortSettings::Translate(L"LOAD GAME"), 50);
+        option.mOptionNameStr[49] = 0;
+        if (kLoadGame[i].mPage != MENUPAGE_PLAY)
+        {
+            option.mXPos = pFrontend->GetCenteredXPos(option.mOptionNameStr, option.mFontType, 320);
+        }
+    }
 }
 
 bool Update(Frontend* pFrontend)

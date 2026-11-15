@@ -166,7 +166,8 @@ Saves are kept per city, in `player/`:
 - RETRY JOBS (`port_retry`) keeps a checkpoint taken as a job or a kill frenzy starts. After a failure,
   the pause menu offers RETRY JOB or RETRY FRENZY (RESTART while it runs), with the job's name, the
   money then and how long ago. Passing it, a church save or a new game deletes the checkpoint.
-- RESUME SAVED STATUS opens LOAD GAME, even for a single save: a tab per city (Left and
+- LOAD GAME (the original's RESUME SAVED STATUS, on the Play, quit, dead and area complete pages)
+  lists the saves, even a single one: a tab per city (Left and
   Right, Q and E, or LB and RB), each save with its money, jobs passed and date, newest first.
 - With AUTOSAVE on, a new game in a city that has an autosave warns first: YOUR DOWNTOWN AUTOSAVE
   WILL BE REPLACED, CONTINUE or CANCEL.
