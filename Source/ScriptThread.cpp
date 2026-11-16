@@ -6800,6 +6800,15 @@ void ScriptThread::Handle_DO_BASIC_KF()
                 gHud_2B00->mMessage.ShowMessage(gText_0x14->Find("kffail"), hud_message_priority::important_3);
                 ++*gScriptManager->mSecretsFailed;
                 gRoot_sound.PlayVoice(voice_line::frenzyfail_18);
+#if defined(GTA2_PORT)
+                // Port: FRENZY RESPAWN, a failed frenzy comes back on the map, as a failed job's phone stays. Its thread
+                // ends as at its RETURN, before Downtown's tank frenzies lock their tank.
+                if (PortRetry::FrenzyFailed(gBasePtr->mCmdThis))
+                {
+                    ScriptThread::EndCmd();
+                    return;
+                }
+#endif
             }
             ScriptThread::Next(gBasePtr);
         }

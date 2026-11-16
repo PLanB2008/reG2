@@ -60,6 +60,9 @@ struct Sample
 const s32 kNumSamples = 12;
 const u32 kSampleSteps = 30;
 const f32 kMinTriggerDistance = 2;
+// FRENZY RESPAWN: a new frenzy car only that far from the player and the old car, as creating it moves the cars it
+// overlaps to a road and removes the peds, the player too (Sprite::ResolveCollisionWithCarPedOrObject).
+const f32 kClearCarSpot = 3;
 // Further in a second: a teleport, the spots before it are of no use.
 const f32 kMaxSampleDistance = 20;
 // Cars catch fire from there (Car::AccumulateDamage).
@@ -329,6 +332,59 @@ void AfterStep()
     {
         Relaunch();
     }
+}
+
+bool FrenzyFailed(u16 doCmd)
+{
+    // The template's START_BASIC_KF and START_BONUS come just before its DO_BASIC_KF in the three cities' scripts.
+    const u16 start = doCmd - 2;
+    const SCR_START_BASIC_KF_TEMPLATE* pFrenzy = static_cast<const SCR_START_BASIC_KF_TEMPLATE*>(gScriptManager->GetBasePointer(start));
+    if (!PortSettings::KfRespawn() || !InGame() || pFrenzy->mType != SCRCMD_START_BASIC_KF)
+    {
+        return false;
+    }
+    for (u32 i = 0; i < GTA2_COUNTOF(gScriptManager->mBasicKf); i++)
+    {
+        if (gScriptManager->mBasicKf[i] == start)
+        {
+            gGameSave.mCarAndScriptData.mStartedBasicKfMask &= ~(1 << i);
+        }
+    }
+    // A new skull or car as the level's start creates them (ScriptThread::ExecOpCode); the old car locks the player
+    // out and despawns as traffic does, or stays the frenzy's while it or the player is on the new one's spot.
+    SCR_POINTER* pIcon = static_cast<SCR_POINTER*>(gScriptManager->GetBasePointer(pFrenzy->mObjname));
+    ScriptThread thread;
+    if (pIcon->mType != SCRCMD_PARKED_CAR_DECSET_3D)
+    {
+        thread.SCRCMD_OBJ_DECSET_2D_3D(reinterpret_cast<SCR_OBJ_DATA*>(pIcon), pIcon);
+    }
+    else
+    {
+        Car* pOld = pIcon->mCar;
+        PortSaves::Spot player;
+        PortSaves::GetSpot(&player);
+        PortSaves::Spot old = player;
+        PortSaves::Spot spot = player;
+        spot.mX = reinterpret_cast<SCR_CAR_DATA_DEC*>(pIcon)->mPos.x;
+        spot.mY = reinterpret_cast<SCR_CAR_DATA_DEC*>(pIcon)->mPos.y;
+        if (pOld && pOld->mCarSprite)
+        {
+            old.mX = pOld->mCarSprite->GetXPos();
+            old.mY = pOld->mCarSprite->GetYPos();
+        }
+        if (Distance(player, spot) > kClearCarSpot && Distance(old, spot) > kClearCarSpot)
+        {
+            if (pOld && pOld->mDoorLock != Car_Door_Lock::locked_permanently_4)
+            {
+                pOld->mDoorLock = Car_Door_Lock::lockout_player_5;
+            }
+            thread.DeallocOrDeleteItem(pFrenzy->mObjname);
+            thread.SCRCMD_PARKED_CAR_DECSET(pIcon);
+        }
+    }
+    thread.EnableThread(pFrenzy->mTriggername);
+    Log("frenzy back");
+    return true;
 }
 
 bool LastSteadySpot(PortSaves::Spot* pSpot)
