@@ -115,7 +115,8 @@ bool Autosave();
 // RETRY JOBS: a checkpoint before each job and kill frenzy, to go back to after a failure (retry.hpp).
 bool Retry();
 
-// A line under the page that says what the setting does, NULL if none.
+// What the setting does, or its value where that is not plain, on two lines at most under the page; NULL if
+// nothing. A setting with help has it for every value.
 const wchar_t* Help(Id id);
 
 // SAFE AREA: the part of the screen's width or height kept clear at each edge, 0 to 0.1.

@@ -646,7 +646,8 @@ void DrawRequirement(const Item& item, f32 x, f32 y)
 {
     const PortSettings::Id requirement = PortSettings::Requirement(static_cast<PortSettings::Id>(item.mArg));
     wchar_t text[64];
-    const wchar_t* pName = requirement == PortSettings::kLighting ? L"DAY-NIGHT CYCLE" : PortSettings::Name(requirement);
+    const wchar_t* pName = requirement == PortSettings::kLighting ? L"DAY-NIGHT CYCLE"
+                                                                  : (requirement == PortSettings::kControls ? L"TWIN STICK" : PortSettings::Name(requirement));
     swprintf(text, L"%ls %ls", Translate(L"NEEDS"), Translate(pName));
     Text(text, x, y, MenuFont());
 }
@@ -920,6 +921,11 @@ const f32 kTitleStep = 14;
 const f32 kTitleRuleY = 9;
 // The frontend's hints, and the lowest the pause menu's go.
 const f32 kHintsY = 440;
+// The frontend's logos in the bottom corners, and the bottom of a line's letters.
+const f32 kLogosTop = 402;
+const f32 kLeftLogoRight = 66;
+const f32 kRightLogoLeft = 556;
+const f32 kTextBottom = 14;
 const f32 kGapStep = 24;
 const f32 kSaveSpace = 4;
 const f32 kTabsStep = 46;
@@ -952,20 +958,23 @@ void DrawTitle(const wchar_t* pTitle, f32 x, f32 y, f32 right)
     Rect(x + width + 6, y + kTitleRuleY, right, y + kTitleRuleY + 1, 0x7A1A1A);
 }
 
-// Dim, on two lines of about the same length if it is wider than the page.
-void DrawHelp(const wchar_t* pText, f32 x, f32 y, f32 width)
+// Dim, on two lines of about the same length if it is wider than right - x; further left, down to left, if a line
+// still is.
+void DrawHelp(const wchar_t* pText, f32 x, f32 y, f32 left, f32 right)
 {
     const s16 font = MenuFont();
     wchar_t first[96];
     wcsncpy(first, pText, 95);
     first[95] = 0;
     const wchar_t* pSecond = L"";
-    const s32 split = Width(pText, font) > width ? BalancedSplit(first, 0) : -1;
+    const s32 split = Width(pText, font) > right - x ? BalancedSplit(first, 0) : -1;
     if (split >= 0)
     {
         first[split] = 0;
         pSecond = first + split + 1;
     }
+    const f32 longest = Max(Width(first, font), Width(pSecond, font));
+    x = Max(left, x < right - longest ? x : right - longest);
     Text(first, x, y, font, false, true);
     Text(pSecond, x, y + kLineStep, font, false, true);
 }
@@ -1649,7 +1658,12 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
     GetLayout(&layout);
     const s16 normal = MenuFont();
     const f32 underPage = layout.mUnderPage;
-    const f32 hintsY = port_GameRunning() ? layout.mBottom + kLineStep : kHintsY;
+    const bool inGame = port_GameRunning();
+    const f32 hintsY = inGame ? layout.mBottom + kLineStep : kHintsY;
+    // The help and requirement lines inside the panel, or between the frontend's logos once that low.
+    const bool logos = !inGame && underPage + kLineStep + kTextBottom > kLogosTop;
+    const f32 helpLeft = inGame ? layout.mPanelLeft + 10 : (logos ? kLeftLogoRight : 20);
+    const f32 helpRight = logos ? kRightLogoLeft : layout.mPanelRight - 10;
     if (panel)
     {
         Rect(layout.mPanelLeft, kGamePanelTop, layout.mPanelRight, hintsY + kGameListTop - kGamePanelTop, 0);
@@ -1693,12 +1707,12 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
         Text(texts[0], valueX, y, normal, selected, dim);
         if (selected && dim)
         {
-            DrawRequirement(item, layout.mX, underPage);
+            DrawRequirement(item, Max(layout.mX, helpLeft), underPage);
         }
         const wchar_t* pHelp = item.mKind == kSetting ? PortSettings::Help(static_cast<PortSettings::Id>(item.mArg)) : NULL;
         if (selected && !dim && pHelp)
         {
-            DrawHelp(Translate(pHelp), layout.mX, underPage, layout.mPanelRight - 10 - layout.mX);
+            DrawHelp(Translate(pHelp), Max(layout.mX, helpLeft), underPage, helpLeft, helpRight);
         }
         for (s32 c = 1; c < layout.mColumns && (item.mKind == kBinding || item.mKind == kSave); c++)
         {
