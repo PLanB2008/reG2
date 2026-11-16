@@ -73,6 +73,7 @@ struct Item
     Kind mKind;
     s32 mArg; // page, setting or control
     bool mGap; // set apart from the item above
+    const wchar_t* mTitle; // its group's title above it, in English, NULL if none
 };
 
 const s32 kMaxItems = 16;
@@ -152,13 +153,22 @@ struct KeyName
 };
 std::vector<KeyName> sKeyNames;
 
-// A page of settings, then BACK.
+// A page of settings, each group's title over its first one, then BACK. A group without settings shows nothing.
 s32 SettingsPage(Item* pItems, const PortSettings::Id* pIds, s32 count)
 {
     s32 n = 0;
-    for (; n < count; n++)
+    const wchar_t* pTitle = NULL;
+    for (s32 i = 0; i < count; i++)
     {
-        pItems[n] = Item{kSetting, pIds[n], false};
+        if (PortSettings::IsGroup(pIds[i]))
+        {
+            pTitle = PortSettings::Name(pIds[i]);
+        }
+        else
+        {
+            pItems[n++] = Item{kSetting, pIds[i], false, pTitle};
+            pTitle = NULL;
+        }
     }
     pItems[n++] = Item{kBack, 0, true};
     return n;
@@ -884,6 +894,8 @@ struct Layout
     f32 mLineStep;
     f32 mPanelLeft;
     f32 mPanelRight;
+    f32 mUnderPage; // the help's or requirement's first line
+    f32 mBottom; // the page's, with the two lines of help it has room for
 };
 
 // The first line's top: under the frontend's logo, or near the top of the pause menu's panel, which
@@ -900,8 +912,14 @@ f32 ListTop()
 }
 
 // From a line's top to the next, or to one set apart; a save's line, and the space after it; from the saves page's
-// tabs to its first line.
+// tabs to its first line. A page that would reach the hints has its lines closer, down to kMinLineStep.
 const f32 kLineStep = 16;
+const f32 kMinLineStep = 14;
+// The space a group's title takes above its first line, half a line more unless it tops the page, and its rule's height.
+const f32 kTitleStep = 14;
+const f32 kTitleRuleY = 9;
+// The frontend's hints, and the lowest the pause menu's go.
+const f32 kHintsY = 440;
 const f32 kGapStep = 24;
 const f32 kSaveSpace = 4;
 const f32 kTabsStep = 46;
@@ -919,6 +937,20 @@ f32 Height(const Item& item, f32 lineStep)
 
 // From a setting's value to the centre of the arrows the mouse changes it with.
 const f32 kArrowGap = 14;
+
+// A group's title in the frontend's small red and white font, a third larger as on the welcome screen, with a dark red
+// rule after it up to right.
+void DrawTitle(const wchar_t* pTitle, f32 x, f32 y, f32 right)
+{
+    const f32 size = 4.0f / 3;
+    wchar_t text[kTextLength];
+    wcsncpy(text, pTitle, kTextLength - 1);
+    text[kTextLength - 1] = 0;
+    DrawString(text, Fx(sLeft + x * sScale), Fx(sTop + y * sScale), gFrontendFont6, Fx(sScale * size), palette_types_enum::sprites_2,
+               0, 0, 0);
+    const f32 width = Frontend::GetMaxTextWidth(text, gFrontendFont6) * size;
+    Rect(x + width + 6, y + kTitleRuleY, right, y + kTitleRuleY + 1, 0x7A1A1A);
+}
 
 // Dim, on two lines of about the same length if it is wider than the page.
 void DrawHelp(const wchar_t* pText, f32 x, f32 y, f32 width)
@@ -1019,19 +1051,37 @@ void GetLayout(Layout* pLayout)
     }
     pLayout->mPanelLeft = pLayout->mX < 60 ? pLayout->mX - 20 : 40;
     pLayout->mPanelRight = Max(600, right - shift + (controls || saves ? 20 : kArrowGap + 16));
-    // The controls page closer, its last line above the frontend's left logo.
-    pLayout->mLineStep = controls ? kLineStep - 1 : kLineStep;
-    // BACK under the statistics; the saves under the tabs, BACK under NO SAVE.
-    f32 y = ListTop() + (sPage == kStatsPage ? sStatRows * kStatStep + kGapStep - kLineStep : 0);
-    y += saves ? (count == 1 ? kTabsStep - kHeadingsStep + kGapStep : kTabsStep) : 0;
+    // In game the hints go under the page, on a panel that ends with them, and two lines are kept under the page for
+    // a setting's help or requirement.
+    bool help = false;
     for (s32 i = 0; i < count; i++)
     {
-        if (i)
+        const PortSettings::Id id = static_cast<PortSettings::Id>(pItems[i].mArg);
+        help = help || (pItems[i].mKind == kSetting && (PortSettings::Help(id) || PortSettings::Requirement(id) != PortSettings::kCount));
+    }
+    const f32 lowest = port_GameRunning() ? kHintsY - kLineStep : kHintsY;
+    // The controls page closer, its last line above the frontend's left logo.
+    for (f32 step = controls ? kLineStep - 1 : kLineStep;; step--)
+    {
+        pLayout->mLineStep = step;
+        // BACK under the statistics; the saves under the tabs, BACK under NO SAVE.
+        f32 y = ListTop() + (sPage == kStatsPage ? sStatRows * kStatStep + kGapStep - kLineStep : 0);
+        y += saves ? (count == 1 ? kTabsStep - kHeadingsStep + kGapStep : kTabsStep) : 0;
+        for (s32 i = 0; i < count; i++)
         {
-            y += (pItems[i].mGap ? (controls ? kGapStep - 4 : kGapStep) : pLayout->mLineStep) +
-                Height(pItems[i - 1], pLayout->mLineStep) - pLayout->mLineStep;
+            if (i)
+            {
+                y += (pItems[i].mGap ? (controls ? kGapStep - 4 : kGapStep) : step) + Height(pItems[i - 1], step) - step;
+            }
+            y += pItems[i].mTitle ? kTitleStep + (i ? step / 2 : 0) : 0;
+            pLayout->mY[i] = y;
         }
-        pLayout->mY[i] = y;
+        pLayout->mUnderPage = y + kGapStep + 4;
+        pLayout->mBottom = Max(y + Height(pItems[count - 1], step), help ? pLayout->mUnderPage + kLineStep * 2 : 0);
+        if (pLayout->mBottom <= lowest || step <= kMinLineStep)
+        {
+            break;
+        }
     }
 }
 
@@ -1598,19 +1648,8 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
     Layout layout;
     GetLayout(&layout);
     const s16 normal = MenuFont();
-    // In game the keys go under the page and the two lines a setting's help or requirement takes, on a
-    // panel that ends with them.
-    const f32 underPage = layout.mY[layout.mCount - 1] + kGapStep + 4;
-    f32 bottom = layout.mY[layout.mCount - 1] + Height(layout.mItems[layout.mCount - 1], layout.mLineStep);
-    for (s32 i = 0; i < layout.mCount; i++)
-    {
-        const PortSettings::Id id = static_cast<PortSettings::Id>(layout.mItems[i].mArg);
-        if (layout.mItems[i].mKind == kSetting && (PortSettings::Help(id) || PortSettings::Requirement(id) != PortSettings::kCount))
-        {
-            bottom = Max(bottom, underPage + kLineStep * 2);
-        }
-    }
-    const f32 hintsY = port_GameRunning() ? bottom + kLineStep : 440;
+    const f32 underPage = layout.mUnderPage;
+    const f32 hintsY = port_GameRunning() ? layout.mBottom + kLineStep : kHintsY;
     if (panel)
     {
         Rect(layout.mPanelLeft, kGamePanelTop, layout.mPanelRight, hintsY + kGameListTop - kGamePanelTop, 0);
@@ -1631,6 +1670,10 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
         const bool selected = i == sSelected[sPage];
         const bool dim = !IsEnabled(item);
         ItemValues(item, texts);
+        if (item.mTitle)
+        {
+            DrawTitle(Translate(item.mTitle), layout.mX, y - kTitleStep, layout.mPanelRight - 30);
+        }
         if (item.mKind == kRetry)
         {
             const s32 rows = RetryRows(texts);
@@ -1692,7 +1735,7 @@ void DrawChoiceHints()
     const bool pad = PadMode();
     const Hint kHints[] = {{{pad ? PortPrompts::kPadSouth : PortPrompts::kKeyEnter, kNoGlyph}, L"ENTER", L"SELECT"},
                            {{pad ? PortPrompts::kPadEast : PortPrompts::kKeyEscape, kNoGlyph}, L"ESC", L"BACK"}};
-    DrawHintRow(kHints, 2, 440);
+    DrawHintRow(kHints, 2, kHintsY);
 }
 
 f32 DrawHintGlyph(PortPrompts::Glyph glyph, f32 x, f32 y)

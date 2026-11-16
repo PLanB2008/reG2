@@ -43,9 +43,17 @@ enum Id
     kAutosave,
     kRetry,
     kCount,
+    // Group titles in the pages' lists: the settings after one, up to the next, are under it.
+    kSavesGroup,
+    kTimeOfDayGroup,
+    kLightingGroup,
+    kImageGroup,
+    kScreenGroup,
+    kViewGroup,
+    kGroupsEnd,
 };
 
-// The settings of each options page, in their order.
+// The settings of each options page, in their order, with their group titles.
 extern const Id kGameSettings[];
 extern const s32 kNumGameSettings;
 extern const Id kGraphicsSettings[];
@@ -61,7 +69,8 @@ const wchar_t* Translate(const wchar_t* pEnglish);
 // data\<code>.gxt is there: the 2004 freeware has only English and Spanish.
 bool LanguageInstalled(char code);
 
-// In English, as the key to Translate.
+bool IsGroup(Id id);
+// In English, as the key to Translate; a group's title.
 const wchar_t* Name(Id id);
 void Value(Id id, wchar_t* pOut);
 // The numeric settings, shown as sliders: false for the others.

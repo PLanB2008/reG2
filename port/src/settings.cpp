@@ -35,22 +35,26 @@ void port_SetFullscreenModeIndex(int index);
 namespace PortSettings
 {
 // No DAY-NIGHT CYCLE without SDL: its settings would stay greyed.
-const Id kGameSettings[] = {kLanguage, kTextSpeed, kAutosave, kRetry, kExplodingScores, kBlood, kLighting,
-#if defined(GTA2_PORT_SDL)
-                            kDayLength, kStartTime, kClock,
-#endif
+const Id kGameSettings[] = {kLanguage, kTextSpeed, kExplodingScores, kBlood,
 #if defined(GTA2_UPDATE_CHECK)
                             kUpdateCheck,
+#endif
+                            kSavesGroup, kAutosave, kRetry,
+                            kTimeOfDayGroup, kLighting,
+#if defined(GTA2_PORT_SDL)
+                            kDayLength, kStartTime, kClock,
 #endif
 };
 const s32 kNumGameSettings = sizeof(kGameSettings) / sizeof(kGameSettings[0]);
 #if defined(GTA2_PORT_SDL)
-const Id kGraphicsSettings[] =
-    {kPreset, kTrueColour, kPerPixelLighting, kShadows, kHeadlights, kLightEffects, kBloom, kTextureFilter, kAntiAliasing};
-const Id kDisplaySettings[] = {kFullScreen, kDisplayMode, kVsync, kFrameLimit, kShowFps, kBrightness, kZoom, kHudScale, kSafeArea};
+const Id kGraphicsSettings[] = {kPreset,
+                                kLightingGroup, kPerPixelLighting, kShadows, kHeadlights, kLightEffects, kBloom,
+                                kImageGroup, kTrueColour, kTextureFilter, kAntiAliasing};
+const Id kDisplaySettings[] = {kScreenGroup, kFullScreen, kDisplayMode, kVsync, kFrameLimit, kShowFps,
+                               kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea};
 #else
 const Id kGraphicsSettings[] = {kHeadlights, kLightEffects};
-const Id kDisplaySettings[] = {kFullScreen, kFrameLimit, kShowFps, kBrightness, kZoom, kHudScale, kSafeArea};
+const Id kDisplaySettings[] = {kScreenGroup, kFullScreen, kFrameLimit, kShowFps, kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea};
 #endif
 const s32 kNumGraphicsSettings = sizeof(kGraphicsSettings) / sizeof(kGraphicsSettings[0]);
 const s32 kNumDisplaySettings = sizeof(kDisplaySettings) / sizeof(kDisplaySettings[0]);
@@ -63,6 +67,7 @@ const wchar_t* const kNames[kCount] = {L"SOUND EFFECTS", L"MUSIC", L"3D SOUND", 
                                        L"FULL SCREEN", L"BRIGHTNESS", L"LIGHTING", L"EXPLODING SCORES", L"FRAME LIMIT",
                                        L"TRUE COLOUR", L"BLOOM", L"PIXEL LIGHTING", L"CAR HEADLIGHTS",
                                        L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS"};
+const wchar_t* const kGroupNames[kGroupsEnd - kCount - 1] = {L"SAVES", L"TIME OF DAY", L"LIGHTING", L"IMAGE", L"SCREEN", L"VIEW"};
 
 struct Language
 {
@@ -135,6 +140,11 @@ const Translation kTranslations[] = {
     {L"YOUR %ls AUTOSAVE WILL BE REPLACED", NULL,
      {L"VOTRE SAUVEGARDE AUTO DE %ls SERA REMPLACEE", L"DEIN AUTOSPEICHERSTAND VON %ls WIRD ERSETZT",
       L"IL TUO SALVATAGGIO AUTO DI %ls SARÀ SOSTITUITO", L"TU GUARDADO AUTO DE %ls SERÁ REEMPLAZADO"}},
+    {L"SAVES", NULL, {L"SAUVEGARDES", L"SPEICHERN", L"SALVATAGGI", L"GUARDADO"}},
+    {L"TIME OF DAY", NULL, {L"HEURE DU JOUR", L"TAGESZEIT", L"ORA DEL GIORNO", L"HORA DEL DÍA"}},
+    {L"IMAGE", NULL, {L"IMAGE", L"BILD", L"IMMAGINE", L"IMAGEN"}},
+    {L"SCREEN", NULL, {L"ECRAN", L"BILDSCHIRM", L"SCHERMO", L"PANTALLA"}},
+    {L"VIEW", NULL, {L"VUE", L"ANSICHT", L"VISTA", L"VISTA"}},
     {L"CONTINUE", NULL, {L"CONTINUER", L"WEITER", L"CONTINUA", L"CONTINUAR"}},
     {L"SAVING", NULL, {L"SAUVEGARDE", L"SPEICHERN", L"SALVATAGGIO", L"GUARDANDO"}},
     {L"SAVE FAILED", NULL, {L"ECHEC DE LA SAUVEGARDE", L"SPEICHERN FEHLGESCHLAGEN", L"SALVATAGGIO FALLITO", L"ERROR AL GUARDAR"}},
@@ -596,9 +606,14 @@ const wchar_t* Translate(const wchar_t* pEnglish)
     return pEnglish;
 }
 
+bool IsGroup(Id id)
+{
+    return id > kCount;
+}
+
 const wchar_t* Name(Id id)
 {
-    return kNames[id];
+    return IsGroup(id) ? kGroupNames[id - kCount - 1] : kNames[id];
 }
 
 f32 HudScale()
