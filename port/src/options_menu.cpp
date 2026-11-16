@@ -674,9 +674,8 @@ bool Resume(Frontend* pFrontend)
 void AfterGame(Frontend* pFrontend)
 {
     char_type name[64];
-    PortSaves::CheckpointName(gGameSession.GetPlySlotIdx(), name, sizeof(name));
     PortSaves::Header header;
-    if (PortRetry::TakeRetry() && PortSaves::IsValid(name, &header) && IsLevel(pFrontend, header))
+    if (PortRetry::TakeRetry(name, sizeof(name)) && PortSaves::IsValid(name, &header) && IsLevel(pFrontend, header))
     {
         Boot(pFrontend, name);
     }
