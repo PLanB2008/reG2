@@ -151,6 +151,8 @@ be changed later. `GTA2_WELCOME=1` shows the screen again.
 
 OPTIONS has five pages: GAME (language, text speed, AUTOSAVE, RETRY JOBS, blood, lighting and the
 day and night cycle), GRAPHICS, DISPLAY (full screen, frame rate, zoom, HUD), SOUND and CONTROLS.
+Their settings are grouped under small titles, and the less common ones say under the page what they
+do, or what their value does (PRESET, LIGHTING, FRAME LIMIT, CONTROLS, AIM CAMERA).
 In a game, Escape opens the same menu as a pause menu, with RESUME, STATISTICS (the original pause
 screen's lines) and QUIT GAME. The hints under the pages show the keys, or once a pad is used its
 buttons: PlayStation's symbols on a PlayStation pad, otherwise Xbox's pictures with the letters
