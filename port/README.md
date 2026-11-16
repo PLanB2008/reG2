@@ -152,7 +152,7 @@ be changed later. `GTA2_WELCOME=1` shows the screen again.
 OPTIONS has five pages: GAME (language, text speed, AUTOSAVE, RETRY JOBS, blood, lighting and the
 day and night cycle), GRAPHICS, DISPLAY (full screen, frame rate, zoom, HUD), SOUND and CONTROLS.
 In a game, Escape opens the same menu as a pause menu, with RESUME, STATISTICS (the original pause
-screen's lines) and QUIT GAME. The hints under the pages show the keys, or once a pad is used its
+screen's lines), LOAD GAME and QUIT GAME. The hints under the pages show the keys, or once a pad is used its
 buttons: PlayStation's symbols on a PlayStation pad, otherwise Xbox's pictures with the letters
 printed on the pad (a Nintendo pad's bottom button is B), from SDL's pad type and button labels.
 
@@ -169,6 +169,8 @@ Saves are kept per city, in `player/`:
 - LOAD GAME (the original's RESUME SAVED STATUS, on the Play, quit, dead and area complete pages)
   lists the saves, even a single one: a tab per city (Left and
   Right, Q and E, or LB and RB), each save with its money, jobs passed and date, newest first.
+  The pause menu's LOAD GAME (not in a bonus stage or a network game) first warns that the progress since the
+  last save will be lost; the game it leaves is neither scored nor autosaved, as for RETRY.
 - With AUTOSAVE on, a new game in a city that has an autosave warns first: YOUR DOWNTOWN AUTOSAVE
   WILL BE REPLACED, CONTINUE or CANCEL.
 

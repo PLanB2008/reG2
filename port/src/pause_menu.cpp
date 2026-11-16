@@ -16,8 +16,10 @@
 #include "gbh_graphics.hpp"
 #include "gtx_0x106C.hpp"
 #include "menu.hpp"
+#include "options_menu.hpp"
 #include "registry.hpp"
 #include "settings.hpp"
+#include "winmain.hpp"
 #include <stdio.h>
 #include <vector>
 
@@ -232,10 +234,16 @@ void Close()
     }
 }
 
+bool Closes(PortMenu::Result result)
+{
+    return result == PortMenu::kClosed || result == PortMenu::kQuitGame || result == PortMenu::kRetryCheckpoint ||
+        result == PortMenu::kLoadSave;
+}
+
 void Apply(PortMenu::Result result)
 {
     PlaySound(result);
-    if (result == PortMenu::kClosed || result == PortMenu::kQuitGame || result == PortMenu::kRetryCheckpoint)
+    if (Closes(result))
     {
         Close();
     }
@@ -247,6 +255,11 @@ void Apply(PortMenu::Result result)
     if (result == PortMenu::kRetryCheckpoint)
     {
         PortRetry::Retry();
+    }
+    // As RETRY, no autosave: it could replace the save chosen.
+    if (result == PortMenu::kLoadSave)
+    {
+        PortRetry::Retry(PortMenu::SelectedSave().mFileName);
     }
 }
 
@@ -322,6 +335,12 @@ bool HandleKey(s32 action, Player* pPlayer)
         }
         u8 sections[7];
         PortMenu::OfferStatistics(StatSections(sections));
+        if (!PortSaves::Replaying() && !IsNetworkGame() && !gGameSession.IsBonusStage())
+        {
+            PortSaves::Entry saves[PortSaves::kMaxSaves];
+            bool cities[PortSaves::kNumCities];
+            PortMenu::OfferSaves(saves, PortOptionsMenu::ListSaves(NULL, saves, cities), cities);
+        }
         if (!gGame_0x40->IsPaused())
         {
             gGame_0x40->Pause();
@@ -415,7 +434,7 @@ void Draw()
     const f32 menuTop = top + 10 * scale;
     UseFrontendStyle(false);
     const PortMenu::Result result = PortMenu::HandleMouse(scale, left, menuTop);
-    if (result == PortMenu::kClosed || result == PortMenu::kQuitGame || result == PortMenu::kRetryCheckpoint)
+    if (Closes(result))
     {
         UseGameStyle();
         Apply(result);

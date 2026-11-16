@@ -52,6 +52,7 @@ enum Page
     kControlsPage,
     kStatsPage,
     kSavesPage,
+    kLoadPage,
     kNumPages,
 };
 
@@ -66,18 +67,19 @@ enum Kind
     kQuit,
     kSave,
     kRetry,
+    kContinue,
 };
 
 struct Item
 {
     Kind mKind;
-    s32 mArg; // page, setting or control
+    s32 mArg; // page, setting or control; 1 for a BACK named CANCEL
     bool mGap; // set apart from the item above
 };
 
 const s32 kMaxItems = 16;
 const wchar_t* const kTitles[kNumPages] =
-    {L"OPTIONS", L"GAME", L"GRAPHICS", L"DISPLAY", L"SOUND", L"CONTROLS", L"STATISTICS", L"LOAD GAME"};
+    {L"OPTIONS", L"GAME", L"GRAPHICS", L"DISPLAY", L"SOUND", L"CONTROLS", L"STATISTICS", L"LOAD GAME", L"LOAD GAME"};
 
 const s32 kNumControls = 12;
 const s32 kDefaultControls[kNumControls] = {DIK_UP, DIK_DOWN, DIK_LEFT, DIK_RIGHT, DIK_LCONTROL, DIK_RETURN,
@@ -183,6 +185,10 @@ s32 Items(Page page, Item* pItems)
             {
                 pItems[n++] = Item{kGoTo, kStatsPage, false};
             }
+            if (inGame && sNumSaves)
+            {
+                pItems[n++] = Item{kGoTo, kLoadPage, false};
+            }
             for (s32 page = kGamePage; page <= kControlsPage; page++)
             {
                 pItems[n++] = Item{kGoTo, page, inGame && page == kGamePage};
@@ -209,6 +215,10 @@ s32 Items(Page page, Item* pItems)
                 }
             }
             pItems[n++] = Item{kBack, 0, true};
+            break;
+        case kLoadPage:
+            pItems[n++] = Item{kContinue, 0, false};
+            pItems[n++] = Item{kBack, 1, false};
             break;
         default:
             for (s32 i = 0; i < kNumControls; i++)
@@ -260,8 +270,10 @@ const wchar_t* EnglishName(const Item& item)
                 return sRetry == PortSaves::kBeforeFrenzy ? L"RESTART FRENZY" : L"RESTART JOB";
             }
             return sRetry == PortSaves::kBeforeFrenzy ? L"RETRY FRENZY" : L"RETRY JOB";
+        case kContinue:
+            return L"CONTINUE";
         default:
-            return L"BACK";
+            return item.mArg ? L"CANCEL" : L"BACK";
     }
 }
 
@@ -483,12 +495,14 @@ void GoTo(Page page)
         sColumn = PadMode() ? kPadColumn : kKeyColumn;
     }
     sPage = page;
-    sSelected[page] = 0;
+    // LOAD GAME's question on CANCEL, as the frontend's.
+    sSelected[page] = page == kLoadPage ? 1 : 0;
 }
 
+// In game the saves page goes back to the pause menu.
 Result Back()
 {
-    if (sPage == kMainPage || sPage == kSavesPage)
+    if (sPage == kMainPage || (sPage == kSavesPage && !port_GameRunning()))
     {
         return kClosed;
     }
@@ -920,8 +934,8 @@ f32 Height(const Item& item, f32 lineStep)
 // From a setting's value to the centre of the arrows the mouse changes it with.
 const f32 kArrowGap = 14;
 
-// Dim, on two lines of about the same length if it is wider than the page.
-void DrawHelp(const wchar_t* pText, f32 x, f32 y, f32 width)
+// Dim unless asked, on two lines of about the same length if it is wider than the page.
+void DrawHelp(const wchar_t* pText, f32 x, f32 y, f32 width, bool dim = true)
 {
     const s16 font = MenuFont();
     wchar_t first[96];
@@ -934,8 +948,8 @@ void DrawHelp(const wchar_t* pText, f32 x, f32 y, f32 width)
         first[split] = 0;
         pSecond = first + split + 1;
     }
-    Text(first, x, y, font, false, true);
-    Text(pSecond, x, y + kLineStep, font, false, true);
+    Text(first, x, y, font, false, dim);
+    Text(pSecond, x, y + kLineStep, font, false, dim);
 }
 
 void GetLayout(Layout* pLayout)
@@ -1021,8 +1035,9 @@ void GetLayout(Layout* pLayout)
     pLayout->mPanelRight = Max(600, right - shift + (controls || saves ? 20 : kArrowGap + 16));
     // The controls page closer, its last line above the frontend's left logo.
     pLayout->mLineStep = controls ? kLineStep - 1 : kLineStep;
-    // BACK under the statistics; the saves under the tabs, BACK under NO SAVE.
+    // BACK under the statistics; the saves under the tabs, BACK under NO SAVE; LOAD GAME's choices under its two lines.
     f32 y = ListTop() + (sPage == kStatsPage ? sStatRows * kStatStep + kGapStep - kLineStep : 0);
+    y += sPage == kLoadPage ? kLineStep + kGapStep : 0;
     y += saves ? (count == 1 ? kTabsStep - kHeadingsStep + kGapStep : kTabsStep) : 0;
     for (s32 i = 0; i < count; i++)
     {
@@ -1297,6 +1312,7 @@ void Open()
     sSelected[kMainPage] = 0;
     sRetry = PortSaves::kNoCheckpoint;
     sStatRows = 0;
+    sNumSaves = 0;
     sCapturing = -1;
     sDragging = false;
     DiscardMouse();
@@ -1327,9 +1343,8 @@ bool OnStatistics(f32* pTop, f32* pStep)
     return sPage == kStatsPage;
 }
 
-void OpenSaves(const PortSaves::Entry* pEntries, s32 count, const bool* pCities)
+void OfferSaves(const PortSaves::Entry* pEntries, s32 count, const bool* pCities)
 {
-    Open();
     sNumSaves = count < PortSaves::kMaxSaves ? count : PortSaves::kMaxSaves;
     memcpy(sSaves, pEntries, sNumSaves * sizeof(sSaves[0]));
     sTab = -1;
@@ -1343,8 +1358,13 @@ void OpenSaves(const PortSaves::Entry* pEntries, s32 count, const bool* pCities)
         sTab = sTab < 0 && sTabEnabled[c] ? c : sTab;
     }
     sTab = sNumSaves ? sSaves[0].mMainStage : (sTab < 0 ? 0 : sTab);
-    sPage = kSavesPage;
-    sSelected[kSavesPage] = 0;
+}
+
+void OpenSaves(const PortSaves::Entry* pEntries, s32 count, const bool* pCities)
+{
+    Open();
+    OfferSaves(pEntries, count, pCities);
+    GoTo(kSavesPage);
 }
 
 bool OnSaves()
@@ -1445,6 +1465,10 @@ Result HandleInput(Input input)
                     return kLoadSave;
                 case kRetry:
                     return kRetryCheckpoint;
+                case kContinue:
+                    GoTo(kSavesPage);
+                    sTab = sSaves[0].mMainStage;
+                    return kEntered;
                 default:
                     return kQuitGame;
             }
@@ -1622,6 +1646,11 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
     if (sPage == kSavesPage)
     {
         DrawTabs(layout);
+    }
+    if (sPage == kLoadPage)
+    {
+        const wchar_t* pQuestion = Translate(L"PROGRESS SINCE YOUR LAST SAVE WILL BE LOST");
+        DrawHelp(pQuestion, layout.mX, ListTop(), layout.mPanelRight - 10 - layout.mX, false);
     }
     wchar_t texts[kMaxTexts][kTextLength];
     for (s32 i = 0; i < layout.mCount; i++)
