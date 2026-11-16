@@ -53,6 +53,7 @@ enum Page
     kStatsPage,
     kSavesPage,
     kLoadPage,
+    kQuitPage,
     kNumPages,
 };
 
@@ -68,18 +69,19 @@ enum Kind
     kSave,
     kRetry,
     kContinue,
+    kSaveAndQuit,
 };
 
 struct Item
 {
     Kind mKind;
-    s32 mArg; // page, setting or control; 1 for a BACK named CANCEL
+    s32 mArg; // page, setting or control; 1 for a BACK named CANCEL, or a QUIT GAME named QUIT
     bool mGap; // set apart from the item above
 };
 
 const s32 kMaxItems = 16;
 const wchar_t* const kTitles[kNumPages] =
-    {L"OPTIONS", L"GAME", L"GRAPHICS", L"DISPLAY", L"SOUND", L"CONTROLS", L"STATISTICS", L"LOAD GAME", L"LOAD GAME"};
+    {L"OPTIONS", L"GAME", L"GRAPHICS", L"DISPLAY", L"SOUND", L"CONTROLS", L"STATISTICS", L"LOAD GAME", L"LOAD GAME", L"QUIT GAME"};
 
 const s32 kNumControls = 12;
 const s32 kDefaultControls[kNumControls] = {DIK_UP, DIK_DOWN, DIK_LEFT, DIK_RIGHT, DIK_LCONTROL, DIK_RETURN,
@@ -141,6 +143,9 @@ s32 sRetryMoney;
 long long sRetryTime;
 PortSaves::JobName sRetryJob;
 s32 sStatRows;
+// QUIT GAME's choices offered, and why SAVE AND QUIT is greyed, NULL if it is not.
+bool sQuitChoices;
+const wchar_t* sQuitBlocked;
 s32 sColumn; // a Column
 s32 sCapturing = -1; // control waiting for a key or pad input
 bool sDragging; // a slider's knob, with the left button held
@@ -220,6 +225,11 @@ s32 Items(Page page, Item* pItems)
             pItems[n++] = Item{kContinue, 0, false};
             pItems[n++] = Item{kBack, 1, false};
             break;
+        case kQuitPage:
+            pItems[n++] = Item{kSaveAndQuit, 0, false};
+            pItems[n++] = Item{kQuit, 1, false};
+            pItems[n++] = Item{kBack, 1, false};
+            break;
         default:
             for (s32 i = 0; i < kNumControls; i++)
             {
@@ -253,7 +263,9 @@ const wchar_t* EnglishName(const Item& item)
         case kResume:
             return L"RESUME";
         case kQuit:
-            return L"QUIT GAME";
+            return item.mArg ? L"QUIT" : L"QUIT GAME";
+        case kSaveAndQuit:
+            return L"SAVE AND QUIT";
         case kSave:
             switch (sSaves[item.mArg].mKind)
             {
@@ -495,8 +507,8 @@ void GoTo(Page page)
         sColumn = PadMode() ? kPadColumn : kKeyColumn;
     }
     sPage = page;
-    // LOAD GAME's question on CANCEL, as the frontend's.
-    sSelected[page] = page == kLoadPage ? 1 : 0;
+    // LOAD GAME's question on CANCEL, as the frontend's; QUIT GAME's choices on CANCEL if SAVE AND QUIT is greyed.
+    sSelected[page] = page == kLoadPage ? 1 : (page == kQuitPage && sQuitBlocked ? 2 : 0);
 }
 
 // In game the saves page goes back to the pause menu.
@@ -642,6 +654,10 @@ void DrawSlider(const Slider& slider, f32 x, f32 y, bool selected, bool dim)
 
 bool IsEnabled(const Item& item)
 {
+    if (item.mKind == kSaveAndQuit)
+    {
+        return !sQuitBlocked;
+    }
     return item.mKind != kSetting || PortSettings::Enabled(static_cast<PortSettings::Id>(item.mArg));
 }
 
@@ -1313,6 +1329,8 @@ void Open()
     sRetry = PortSaves::kNoCheckpoint;
     sStatRows = 0;
     sNumSaves = 0;
+    sQuitChoices = false;
+    sQuitBlocked = NULL;
     sCapturing = -1;
     sDragging = false;
     DiscardMouse();
@@ -1341,6 +1359,12 @@ bool OnStatistics(f32* pTop, f32* pStep)
     *pTop = ListTop();
     *pStep = kStatStep;
     return sPage == kStatsPage;
+}
+
+void OfferQuitChoices(const wchar_t* pBlocked)
+{
+    sQuitChoices = true;
+    sQuitBlocked = pBlocked;
 }
 
 void OfferSaves(const PortSaves::Entry* pEntries, s32 count, const bool* pCities)
@@ -1469,7 +1493,14 @@ Result HandleInput(Input input)
                     GoTo(kSavesPage);
                     sTab = sSaves[0].mMainStage;
                     return kEntered;
+                case kSaveAndQuit:
+                    return IsEnabled(item) ? kSaveAndQuitGame : kNothing;
                 default:
+                    if (sQuitChoices && !item.mArg)
+                    {
+                        GoTo(kQuitPage);
+                        return kEntered;
+                    }
                     return kQuitGame;
             }
         default:
@@ -1629,7 +1660,8 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
     for (s32 i = 0; i < layout.mCount; i++)
     {
         const PortSettings::Id id = static_cast<PortSettings::Id>(layout.mItems[i].mArg);
-        if (layout.mItems[i].mKind == kSetting && (PortSettings::Help(id) || PortSettings::Requirement(id) != PortSettings::kCount))
+        if ((layout.mItems[i].mKind == kSetting && (PortSettings::Help(id) || PortSettings::Requirement(id) != PortSettings::kCount)) ||
+            sPage == kQuitPage)
         {
             bottom = Max(bottom, underPage + kLineStep * 2);
         }
@@ -1677,12 +1709,15 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
         }
         const f32 valueX = layout.mColumnX[0] + TextOffset(item);
         Text(texts[0], valueX, y, normal, selected, dim);
-        if (selected && dim)
+        if (selected && dim && item.mKind == kSetting)
         {
             DrawRequirement(item, layout.mX, underPage);
         }
         const wchar_t* pHelp = item.mKind == kSetting ? PortSettings::Help(static_cast<PortSettings::Id>(item.mArg)) : NULL;
-        if (selected && !dim && pHelp)
+        // QUIT GAME's choices: why SAVE AND QUIT is greyed, what QUIT loses.
+        const wchar_t* pLost = L"PROGRESS SINCE YOUR LAST SAVE WILL BE LOST";
+        pHelp = item.mKind == kSaveAndQuit ? sQuitBlocked : (item.mKind == kQuit && item.mArg ? pLost : pHelp);
+        if (selected && (!dim || item.mKind != kSetting) && pHelp)
         {
             DrawHelp(Translate(pHelp), layout.mX, underPage, layout.mPanelRight - 10 - layout.mX);
         }

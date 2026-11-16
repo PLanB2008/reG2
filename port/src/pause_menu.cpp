@@ -237,7 +237,7 @@ void Close()
 bool Closes(PortMenu::Result result)
 {
     return result == PortMenu::kClosed || result == PortMenu::kQuitGame || result == PortMenu::kRetryCheckpoint ||
-        result == PortMenu::kLoadSave;
+        result == PortMenu::kLoadSave || result == PortMenu::kSaveAndQuitGame;
 }
 
 void Apply(PortMenu::Result result)
@@ -247,16 +247,15 @@ void Apply(PortMenu::Result result)
     {
         Close();
     }
-    if (result == PortMenu::kQuitGame)
+    // A failed save leaves the player in game, SAVE FAILED on the HUD.
+    if (result == PortMenu::kQuitGame || (result == PortMenu::kSaveAndQuitGame && PortAutosave::SaveToQuit()))
     {
-        PortAutosave::Quit("quit");
         gGame_0x40->ExitGameNoBonus(1, GameExitType::PlayerQuit_2);
     }
     if (result == PortMenu::kRetryCheckpoint)
     {
         PortRetry::Retry();
     }
-    // As RETRY, no autosave: it could replace the save chosen.
     if (result == PortMenu::kLoadSave)
     {
         PortRetry::Retry(PortMenu::SelectedSave().mFileName);
@@ -340,6 +339,10 @@ bool HandleKey(s32 action, Player* pPlayer)
             PortSaves::Entry saves[PortSaves::kMaxSaves];
             bool cities[PortSaves::kNumCities];
             PortMenu::OfferSaves(saves, PortOptionsMenu::ListSaves(NULL, saves, cities), cities);
+            if (PortSettings::Autosave())
+            {
+                PortMenu::OfferQuitChoices(PortAutosave::QuitSaveBlocked());
+            }
         }
         if (!gGame_0x40->IsPaused())
         {

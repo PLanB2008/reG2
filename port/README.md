@@ -159,10 +159,13 @@ printed on the pad (a Nintendo pad's bottom button is B), from SDL's pad type an
 Saves are kept per city, in `player/`:
 
 - A church save goes to `plyslotN.svg`, as in the original, and to a copy for its city.
-- AUTOSAVE (`port_autosave`) saves the city after each job or kill frenzy, once the player is safe,
-  as he leaves it through the exit arrow (a few steps back from it), and on QUIT GAME or closing the
-  window after one, or after two minutes of play. SAVING shows at the top of the screen, SAVE FAILED
-  in red if the file could not be written; the game goes on.
+- AUTOSAVE (`port_autosave`) saves the city after each job or kill frenzy, once the player is safe, and
+  as he leaves it through the exit arrow (a few steps back from it). SAVING shows at the top of the
+  screen, SAVE FAILED in red if the file could not be written; the game goes on. With it on, the pause
+  menu's QUIT GAME offers SAVE AND QUIT, QUIT and CANCEL. SAVE AND QUIT writes the autosave, then quits
+  (if the save fails, SAVE FAILED and the game goes on); it is greyed during a job or a frenzy, when
+  wasted, busted or burning (NOT NOW), or with no firm ground to save on (NOT HERE). QUIT and closing
+  the window save nothing.
 - RETRY JOBS (`port_retry`) keeps a checkpoint taken as a job or a kill frenzy starts. After a failure,
   the pause menu offers RETRY JOB or RETRY FRENZY (RESTART while it runs), with the job's name, the
   money then and how long ago. Passing it, a church save or a new game deletes the checkpoint.
@@ -170,7 +173,7 @@ Saves are kept per city, in `player/`:
   lists the saves, even a single one: a tab per city (Left and
   Right, Q and E, or LB and RB), each save with its money, jobs passed and date, newest first.
   The pause menu's LOAD GAME (not in a bonus stage or a network game) first warns that the progress since the
-  last save will be lost; the game it leaves is neither scored nor autosaved, as for RETRY.
+  last save will be lost; the game it leaves is not scored, as for RETRY.
 - With AUTOSAVE on, a new game in a city that has an autosave warns first: YOUR DOWNTOWN AUTOSAVE
   WILL BE REPLACED, CONTINUE or CANCEL.
 
