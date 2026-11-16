@@ -32,9 +32,9 @@ void Draw();
 // The pause menu's RETRY: right after a failure it comes selected; RESTART while the job or frenzy runs.
 bool JustFailed();
 bool Running();
-void Retry();
-// The game ends for RETRY.
+// The game ends, unscored, for the checkpoint or for that save (the pause menu's LOAD GAME).
+void Retry(const char_type* pFileName = NULL);
 bool Retrying();
-// The frontend is back after the game RETRY ended: true once, with the checkpoint to boot.
-bool TakeRetry();
+// The frontend is back after the game RETRY ended: true once, with the save to boot.
+bool TakeRetry(char_type* pFileName, size_t size);
 } // namespace PortRetry

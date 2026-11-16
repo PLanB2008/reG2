@@ -32,6 +32,7 @@ enum Result
     kQuitGame,
     kLoadSave,
     kRetryCheckpoint,
+    kSaveAndQuitGame,
 };
 
 // The gamepad gave the last input.
@@ -52,6 +53,11 @@ void Close();
 // The frontend's LOAD GAME page: the saves under a tab per city (unreached cities dim unless saved), on the newest
 // save. Left and right change the city; Back closes it; a save chosen gives kLoadSave.
 void OpenSaves(const PortSaves::Entry* pEntries, s32 count, const bool* pCities);
+// After Open in game, with AUTOSAVE: QUIT GAME offers SAVE AND QUIT (kSaveAndQuitGame), greyed with that reason (English)
+// if not NULL, QUIT and CANCEL.
+void OfferQuitChoices(const wchar_t* pBlocked);
+// After Open in game: LOAD GAME under STATISTICS if there is a save, a question then that page; Back goes back.
+void OfferSaves(const PortSaves::Entry* pEntries, s32 count, const bool* pCities);
 bool OnSaves();
 const PortSaves::Entry& SelectedSave();
 

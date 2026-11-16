@@ -35,9 +35,6 @@ const s32 kShowSteps = 45;
 const s32 kFailedSteps = 90;
 // The HUD font's red remap.
 const u16 kRed = 5;
-// Quitting saves once a job or frenzy ended, or after this much play: less is a look around, which must not
-// replace an autosave of a longer game.
-const s32 kQuitSaveSteps = 2 * 60 * 30;
 
 bool sPending;
 s32 sWaited;
@@ -46,8 +43,6 @@ s32 sShown;
 s32 sLastMission;
 bool sLastFrenzy;
 const char* sPendingWhy;
-bool sJobEnded;
-s32 sPlayed;
 s32 sFailures;
 s32 sFailedShown;
 
@@ -174,8 +169,6 @@ void Start()
     sShown = 0;
     sLastMission = -1;
     sLastFrenzy = false;
-    sJobEnded = false;
-    sPlayed = 0;
     sFailures = PortSaves::Failures();
     sFailedShown = 0;
 }
@@ -207,13 +200,11 @@ void AfterStep()
     {
         sPending = true;
         sPendingWhy = sLastFrenzy && !frenzy ? "frenzy over" : "job over";
-        sJobEnded = true;
         sWaited = 0;
         sSafe = 0;
     }
     sLastMission = mission;
     sLastFrenzy = frenzy;
-    sPlayed += gGame_0x40->IsPaused() ? 0 : 1;
     if (!sPending || mission != 0 || gGame_0x40->IsPaused())
     {
         sPending = sPending && mission == 0;
@@ -228,42 +219,28 @@ void AfterStep()
     }
 }
 
-void Quit(const char* pWhy)
+const wchar_t* QuitSaveBlocked()
 {
-    if (PortSaves::Replaying() || !gGame_0x40 || !gScriptManager)
+    PortSaves::Spot spot;
+    if (!SafeState())
     {
-        return;
+        const bool job = gScriptManager && ((gScriptManager->mMissionFlag && *gScriptManager->mMissionFlag) ||
+                                            gScriptManager->IsKillFrenzyActive());
+        return job ? L"NOT DURING A JOB OR FRENZY" : L"NOT NOW";
     }
-    if (!sJobEnded && sPlayed < kQuitSaveSteps)
+    return SafeSpot(true) || PortRetry::LastSteadySpot(&spot) ? NULL : L"NOT HERE";
+}
+
+bool SaveToQuit()
+{
+    if (SafeSpot(true))
     {
-#if defined(GTA2_PORT_SDL)
-        SDL_Log("Autosave: none (%s), no job or frenzy over and %d seconds played", pWhy, sPlayed / 30);
-#endif
+        return Save("save and quit");
     }
-    else if (!SafeState())
-    {
-        if (PortSettings::Autosave())
-        {
-            LogNone(pWhy, "on a job or a frenzy, or not safe");
-        }
-    }
-    else if (SafeSpot(true))
-    {
-        Save(pWhy);
-    }
-    else
-    {
-        // Mid-jump, getting into a car, in water: where he last stood or drove steady instead.
-        PortSaves::Spot spot;
-        if (PortRetry::LastSteadySpot(&spot))
-        {
-            Save(pWhy, &spot);
-        }
-        else
-        {
-            LogNone(pWhy, "no steady spot yet");
-        }
-    }
+    // Mid-jump, getting into a car, in water: where he last stood or drove steady instead.
+    PortSaves::Spot spot;
+    PortRetry::LastSteadySpot(&spot);
+    return Save("save and quit", &spot);
 }
 
 void AreaFinished()

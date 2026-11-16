@@ -19,6 +19,7 @@
 #include "settings.hpp"
 #include "winmain.hpp"
 #include <math.h>
+#include <stdio.h>
 
 #if defined(GTA2_PORT_SDL)
 #include <SDL3/SDL_log.h>
@@ -39,6 +40,7 @@ s32 sLastMission;
 bool sLastFrenzy;
 s32 sShown;
 bool sRetrying;
+char_type sRetryFile[64];
 // A checkpoint was just written before a job, whose script is not loaded yet.
 bool sJobToName;
 // LoadMissionScript loads that many base pointers of a job's script.
@@ -430,9 +432,17 @@ bool JustFailed()
     return sShown > 0;
 }
 
-void Retry()
+void Retry(const char_type* pFileName)
 {
-    Log("chosen");
+    Log(pFileName ? pFileName : "chosen");
+    if (pFileName)
+    {
+        snprintf(sRetryFile, sizeof(sRetryFile), "%s", pFileName);
+    }
+    else
+    {
+        PortSaves::CheckpointName(gGameSession.GetPlySlotIdx(), sRetryFile, sizeof(sRetryFile));
+    }
     sRetrying = true;
     gGame_0x40->ExitGameNoBonus(1, GameExitType::PlayerQuit_2);
 }
@@ -447,8 +457,9 @@ bool Retrying()
     return sRetrying;
 }
 
-bool TakeRetry()
+bool TakeRetry(char_type* pFileName, size_t size)
 {
+    snprintf(pFileName, size, "%s", sRetryFile);
     const bool retrying = sRetrying;
     sRetrying = false;
     return retrying;

@@ -16,8 +16,10 @@
 #include "gbh_graphics.hpp"
 #include "gtx_0x106C.hpp"
 #include "menu.hpp"
+#include "options_menu.hpp"
 #include "registry.hpp"
 #include "settings.hpp"
+#include "winmain.hpp"
 #include <stdio.h>
 #include <vector>
 
@@ -232,21 +234,31 @@ void Close()
     }
 }
 
+bool Closes(PortMenu::Result result)
+{
+    return result == PortMenu::kClosed || result == PortMenu::kQuitGame || result == PortMenu::kRetryCheckpoint ||
+        result == PortMenu::kLoadSave || result == PortMenu::kSaveAndQuitGame;
+}
+
 void Apply(PortMenu::Result result)
 {
     PlaySound(result);
-    if (result == PortMenu::kClosed || result == PortMenu::kQuitGame || result == PortMenu::kRetryCheckpoint)
+    if (Closes(result))
     {
         Close();
     }
-    if (result == PortMenu::kQuitGame)
+    // A failed save leaves the player in game, SAVE FAILED on the HUD.
+    if (result == PortMenu::kQuitGame || (result == PortMenu::kSaveAndQuitGame && PortAutosave::SaveToQuit()))
     {
-        PortAutosave::Quit("quit");
         gGame_0x40->ExitGameNoBonus(1, GameExitType::PlayerQuit_2);
     }
     if (result == PortMenu::kRetryCheckpoint)
     {
         PortRetry::Retry();
+    }
+    if (result == PortMenu::kLoadSave)
+    {
+        PortRetry::Retry(PortMenu::SelectedSave().mFileName);
     }
 }
 
@@ -322,6 +334,16 @@ bool HandleKey(s32 action, Player* pPlayer)
         }
         u8 sections[7];
         PortMenu::OfferStatistics(StatSections(sections));
+        if (!PortSaves::Replaying() && !IsNetworkGame() && !gGameSession.IsBonusStage())
+        {
+            PortSaves::Entry saves[PortSaves::kMaxSaves];
+            bool cities[PortSaves::kNumCities];
+            PortMenu::OfferSaves(saves, PortOptionsMenu::ListSaves(NULL, saves, cities), cities);
+            if (PortSettings::Autosave())
+            {
+                PortMenu::OfferQuitChoices(PortAutosave::QuitSaveBlocked());
+            }
+        }
         if (!gGame_0x40->IsPaused())
         {
             gGame_0x40->Pause();
@@ -346,6 +368,13 @@ bool HandleKey(s32 action, Player* pPlayer)
     while (i < count && kInputs[i].mDik != action)
     {
         i++;
+    }
+    // LOAD GAME's cities: also Page Up and Page Down (the pad's LB and RB), Q and E, as in the frontend.
+    const bool previousCity = action == DIK_PRIOR || action == DIK_Q;
+    if (PortMenu::OnSaves() && (previousCity || action == DIK_NEXT || action == DIK_E))
+    {
+        Apply(PortMenu::HandleInput(previousCity ? PortMenu::kLeft : PortMenu::kRight));
+        return true;
     }
     if (i == count)
     {
@@ -415,7 +444,7 @@ void Draw()
     const f32 menuTop = top + 10 * scale;
     UseFrontendStyle(false);
     const PortMenu::Result result = PortMenu::HandleMouse(scale, left, menuTop);
-    if (result == PortMenu::kClosed || result == PortMenu::kQuitGame || result == PortMenu::kRetryCheckpoint)
+    if (Closes(result))
     {
         UseGameStyle();
         Apply(result);

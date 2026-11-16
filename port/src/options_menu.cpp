@@ -38,6 +38,9 @@ u16 sSavesReturnPage;
 u16 sSavesReturnOption;
 Frontend* sListing;
 char_type sResumeFile[64];
+// The frontend's levels, for the pause menu's LOAD GAME, when the frontend is gone.
+MainBlockStrings sLevels[PortSaves::kNumCities][4];
+u8 sNumCities;
 
 // The delete player dialog's type for a new game that replaces an autosave, past the original's 1, and its
 // choices, CANCEL first.
@@ -256,12 +259,6 @@ void OriginalPageMouse(Frontend* pFrontend)
 bool IsListingLevel(const PortSaves::Header& header)
 {
     return IsLevel(sListing, header);
-}
-
-s32 ListSaves(Frontend* pFrontend, PortSaves::Entry* pEntries)
-{
-    sListing = pFrontend;
-    return PortSaves::List(gGameSession.GetPlySlotIdx(), IsListingLevel, pEntries);
 }
 
 void Boot(Frontend* pFrontend, const char_type* pFileName)
@@ -622,22 +619,34 @@ s32 DrawKeyHint(u8 hint, wchar_t* pText, u16 x, u16 y, u16 font, s32 palette)
 
 bool IsLevel(Frontend* pFrontend, const PortSaves::Header& header)
 {
-    const MainBlockStrings& level = pFrontend->mBlocks[header.mMainStage][header.mBonusStage];
+    const MainBlockStrings& level = (pFrontend ? pFrontend->mBlocks : sLevels)[header.mMainStage][header.mBonusStage];
     return !strncmp(header.mMapName, "data\\", 5) && !strcmp(header.mMapName + 5, level.mGmpName) &&
         !strncmp(header.mStyleName, "data\\", 5) && !strcmp(header.mStyleName + 5, level.mStyName) &&
         !strncmp(header.mScriptName, "data\\", 5) && !strcmp(header.mScriptName + 5, level.mScrName);
 }
 
+s32 ListSaves(Frontend* pFrontend, PortSaves::Entry* pEntries, bool* pCities)
+{
+    sListing = pFrontend;
+    const PlySlot& stats = gPlyDat->mPlyrStats[gGameSession.GetPlySlotIdx()];
+    for (u8 city = 0; city < PortSaves::kNumCities && pCities; city++)
+    {
+        pCities[city] = city < (pFrontend ? pFrontend->mNumMainStages : sNumCities) &&
+            stats.mPlyrStageStats[city][0].mIsStageUnlocked && FreeLoader::CheckCityInstalled(city);
+    }
+    return PortSaves::List(gGameSession.GetPlySlotIdx(), IsListingLevel, pEntries);
+}
+
 bool HasSaves(Frontend* pFrontend)
 {
     PortSaves::Entry saves[PortSaves::kMaxSaves];
-    return ListSaves(pFrontend, saves) > 0;
+    return ListSaves(pFrontend, saves, NULL) > 0;
 }
 
 bool HasSave(Frontend* pFrontend, u8 mainStage, u8 bonusStage)
 {
     PortSaves::Entry saves[PortSaves::kMaxSaves];
-    const s32 count = ListSaves(pFrontend, saves);
+    const s32 count = ListSaves(pFrontend, saves, NULL);
     for (s32 i = 0; i < count; i++)
     {
         if (saves[i].mMainStage == mainStage && saves[i].mBonusStage == bonusStage)
@@ -651,20 +660,14 @@ bool HasSave(Frontend* pFrontend, u8 mainStage, u8 bonusStage)
 bool Resume(Frontend* pFrontend)
 {
     PortSaves::Entry saves[PortSaves::kMaxSaves];
-    const s32 count = ListSaves(pFrontend, saves);
+    bool cities[PortSaves::kNumCities];
+    const s32 count = ListSaves(pFrontend, saves, cities);
     if (!count)
     {
         return false;
     }
     sSavesReturnPage = pFrontend->mCurrentPageIdx;
     sSavesReturnOption = pFrontend->mMenuPagesArray[sSavesReturnPage].mCurrentOptionIdx;
-    bool cities[PortSaves::kNumCities];
-    PlySlot* pStats = pFrontend->GetCurrPlayerStats();
-    for (u8 city = 0; city < PortSaves::kNumCities; city++)
-    {
-        cities[city] = city < pFrontend->mNumMainStages && pStats->mPlyrStageStats[city][0].mIsStageUnlocked &&
-            FreeLoader::CheckCityInstalled(city);
-    }
     PortMenu::OpenSaves(saves, count, cities);
     sShown = true;
     pFrontend->ChangeMenuPage(kMenuPage);
@@ -673,10 +676,11 @@ bool Resume(Frontend* pFrontend)
 
 void AfterGame(Frontend* pFrontend)
 {
+    memcpy(sLevels, pFrontend->mBlocks, sizeof(sLevels));
+    sNumCities = pFrontend->mNumMainStages;
     char_type name[64];
-    PortSaves::CheckpointName(gGameSession.GetPlySlotIdx(), name, sizeof(name));
     PortSaves::Header header;
-    if (PortRetry::TakeRetry() && PortSaves::IsValid(name, &header) && IsLevel(pFrontend, header))
+    if (PortRetry::TakeRetry(name, sizeof(name)) && PortSaves::IsValid(name, &header) && IsLevel(pFrontend, header))
     {
         Boot(pFrontend, name);
     }

@@ -716,11 +716,11 @@ void port_UpdatePad()
         {
             Tap(DIK_ESCAPE);
         }
-        // The pause menu's navigation.
-        static bool sPrevDir[4];
-        const int dirs[4] = {kPadUp, kPadDown, kPadLeft, kPadRight};
-        const DWORD keys[4] = {DIK_UP, DIK_DOWN, DIK_LEFT, DIK_RIGHT};
-        for (int d = 0; d < 4; d++)
+        // The pause menu's navigation; LB and RB change LOAD GAME's city.
+        static bool sPrevDir[6];
+        const int dirs[6] = {kPadUp, kPadDown, kPadLeft, kPadRight, 4, 5};
+        const DWORD keys[6] = {DIK_UP, DIK_DOWN, DIK_LEFT, DIK_RIGHT, DIK_PRIOR, DIK_NEXT};
+        for (int d = 0; d < 6; d++)
         {
             const bool down = CodeDown(dirs[d]);
             if (quitShown && down && !sPrevDir[d])

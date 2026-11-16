@@ -2181,10 +2181,6 @@ EXPORT LRESULT __stdcall WindowProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM l
             break;
 
         case WM_DESTROY:
-#if defined(GTA2_PORT)
-            // Port: closing the window autosaves as QUIT GAME does.
-            PortAutosave::Quit("window closed");
-#endif
             if (bStartNetworkGame)
             {
                 gNetPlay.Disconnect();
@@ -2425,7 +2421,7 @@ s32 __stdcall GameWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lp
             Frontend::create();
             gFrontend->ChangeMenuPage(state);
 #if defined(GTA2_PORT)
-            // Port: if RETRY ended the game, the frontend boots the checkpoint at once.
+            // Port: if RETRY or the pause menu's LOAD GAME ended the game, the frontend boots that save at once.
             PortOptionsMenu::AfterGame(gFrontend);
 #endif
         }
