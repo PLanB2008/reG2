@@ -43,9 +43,17 @@ enum Id
     kAutosave,
     kRetry,
     kCount,
+    // Group titles in the pages' lists: the settings after one, up to the next, are under it.
+    kSavesGroup,
+    kTimeOfDayGroup,
+    kLightingGroup,
+    kImageGroup,
+    kScreenGroup,
+    kViewGroup,
+    kGroupsEnd,
 };
 
-// The settings of each options page, in their order.
+// The settings of each options page, in their order, with their group titles.
 extern const Id kGameSettings[];
 extern const s32 kNumGameSettings;
 extern const Id kGraphicsSettings[];
@@ -61,7 +69,8 @@ const wchar_t* Translate(const wchar_t* pEnglish);
 // data\<code>.gxt is there: the 2004 freeware has only English and Spanish.
 bool LanguageInstalled(char code);
 
-// In English, as the key to Translate.
+bool IsGroup(Id id);
+// In English, as the key to Translate; a group's title.
 const wchar_t* Name(Id id);
 void Value(Id id, wchar_t* pOut);
 // The numeric settings, shown as sliders: false for the others.
@@ -106,7 +115,8 @@ bool Autosave();
 // RETRY JOBS: a checkpoint before each job and kill frenzy, to go back to after a failure (retry.hpp).
 bool Retry();
 
-// A line under the page that says what the setting does, NULL if none.
+// What the setting does, or its value where that is not plain, on two lines at most under the page; NULL if
+// nothing. A setting with help has it for every value.
 const wchar_t* Help(Id id);
 
 // SAFE AREA: the part of the screen's width or height kept clear at each edge, 0 to 0.1.
