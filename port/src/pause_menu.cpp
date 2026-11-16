@@ -366,6 +366,13 @@ bool HandleKey(s32 action, Player* pPlayer)
     {
         i++;
     }
+    // LOAD GAME's cities: also Page Up and Page Down (the pad's LB and RB), Q and E, as in the frontend.
+    const bool previousCity = action == DIK_PRIOR || action == DIK_Q;
+    if (PortMenu::OnSaves() && (previousCity || action == DIK_NEXT || action == DIK_E))
+    {
+        Apply(PortMenu::HandleInput(previousCity ? PortMenu::kLeft : PortMenu::kRight));
+        return true;
+    }
     if (i == count)
     {
         return true;
