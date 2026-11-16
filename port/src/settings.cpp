@@ -35,7 +35,7 @@ void port_SetFullscreenModeIndex(int index);
 namespace PortSettings
 {
 // No DAY-NIGHT CYCLE without SDL: its settings would stay greyed.
-const Id kGameSettings[] = {kLanguage, kTextSpeed, kAutosave, kRetry, kExplodingScores, kBlood, kLighting,
+const Id kGameSettings[] = {kLanguage, kTextSpeed, kAutosave, kRetry, kKfRespawn, kExplodingScores, kBlood, kLighting,
 #if defined(GTA2_PORT_SDL)
                             kDayLength, kStartTime, kClock,
 #endif
@@ -62,7 +62,7 @@ namespace
 const wchar_t* const kNames[kCount] = {L"SOUND EFFECTS", L"MUSIC", L"3D SOUND", L"TEXT SPEED", L"LANGUAGE",
                                        L"FULL SCREEN", L"BRIGHTNESS", L"LIGHTING", L"EXPLODING SCORES", L"FRAME LIMIT",
                                        L"TRUE COLOUR", L"BLOOM", L"PIXEL LIGHTING", L"CAR HEADLIGHTS",
-                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS"};
+                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS", L"FRENZY RESPAWN"};
 
 struct Language
 {
@@ -142,6 +142,10 @@ const Translation kTranslations[] = {
     {L"RETRY A FAILED JOB OR FRENZY FROM THE PAUSE MENU", NULL,
      {L"REESSAYER UNE MISSION OU FRENESIE RATEE DEPUIS LE MENU PAUSE", L"NACH EINEM FEHLSCHLAG IM PAUSENMENÜ WIEDERHOLEN",
       L"RIPROVA UNA MISSIONE O FRENESIA FALLITA DAL MENU DI PAUSA", L"REINTENTA UNA MISIÓN O FRENESÍ FALLIDO DESDE EL MENÚ DE PAUSA"}},
+    {L"FRENZY RESPAWN", NULL, {L"RETOUR DES FRENESIES", L"AMOKLÄUFE ZURÜCK", L"RITORNO FRENESIE", L"REGRESO DE FRENESÍES"}},
+    {L"A FAILED KILL FRENZY COMES BACK ON THE MAP", NULL,
+     {L"UNE FRENESIE RATEE REVIENT SUR LA CARTE", L"EIN GESCHEITERTER AMOKLAUF KEHRT AUF DIE KARTE ZURÜCK",
+      L"UNA FRENESIA FALLITA TORNA SULLA MAPPA", L"UN FRENESÍ FALLIDO VUELVE AL MAPA"}},
     {L"%ls: RETRY", NULL, {L"%ls : REESSAYER", L"%ls: WIEDERHOLEN", L"%ls: RIPROVA", L"%ls: REINTENTAR"}},
     {L"RETRY", NULL, {L"REESSAYER", L"WIEDERHOLEN", L"RIPROVA", L"REINTENTAR"}},
     {L"RETRY: %ls", NULL, {L"REESSAYER : %ls", L"WIEDERHOLEN: %ls", L"RIPROVA: %ls", L"REINTENTAR: %ls"}},
@@ -357,6 +361,8 @@ const char* ScreenName(Id id)
             return "port_autosave";
         case kRetry:
             return "port_retry";
+        case kKfRespawn:
+            return "port_kf_respawn";
         default:
             return "car_headlights";
     }
@@ -689,6 +695,11 @@ bool Retry()
     return Screen(kRetry) != 0;
 }
 
+bool KfRespawn()
+{
+    return Screen(kKfRespawn) != 0;
+}
+
 const wchar_t* Help(Id id)
 {
     switch (id)
@@ -697,6 +708,8 @@ const wchar_t* Help(Id id)
             return L"AFTER EACH JOB OR FRENZY, AND ON QUIT AFTER ONE OR 2 MIN OF PLAY";
         case kRetry:
             return L"RETRY A FAILED JOB OR FRENZY FROM THE PAUSE MENU";
+        case kKfRespawn:
+            return L"A FAILED KILL FRENZY COMES BACK ON THE MAP";
         default:
             return NULL;
     }
@@ -816,6 +829,7 @@ void ApplyStyle(Style style)
     gRegistry.Set_Screen_Setting(ScreenName(kControls), sTwinStick);
     gRegistry.Set_Screen_Setting(ScreenName(kAutosave), enhanced);
     gRegistry.Set_Screen_Setting(ScreenName(kRetry), enhanced);
+    gRegistry.Set_Screen_Setting(ScreenName(kKfRespawn), enhanced);
     // Unlimited with vsync: a frame each refresh of the screen.
     gRegistry.Set_Screen_Setting(ScreenName(kFrameLimit), 0);
     gRegistry.Set_Screen_Setting(ScreenName(kVsync), 1);
@@ -1033,6 +1047,7 @@ void Change(Id id, s32 delta)
         case kShowFps:
         case kAutosave:
         case kRetry:
+        case kKfRespawn:
             gRegistry.Set_Screen_Setting(ScreenName(id), Screen(id) ? 0 : 1);
             break;
         case kFrameLimit:

@@ -42,6 +42,7 @@ enum Id
     kShowFps,
     kAutosave,
     kRetry,
+    kKfRespawn,
     kCount,
 };
 
@@ -106,6 +107,9 @@ bool Autosave();
 // RETRY JOBS: a checkpoint before each job and kill frenzy, to go back to after a failure (retry.hpp).
 bool Retry();
 
+// FRENZY RESPAWN: a failed kill frenzy comes back on the map (retry.hpp).
+bool KfRespawn();
+
 // A line under the page that says what the setting does, NULL if none.
 const wchar_t* Help(Id id);
 
@@ -119,7 +123,8 @@ s32 MaxFps();
 void ApplyRenderOptions();
 
 // The first start's styles (welcome.hpp), both drawing a frame per screen refresh. CLASSIC: its preset, original
-// lighting and controls, church saves only; ENHANCED: its preset, day-night cycle, twin stick, AUTOSAVE, RETRY JOBS.
+// lighting and controls, church saves only; ENHANCED: its preset, day-night cycle, twin stick, AUTOSAVE, RETRY JOBS,
+// FRENZY RESPAWN.
 enum Style
 {
     kClassicStyle,
