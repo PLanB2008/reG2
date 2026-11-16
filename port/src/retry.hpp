@@ -19,6 +19,9 @@ void BeforeStart(PortSaves::Checkpoint kind, const SCR_CMD_HEADER* pCmd = NULL);
 void JobLoaded(const SCR_CMD_HEADER* pCmd, u16 base);
 // After each logic step.
 void AfterStep();
+// DO_BASIC_KF, that command's frenzy failed. FRENZY RESPAWN (settings.hpp): it is no longer marked started in the
+// save, and its skull or car and its trigger are back: true then.
+bool FrenzyFailed(u16 doCmd);
 // The player's latest steady spot (one a second on foot on the ground or driving on a road, with RETRY JOBS or
 // AUTOSAVE on), false if none since the level started or he was last wasted or busted.
 bool LastSteadySpot(PortSaves::Spot* pSpot);
