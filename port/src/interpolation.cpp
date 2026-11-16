@@ -1,6 +1,7 @@
 #include "interpolation.hpp"
 #include "Camera.hpp"
 #include "Game.hpp"
+#include "Hud.hpp"
 #include "Player.hpp"
 #include "sprite.hpp"
 #include <string.h>
@@ -17,6 +18,10 @@ const s32 kMaxCameraStepMove = 4 * 16384;
 // Ang16 units: 1440 a turn. A sprite turning more than this in one step snapped round.
 const s32 kMaxStepTurn = 360;
 const s32 kTurn = 1440;
+
+// Fix16 screen units: an arrow moving further in one step found a new target or came back into view.
+const s32 kMaxArrowStepMove = 64 * 16384;
+const s32 kNumArrows = sizeof(gHud_2B00->mArrows.mArray) / sizeof(gHud_2B00->mArrows.mArray[0]);
 
 const s32 kNumSprites = sizeof(gSpritePool->mPool.mPool) / sizeof(gSpritePool->mPool.mPool[0]);
 
@@ -71,12 +76,31 @@ Camera* spCamera;
 CameraPos sCameraPos;
 bool sValid;
 
+struct ArrowPose
+{
+    s32 mX;
+    s32 mY;
+    s16 mRot;
+};
+ArrowPose sArrows[kNumArrows];
+ArrowPose sArrowsDrawn[kNumArrows];
+bool sArrowsApplied;
+
 std::vector<Saved> sSaved;
 u32 sMoved;
 u32 sJumped;
 u32 sSnapped;
 Camera* spAppliedCamera;
 u8 sCameraBytes[sizeof(Camera)];
+
+ArrowPose PoseOf(const Hud_Arrow& arrow)
+{
+    ArrowPose pose;
+    pose.mX = arrow.mScreenPosX.mValue;
+    pose.mY = arrow.mScreenPosY.mValue;
+    pose.mRot = arrow.mRotation.rValue;
+    return pose;
+}
 
 Pose PoseOf(const Sprite& sprite)
 {
@@ -198,6 +222,10 @@ void Snapshot()
     }
     spCamera = ViewCamera();
     sCameraPos = spCamera->mCurPos;
+    for (s32 i = 0; gHud_2B00 && i < kNumArrows; i++)
+    {
+        sArrows[i] = PoseOf(gHud_2B00->mArrows.mArray[i]);
+    }
 }
 
 void Clear()
@@ -232,10 +260,36 @@ void Apply(f32 alpha)
         pCamera->mCurPos.mZoom.mValue = Lerp(prev.mZoom.mValue, cur.mZoom.mValue, alpha);
         pCamera->UpdateBoundaries();
     }
+
+    // The HUD's arrows: their screen spot and angle are worked out once a step, from the player and the camera.
+    sArrowsApplied = gHud_2B00 != NULL;
+    for (s32 i = 0; sArrowsApplied && i < kNumArrows; i++)
+    {
+        Hud_Arrow& arrow = gHud_2B00->mArrows.mArray[i];
+        const ArrowPose cur = PoseOf(arrow);
+        const ArrowPose& prev = sArrows[i];
+        const s32 turn = TurnBetween(prev.mRot, cur.mRot);
+        sArrowsDrawn[i] = cur;
+        if (Abs(cur.mX - prev.mX) <= kMaxArrowStepMove && Abs(cur.mY - prev.mY) <= kMaxArrowStepMove && Abs(turn) <= kMaxStepTurn)
+        {
+            arrow.mScreenPosX.mValue = Lerp(prev.mX, cur.mX, alpha);
+            arrow.mScreenPosY.mValue = Lerp(prev.mY, cur.mY, alpha);
+            arrow.mRotation.rValue = static_cast<s16>(cur.mRot - turn + Lerp(0, turn, alpha));
+            arrow.mRotation.Normalize();
+        }
+    }
 }
 
 void Restore()
 {
+    for (s32 i = 0; sArrowsApplied && i < kNumArrows; i++)
+    {
+        Hud_Arrow& arrow = gHud_2B00->mArrows.mArray[i];
+        arrow.mScreenPosX.mValue = sArrowsDrawn[i].mX;
+        arrow.mScreenPosY.mValue = sArrowsDrawn[i].mY;
+        arrow.mRotation.rValue = sArrowsDrawn[i].mRot;
+    }
+    sArrowsApplied = false;
     if (spAppliedCamera)
     {
         memcpy(spAppliedCamera, sCameraBytes, sizeof(Camera));
