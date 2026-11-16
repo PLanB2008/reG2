@@ -45,7 +45,7 @@ const f32 kPadFollow = 0.5f;
 // AIM CAMERA leads this many half screen heights along the last aim, however far the aim is. While Shift, LT
 // or R3 is held it looks this times the aim's offset on screen from the centre, at most this many half heights
 // and with the player this many inside the screen's edges. It follows by this part per step.
-const f32 kLead = 0.3f;
+const f32 kLead = 0.16f;
 const f32 kLookFurther = 2.5f;
 const f32 kMaxLookFurther = 1.2f;
 const f32 kLookEdge = 0.1f;
