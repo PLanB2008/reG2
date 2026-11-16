@@ -26,7 +26,7 @@ You need your own copy of GTA2 for PC. The free 2004 release works.
 
 On first start, CHOOSE YOUR STYLE asks how you want to play. CLASSIC is the game as it was in 1999:
 same lighting, same controls, saves at churches only. ENHANCED turns on refined lights and shadows, the
-day and night cycle, twin stick controls, autosave and job retry. Nothing is forced: every extra below
+day and night cycle, twin stick controls, autosave, job retry and frenzy respawn. Nothing is forced: every extra below
 can be turned on or off later in OPTIONS (start menu, or Escape in game), one by one.
 
 ![CHOOSE YOUR STYLE](docs/images/pc_welcome.png)
@@ -78,7 +78,7 @@ copy of the game has it.
 
 ## Saves
 
-reG2 keeps the original church saves, one per city, and adds an optional autosave and job retry.
+reG2 keeps the original church saves, one per city, and adds an optional autosave, job retry and frenzy respawn.
 
 **Churches.** Church saves work exactly as before: same cost, and the same file the original reads. reG2
 also keeps one per city, so you can go back to a city you left.
@@ -93,12 +93,16 @@ steps from where it started, with the money you had then.
 
 ![RETRY in the pause menu](docs/images/pc_retry.png)
 
+**Frenzy respawn.** GAME > FRENZY RESPAWN: a failed kill frenzy comes back on the map at once, like a job's phone
+after a failure: its skull, or for a vehicle frenzy a new vehicle where the first one was parked. A passed frenzy
+never comes back.
+
 **Load game.** RESUME SAVED STATUS shows your saves with a tab per city: church save, autosave and retry,
 each with its money, jobs passed and date.
 
 ![LOAD GAME](docs/images/pc_load_game.png)
 
-AUTOSAVE and RETRY JOBS are off unless you turn them on, or pick ENHANCED. Purists can ignore all of it:
+AUTOSAVE, RETRY JOBS and FRENZY RESPAWN are off unless you turn them on, or pick ENHANCED. Purists can ignore all of it:
 with CLASSIC, only churches save, as in the original.
 
 ## Download

@@ -145,11 +145,11 @@ window; closing it cancels the copy.
 
 The first start shows CHOOSE YOUR STYLE before the start menu. CLASSIC is the game as it was: its
 look, its controls and church saves only. ENHANCED, selected at first, turns on the new lights and
-shadows, the day and night cycle, twin stick controls, AUTOSAVE and RETRY JOBS. Pick one with the
+shadows, the day and night cycle, twin stick controls, AUTOSAVE, RETRY JOBS and FRENZY RESPAWN. Pick one with the
 keys, the mouse or a pad (Left and Right, or LB and RB, as the hint under it shows); every setting can
 be changed later. `GTA2_WELCOME=1` shows the screen again.
 
-OPTIONS has five pages: GAME (language, text speed, AUTOSAVE, RETRY JOBS, blood, lighting and the
+OPTIONS has five pages: GAME (language, text speed, AUTOSAVE, RETRY JOBS, FRENZY RESPAWN, blood, lighting and the
 day and night cycle), GRAPHICS, DISPLAY (full screen, frame rate, zoom, HUD), SOUND and CONTROLS.
 In a game, Escape opens the same menu as a pause menu, with RESUME, STATISTICS (the original pause
 screen's lines) and QUIT GAME. The hints under the pages show the keys, or once a pad is used its
@@ -166,6 +166,10 @@ Saves are kept per city, in `player/`:
 - RETRY JOBS (`port_retry`) keeps a checkpoint taken as a job or a kill frenzy starts. After a failure,
   the pause menu offers RETRY JOB or RETRY FRENZY (RESTART while it runs), with the job's name, the
   money then and how long ago. Passing it, a church save or a new game deletes the checkpoint.
+- FRENZY RESPAWN (`port_kf_respawn`): a failed kill frenzy is no longer marked started in the save, and a new skull
+  or vehicle and its trigger are back at once; standing on the skull starts it again. The old vehicle locks the
+  player out once he leaves it and despawns as traffic does; while it or the player is on the new one's spot, it stays
+  the frenzy's instead. A passed one stays gone. Off in network games and bonus stages.
 - LOAD GAME (the original's RESUME SAVED STATUS, on the Play, quit, dead and area complete pages)
   lists the saves, even a single one: a tab per city (Left and
   Right, Q and E, or LB and RB), each save with its money, jobs passed and date, newest first.
