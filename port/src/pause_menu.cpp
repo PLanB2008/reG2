@@ -24,6 +24,7 @@
 #include <vector>
 
 EXTERN_GLOBAL(s16, word_7064D8);
+EXTERN_GLOBAL(u16, gBriefFont);
 
 namespace PortPauseMenu
 {
@@ -309,6 +310,8 @@ void Release()
     FreeStyle();
 }
 
+static f32 Transcript(f32 top, f32 room, f32 scale = 0, f32 left = 0, f32 menuTop = 0);
+
 bool HandleKey(s32 action, Player* pPlayer)
 {
     if (!sOpen)
@@ -334,6 +337,10 @@ bool HandleKey(s32 action, Player* pPlayer)
         }
         u8 sections[7];
         PortMenu::OfferStatistics(StatSections(sections));
+        f32 top;
+        f32 room;
+        PortMenu::OnTranscript(&top, &room);
+        PortMenu::OfferTranscript(Transcript(top, room));
         if (!PortSaves::Replaying() && !IsNetworkGame() && !gGameSession.IsBonusStage())
         {
             PortSaves::Entry saves[PortSaves::kMaxSaves];
@@ -428,6 +435,52 @@ static void DrawStats(f32 scale, f32 left, f32 top, f32 rowTop, f32 rowStep)
     pause = saved;
 }
 
+// MISSION TRANSCRIPT's height: the brief shown, then those F7 shows again (one per run of the same), stacked while they fit
+// in room; with a scale, drawn by the HUD a little smaller.
+static f32 Transcript(f32 top, f32 room, f32 scale, f32 left, f32 menuTop)
+{
+    const f32 kSize = 0.85f;
+    Hud_Brief& brief = gHud_2B00->mBrief;
+    const Hud_Brief saved = brief;
+    const Fix16 hudScale = gViewCamera->mUiScale;
+    gViewCamera->mUiScale = Fx(scale * kSize);
+    sDrawingStats = scale > 0;
+    sStatScale = scale * kSize;
+    // DrawBrief's face spans about x 8 to 56 and y 412 to 474, its last line ends at y 480: the face's left at x 50.
+    sStatLeft = left + (50 - 8 * kSize) * scale;
+    f32 height = 0;
+    const Hud_BriefEntry* pLast = NULL;
+    Hud_BriefEntry* pEntry = saved.mCurrBriefs && saved.mCurrBriefs->mWasDisplayed ? saved.mCurrBriefs : saved.mPrevBriefs;
+    for (s32 count = 0; pEntry && count < 5; pEntry = pEntry == saved.mCurrBriefs ? saved.mPrevBriefs : pEntry->mpNext)
+    {
+        if (pLast && !strcmp(pEntry->mBriefIdStr, pLast->mBriefIdStr) && pEntry->mCostParam == pLast->mCostParam)
+        {
+            continue;
+        }
+        brief.mCurrBriefs = pEntry;
+        brief.FormatCurrentBrief();
+        const f32 textTop = 480.0f - GetLineSpacingFromFontType_5D7700_inlined(gBriefFont) * brief.mNumLines;
+        const f32 bottom = height + (pLast ? 14 : 0) + (480 - (textTop < 412 ? textTop : 412)) * kSize;
+        if (bottom > room)
+        {
+            break;
+        }
+        sStatTop = menuTop + (top + bottom - 480 * kSize) * scale;
+        if (scale > 0)
+        {
+            brief.mFaceVariant = 0;
+            brief.DrawBrief();
+        }
+        height = bottom;
+        pLast = pEntry;
+        count++;
+    }
+    sDrawingStats = false;
+    gViewCamera->mUiScale = hudScale;
+    brief = saved;
+    return height;
+}
+
 void Draw()
 {
     if (!sOpen)
@@ -458,6 +511,11 @@ void Draw()
     if (PortMenu::OnStatistics(&rowTop, &rowStep))
     {
         DrawStats(scale, left, menuTop, rowTop, rowStep);
+    }
+    f32 room;
+    if (PortMenu::OnTranscript(&rowTop, &room))
+    {
+        Transcript(rowTop, room, scale, left, menuTop);
     }
 }
 } // namespace PortPauseMenu
