@@ -52,21 +52,20 @@ const f32 kLookEdge = 0.1f;
 const f32 kLookFollow = 0.12f;
 // A walking ped's sprite faces down, its trailing leg the rows above the torso no wider than this.
 const s32 kLegWidth = 5;
-// From this far off the facing to as far off its back, in Ang16 units (45 degrees), only the feet show, the trailing
-// leg under the torso.
-const s32 kFeetTurn = 180;
-// The feet step this far ahead of and behind the hips, in texels, are this long and this far apart.
-const f32 kStride = 7.0f;
-const f32 kFootLength = 5.0f;
-const f32 kFootApart = 1.5f;
-// The hips: this part of the way down the torso from its back.
+// The hips: this part of the way down from the trailing leg to the frame's bottom.
 const f32 kHips = 0.35f;
-// The front leg starts this many rows below the trailing one and is this many pixels from its shoe at most.
-const s32 kFrontLegRow = 2;
-const s32 kFrontLegGrow = 3;
-// The largest walk frame drawn this way, in texels, and the most walk frame sizes with their front leg hidden.
+// Backpedalling, the stride kept (sin^2 of the angle off the back) by the leg ahead and the one behind, all of it up to
+// kBackFull degrees off. A leg showing less than kMinShow texels is left out.
+const f32 kLegLead = 0.5f;
+const f32 kLegTrail = 0.1f;
+const f32 kBackFull = 45.0f;
+const f32 kMinShow = 0.5f;
+// Toward the side, the body bobs kBob texels along the move twice a cycle and its rounded back leans kSway texels.
+const f32 kBob = 1.0f;
+const f32 kSway = 1.0f;
+// The largest frame split, in texels, and the most frames kept split.
 const s32 kMaxFrame = 64;
-const s32 kMaskedSizes = 16;
+const s32 kMaxSplit = 48;
 
 Char* spWalker; // the ped walking this step, along sMove
 s32 sMove;
@@ -193,23 +192,34 @@ const Sprite* AimFrom()
     return pCar ? (Turret(pCar) ? pCar->mCarSprite : NULL) : (pPed && pPed->mGameObject ? pPed->GetSprite() : NULL);
 }
 
-struct Frame
+// A frame's rows: the trailing leg from mTop to above mSplit, the first row wider than a leg; mLeft to mRight its
+// columns. The front leg uses the same fields for its rows (mTop to mSplit) and columns.
+struct Leg
 {
-    STexture* mpTexture;
-    s32 mWidth;
-    s32 mHeight;
-    const u8* mpData;
+    s32 mTop;
+    s32 mSplit;
+    s32 mLeft;
+    s32 mRight;
 };
 
-Frame GetFrame(const Sprite* pSprite, s32 idx)
+// A run or walk frame split in two textures: the legs (behind and the front foot) and the rest, the torso.
+struct Split
 {
-    const sprite_index* pIndex = gGtx_0x106C->get_sprite_index(gGtx_0x106C->GetSpriteTrueIndex(pSprite->mSpriteTypeEnum, idx));
-    const Frame frame = {gTextureCache_15D8->GetSpriteTexture(pSprite->mSpriteTypeEnum, idx, pSprite->mPaletteType, pSprite->mRemap),
-                         pIndex->mWidth,
-                         pIndex->mHeight,
-                         pIndex->mpData};
-    return frame;
-}
+    s32 mSprite; // the true sprite index, -1 while unused
+    u16 mPal;
+    s32 mWidth;
+    s32 mHeight;
+    s32 mLast; // the last drawn row
+    s32 mBack; // the first row from mLeg.mSplit in one piece: the rows above it hold both feet side by side
+    bool mHasLeg;
+    bool mHasFront;
+    Leg mLeg;
+    Leg mFront;
+    STexture* mpTorso;
+    STexture* mpLegs;
+    u8 mTorso[kMaxFrame * 256]; // sprite pages are 256 texels wide, as the textures read them
+    u8 mLegs[kMaxFrame * 256];
+};
 
 struct Box
 {
@@ -219,27 +229,198 @@ struct Box
     f32 v1;
 };
 
-// The frame's texels tex drawn on its texels at, the frame centred on the sprite in pV and turned by turn about its
-// middle column on row hv.
-void DrawPart(const Frame& frame, u32 flags, const Vert* pV, s32 count, const Box& at, const Box& tex, s32 turn, f32 hv)
+void SplitFrame(Split* pS, const u8* pData)
 {
-    // The quad is flat: a texel's place on screen and in the world is linear in (u, v).
+    const s32 w = pS->mWidth;
+    const s32 h = pS->mHeight;
+    memset(pS->mLegs, 0, sizeof(pS->mLegs));
+    memset(pS->mTorso, 0, sizeof(pS->mTorso));
+    for (s32 y = 0; y < h; y++)
+    {
+        memcpy(pS->mTorso + y * 256, pData + y * 256, w);
+    }
+    pS->mLast = 0;
+    s32 top = -1;
+    s32 split = h;
+    for (s32 y = 0; y < h; y++)
+    {
+        s32 n = 0;
+        for (s32 x = 0; x < w; x++)
+        {
+            n += pData[y * 256 + x] != 0;
+        }
+        pS->mLast = n ? y : pS->mLast;
+        top = top < 0 && n ? y : top;
+        split = split == h && n > kLegWidth ? y : split;
+    }
+    Leg& leg = pS->mLeg;
+    leg.mTop = top;
+    leg.mSplit = split;
+    pS->mBack = split;
+    pS->mHasLeg = top >= 0 && split - top >= 2 && split < h;
+    pS->mHasFront = false;
+    if (!pS->mHasLeg)
+    {
+        return;
+    }
+    // The legs behind: every pixel above the split, its top row the shoe; their last row carries on to the hips.
+    bool shoe[256] = {};
+    bool legColour[256] = {};
+    leg.mLeft = w;
+    leg.mRight = -1;
+    for (s32 y = top; y < split; y++)
+    {
+        for (s32 x = 0; x < w; x++)
+        {
+            const u8 c = pData[y * 256 + x];
+            if (c)
+            {
+                shoe[c] = shoe[c] || y == top;
+                legColour[c] = true;
+                pS->mLegs[y * 256 + x] = c;
+                pS->mTorso[y * 256 + x] = 0;
+                leg.mLeft = x < leg.mLeft ? x : leg.mLeft;
+                leg.mRight = x > leg.mRight ? x : leg.mRight;
+            }
+        }
+    }
+    memcpy(pS->mLegs + split * 256 + leg.mLeft, pS->mLegs + (split - 1) * 256 + leg.mLeft, leg.mRight + 1 - leg.mLeft);
+    for (s32 y = split; y < split + 3 && y < h; y++)
+    {
+        s32 runs = 0;
+        for (s32 x = 0; x < w; x++)
+        {
+            runs += pData[y * 256 + x] && (x == 0 || !pData[y * 256 + x - 1]);
+        }
+        if (runs <= 1)
+        {
+            break;
+        }
+        pS->mBack = y + 1;
+    }
+    // The front leg, by the head: a shoe in the front half and the dark trouser pixels joined to it (the leg's colours
+    // under 130, or within 3 of them), not the shirt's lighter ones.
+    bool trousers[256] = {};
+    for (s32 c = 0; c < 130; c++)
+    {
+        for (s32 d = -3; d <= 3; d++)
+        {
+            trousers[c] = trousers[c] || (c + d >= 1 && c + d < 130 && legColour[c + d] && !shoe[c + d]);
+        }
+    }
+    static bool sIn[kMaxFrame * kMaxFrame];
+    memset(sIn, 0, sizeof(sIn));
+    const s32 from = (split + h) / 2;
+    bool anyShoe = false;
+    for (s32 y = from; y < h; y++)
+    {
+        for (s32 x = 0; x < w; x++)
+        {
+            sIn[y * kMaxFrame + x] = shoe[pData[y * 256 + x]];
+            anyShoe = anyShoe || sIn[y * kMaxFrame + x];
+        }
+    }
+    for (s32 i = 0; i < 8 && anyShoe; i++)
+    {
+        for (s32 y = h - 1; y >= from; y--)
+        {
+            for (s32 x = 0; x < w; x++)
+            {
+                bool next = false;
+                for (s32 n = 0; n < 9; n++)
+                {
+                    const s32 yy = y + n / 3 - 1;
+                    const s32 xx = x + n % 3 - 1;
+                    next = next || (yy >= from && yy < h && xx >= 0 && xx < w && sIn[yy * kMaxFrame + xx]);
+                }
+                sIn[y * kMaxFrame + x] = sIn[y * kMaxFrame + x] || (next && trousers[pData[y * 256 + x]]);
+            }
+        }
+    }
+    Leg& front = pS->mFront;
+    front.mTop = h;
+    front.mSplit = -1;
+    front.mLeft = w;
+    front.mRight = -1;
+    for (s32 y = from; y < h; y++)
+    {
+        for (s32 x = 0; x < w; x++)
+        {
+            if (sIn[y * kMaxFrame + x])
+            {
+                pS->mLegs[y * 256 + x] = pData[y * 256 + x];
+                pS->mTorso[y * 256 + x] = 0;
+                front.mTop = y < front.mTop ? y : front.mTop;
+                front.mSplit = y;
+                front.mLeft = x < front.mLeft ? x : front.mLeft;
+                front.mRight = x > front.mRight ? x : front.mRight;
+            }
+        }
+    }
+    pS->mHasFront = front.mSplit >= 0;
+}
+
+// The sprite's frame idx split, made once per frame and kept; NULL if it cannot be.
+const Split* GetSplit(const Sprite* pSprite, s32 idx)
+{
+    static Split sSplits[kMaxSplit];
+    static bool sInit = false;
+    for (s32 i = 0; i < kMaxSplit && !sInit; i++)
+    {
+        sSplits[i].mSprite = -1;
+    }
+    sInit = true;
+    const s32 sprite = gGtx_0x106C->GetSpriteTrueIndex(pSprite->mSpriteTypeEnum, idx);
+    const u16 pal = gGtx_0x106C->get_phys_pal(pSprite->GetTruePalette());
+    Split* pS = NULL;
+    for (s32 i = 0; i < kMaxSplit && !pS; i++)
+    {
+        pS = sSplits[i].mSprite == sprite || sSplits[i].mSprite < 0 ? &sSplits[i] : NULL;
+    }
+    const sprite_index* pIndex = gGtx_0x106C->get_sprite_index(sprite);
+    if (!pS || pIndex->mWidth > kMaxFrame || pIndex->mHeight > kMaxFrame)
+    {
+        return NULL;
+    }
+    if (pS->mSprite != sprite)
+    {
+        pS->mSprite = sprite;
+        pS->mPal = pal;
+        pS->mWidth = pIndex->mWidth;
+        pS->mHeight = pIndex->mHeight;
+        SplitFrame(pS, pIndex->mpData);
+        pS->mpTorso = pgbh_RegisterTexture(pS->mWidth, pS->mHeight, pS->mTorso, pal, 0);
+        pS->mpLegs = pgbh_RegisterTexture(pS->mWidth, pS->mHeight, pS->mLegs, pal, 0);
+    }
+    else if (pS->mPal != pal)
+    {
+        pS->mPal = pal;
+        pgbh_AssignPalette(pS->mpTorso, pal);
+        pgbh_AssignPalette(pS->mpLegs, pal);
+    }
+    return pS;
+}
+
+// The texels tex of pTexture drawn on the frame's texels at, turned by turn about (px, py) in the frame, that point put
+// at (dx, dy) texels from the centre of the sprite's quad pV (its world corners after it if count is 8).
+void DrawTurned(STexture* pTexture, u32 flags, const Vert* pV, s32 count, const Box& at, const Box& tex, s32 turn,
+                f32 px, f32 py, f32 dx, f32 dy)
+{
     const f32 du = 1.0f / (pV[1].u - pV[0].u);
     const f32 dv = 1.0f / (pV[3].v - pV[0].v);
-    const f32 pu = (pV[0].u + pV[1].u) * 0.5f;
-    const f32 pv = (pV[0].v + pV[3].v) * 0.5f;
-    const f32 fu = (frame.mWidth - 0.3f) * 0.5f;
-    const f32 fv = (frame.mHeight - 0.3f) * 0.5f;
+    const f32 pu = (pV[0].u + pV[1].u) * 0.5f + dx;
+    const f32 pv = (pV[0].v + pV[3].v) * 0.5f + dy;
     const f32 c = cosf(turn * (3.14159265f / 720.0f));
     const f32 s = -sinf(turn * (3.14159265f / 720.0f));
     Vert verts[8];
     for (s32 i = 0; i < 4; i++)
     {
         const bool right = i == 1 || i == 2;
-        const f32 u = (right ? at.u1 : at.u0) - fu;
-        const f32 v = (i < 2 ? at.v0 : at.v1) - hv;
+        const f32 u = (right ? at.u1 : at.u0) - px;
+        const f32 v = (i < 2 ? at.v0 : at.v1) - py;
+        // The quad is flat: a texel's place on screen and in the world is linear in (u, v).
         const f32 tu = (pu + u * c - v * s - pV[0].u) * du;
-        const f32 tv = (pv + hv - fv + u * s + v * c - pV[0].v) * dv;
+        const f32 tv = (pv + u * s + v * c - pV[0].v) * dv;
         for (s32 k = 0; k < count; k += 4)
         {
             Vert& out = verts[k + i];
@@ -251,144 +432,131 @@ void DrawPart(const Frame& frame, u32 flags, const Vert* pV, s32 count, const Bo
         verts[i].u = right ? tex.u1 : tex.u0;
         verts[i].v = i < 2 ? tex.v0 : tex.v1;
     }
-    pgbh_DrawQuad(flags, frame.mpTexture, verts, 255);
+    pgbh_DrawQuad(flags, pTexture, verts, 255);
 }
 
-// A frame's trailing leg: the rows top to split above the first one wider than a leg (split), and the columns left to
-// right of its top row with the pixels next to them below.
-struct Leg
+// Backpedalling, from the last drawn row: tall frames have empty rows below the head.
+f32 Hips(const Split* pS)
 {
-    s32 mTop;
-    s32 mSplit;
-    s32 mLeft;
-    s32 mRight;
-};
-
-// False if the frame shows no leg, its split still found.
-bool FindLeg(const Frame& frame, Leg* pLeg)
-{
-    const u8* pData = frame.mpData;
-    s32 top = -1;
-    s32 split = 0;
-    for (; split < frame.mHeight; split++)
-    {
-        s32 n = 0;
-        for (s32 x = 0; x < frame.mWidth; x++)
-        {
-            n += pData[split * 256 + x] != 0;
-        }
-        top = top < 0 && n ? split : top;
-        if (n > kLegWidth)
-        {
-            break;
-        }
-    }
-    pLeg->mSplit = split < frame.mHeight ? split : 0;
-    if (top < 0 || split - top < 2 || split >= frame.mHeight)
-    {
-        return false;
-    }
-    s32 left = 0;
-    while (!pData[top * 256 + left])
-    {
-        left++;
-    }
-    s32 right = left;
-    while (right + 1 < frame.mWidth && pData[top * 256 + right + 1])
-    {
-        right++;
-    }
-    for (s32 y = top + 1; y < split; y++)
-    {
-        while (left > 0 && pData[y * 256 + left - 1])
-        {
-            left--;
-        }
-        while (right + 1 < frame.mWidth && pData[y * 256 + right + 1])
-        {
-            right++;
-        }
-    }
-    pLeg->mTop = top;
-    pLeg->mLeft = left;
-    pLeg->mRight = right;
-    return true;
+    const s32 bottom = sBackward ? pS->mLast + 1 : pS->mHeight;
+    return pS->mLeg.mSplit + (bottom - pS->mLeg.mSplit) * kHips;
 }
 
-// The frame's trailing leg turned by turn about hips, slid under the torso by slide texels, its last row stretched to the
-// hips to stay under the torso.
-void DrawLeg(const Frame& frame, const Leg& leg, u32 flags, const Vert* pV, s32 count, s32 turn, f32 hips, f32 slide)
+f32 HalfWidth(const Split* pS)
 {
-    const f32 l = leg.mLeft - 0.5f;
-    const f32 r = leg.mRight + 1.5f;
-    const f32 t = leg.mTop - 0.5f;
-    const f32 v = leg.mSplit - 0.5f;
-    slide = fminf(slide, hips - v);
-    const Box join = {l, v + slide, r, hips};
-    const Box joinTex = {l, v, r, v};
-    const Box strip = {l, t + slide, r, v + slide};
-    const Box stripTex = {l, t, r, v};
-    DrawPart(frame, flags, pV, count, join, joinTex, turn, hips);
-    DrawPart(frame, flags, pV, count, strip, stripTex, turn, hips);
+    return (pS->mWidth - 0.3f) * 0.5f;
 }
 
-// A foot, a rounded box the colour of the shoe of the leg in frame, at ahead texels along the move (turn) from the hips
-// (hv in the frame) and side texels across it.
-void DrawFoot(const Frame& frame, const Leg& leg, u32 flags, const Vert* pV, s32 count, s32 turn, f32 hv, f32 ahead, f32 side)
+// The middle of leg, in texels from the frame's middle column.
+f32 LegU(const Split* pS, const Leg& leg)
 {
-    const f32 u = (frame.mWidth - 0.3f) * 0.5f + side;
-    const f32 v = hv + ahead;
-    const f32 h = kFootLength * 0.5f;
-    // The shoe: the top texel of the leg's middle column.
-    const f32 shoe = (leg.mLeft + leg.mRight + 1) * 0.5f;
-    const Box tex = {shoe, leg.mTop + 0.5f, shoe, leg.mTop + 0.5f};
-    const Box core = {u - 1.0f, v - h + 0.5f, u + 1.0f, v + h - 0.5f};
-    const Box wide = {u - 1.25f, v - h + 1.0f, u + 1.25f, v + h - 1.0f};
-    const Box tall = {u - 0.75f, v - h, u + 0.75f, v + h};
-    DrawPart(frame, flags, pV, count, core, tex, turn, hv);
-    DrawPart(frame, flags, pV, count, wide, tex, turn, hv);
-    DrawPart(frame, flags, pV, count, tall, tex, turn, hv);
+    return (leg.mLeft + leg.mRight + 1) * 0.5f - HalfWidth(pS);
 }
 
-// The frame with the pixels set in hidden (kMaxFrame per row) cleared, in a texture of its own for each frame size.
-Frame MaskFrame(const Frame& frame, u16 physPal, const bool* pHidden)
+// How far from the hips the torso of pT covers a leg at u texels across, behind (dir -1) or ahead (dir 1), turned by
+// turn; backpedalling, over the leg's three columns.
+f32 TorsoCover(const Split* pT, f32 u, s32 turn, f32 dir)
 {
-    struct Copy
+    const f32 c = cosf(turn * (3.14159265f / 720.0f));
+    const f32 s = -sinf(turn * (3.14159265f / 720.0f));
+    const f32 hips = Hips(pT);
+    const s32 wide = sBackward ? 1 : 0;
+    f32 cover = 0.0f;
+    for (s32 o = -wide; o <= wide; o++)
     {
-        s32 mWidth;
-        s32 mHeight;
-        STexture* mpTexture;
-        u8 mData[kMaxFrame * 256];
-    };
-    static Copy sCopies[kMaskedSizes];
-    Copy* pCopy = NULL;
-    for (s32 i = 0; i < kMaskedSizes && !pCopy; i++)
-    {
-        Copy& copy = sCopies[i];
-        if (!copy.mpTexture)
+        const f32 uo = u + o;
+        for (f32 d = 0.0f; d < 32.0f; d += 0.5f)
         {
-            // Sprite pages are 256 texels wide, as the texture reads them.
-            copy.mWidth = frame.mWidth;
-            copy.mHeight = frame.mHeight;
-            copy.mpTexture = pgbh_RegisterTexture(frame.mWidth, frame.mHeight, copy.mData, physPal, 0);
-        }
-        pCopy = copy.mWidth == frame.mWidth && copy.mHeight == frame.mHeight && copy.mpTexture ? &copy : NULL;
-    }
-    if (!pCopy)
-    {
-        return frame;
-    }
-    for (s32 y = 0; y < frame.mHeight; y++)
-    {
-        for (s32 x = 0; x < frame.mWidth; x++)
-        {
-            pCopy->mData[y * 256 + x] = pHidden[y * kMaxFrame + x] ? 0 : frame.mpData[y * 256 + x];
+            const f32 v = d * dir;
+            const s32 x = static_cast<s32>(floorf(HalfWidth(pT) + uo - v * s));
+            const s32 y = static_cast<s32>(floorf(hips + v * c));
+            const bool in = x >= 0 && y >= 0 && x < pT->mWidth && y < pT->mHeight && pT->mTorso[y * 256 + x];
+            cover = in ? fmaxf(cover, d) : cover;
         }
     }
-    // Also marks the texture to be uploaded again.
-    pgbh_AssignPalette(pCopy->mpTexture, physPal);
-    const Frame masked = {pCopy->mpTexture, frame.mWidth, frame.mHeight, pCopy->mData};
-    return masked;
+    return cover;
+}
+
+// The legs behind of pL, or its front leg, turned by turn about its middle at the hips of pT, pulled in toward them
+// by slide texels and cut there, the body moved by (bx, by).
+void DrawLeg(const Split* pT, const Split* pL, bool front, u32 flags, const Vert* pV, s32 count, s32 turn, f32 slide,
+             f32 bx, f32 by)
+{
+    const Leg& leg = front ? pL->mFront : pL->mLeg;
+    const f32 hips = Hips(pL);
+    const f32 l = static_cast<f32>(leg.mLeft);
+    const f32 r = leg.mRight + 1.0f;
+    const f32 px = sBackward ? (l + r) * 0.5f : HalfWidth(pL);
+    const f32 dx = px - HalfWidth(pL) + bx;
+    const f32 dy = Hips(pT) - (pT->mHeight - 0.3f) * 0.5f + by;
+    if (front)
+    {
+        const f32 top = fmaxf(leg.mTop - slide, hips);
+        const Box strip = {l, top, r, leg.mSplit + 1.0f - slide};
+        const Box tex = {l, top + slide, r, strip.v1 + slide};
+        if (strip.v0 < strip.v1)
+        {
+            DrawTurned(pL->mpLegs, flags, pV, count, strip, tex, turn, px, hips, dx, dy);
+        }
+        return;
+    }
+    const f32 end = fminf(leg.mSplit + 1.0f + slide, hips);
+    const Box strip = {l, leg.mTop + slide, r, end};
+    const Box tex = {l, strip.v0 - slide, r, end - slide};
+    if (strip.v0 < strip.v1)
+    {
+        DrawTurned(pL->mpLegs, flags, pV, count, strip, tex, turn, px, hips, dx, dy);
+        const Box join = {l, end, r, hips};
+        const Box joinTex = {l, leg.mSplit + 0.5f, r, leg.mSplit + 0.5f};
+        if (end < hips)
+        {
+            DrawTurned(pL->mpLegs, flags, pV, count, join, joinTex, turn, px, hips, dx, dy);
+        }
+    }
+}
+
+// The torso of pS from row top, the ends of its first two rows taken in by 2 and 1 texels times round (a rounded back
+// where the legs went), round + sway on the left and round - sway on the right.
+void DrawTorso(const Split* pS, u32 flags, const Vert* pV, s32 count, f32 top, f32 round, f32 sway, f32 bx, f32 by)
+{
+    const f32 fu = HalfWidth(pS);
+    const f32 fv = (pS->mHeight - 0.3f) * 0.5f;
+    s32 row = static_cast<s32>(top);
+    bool found = false;
+    for (; round > 0.0f && row < pS->mHeight && !found; row++)
+    {
+        for (s32 x = 0; x < pS->mWidth; x++)
+        {
+            found = found || pS->mTorso[row * 256 + x];
+        }
+    }
+    for (s32 i = 0; i < 2 && found && row - 1 + i < pS->mHeight; i++)
+    {
+        const s32 r = row - 1 + i;
+        s32 l = pS->mWidth;
+        s32 rr = -1;
+        for (s32 x = 0; x < pS->mWidth; x++)
+        {
+            l = pS->mTorso[r * 256 + x] && x < l ? x : l;
+            rr = pS->mTorso[r * 256 + x] ? x : rr;
+        }
+        const f32 inL = fmaxf(round * (2 - i) + sway, 0.0f);
+        const f32 inR = fmaxf(round * (2 - i) - sway, 0.0f);
+        const Box part = {l + inL, fmaxf(top, static_cast<f32>(r)), rr + 1 - inR, r + 1.0f};
+        if (rr >= l && part.u0 < part.u1)
+        {
+            DrawTurned(pS->mpTorso, flags, pV, count, part, part, 0, fu, fv, bx, by);
+        }
+        top = r + 1.0f;
+    }
+    const Box all = {0.0f, top, pS->mWidth - 0.3f, pS->mHeight - 0.3f};
+    DrawTurned(pS->mpTorso, flags, pV, count, all, all, 0, fu, fv, bx, by);
+}
+
+// How far to pull in a leg that shows shown texels past the torso, shown0 unturned, to keep keep of it.
+f32 Slide(f32 shown, f32 shown0, f32 keep)
+{
+    return fmaxf(sBackward ? shown - shown0 * keep : shown0 * (1.0f - keep), 0.0f);
 }
 } // namespace
 
@@ -479,116 +647,76 @@ bool DrawLegs(const Sprite* pSprite, STexture*, u32 flags, const Vert* pVerts, s
     // The walk and run frames: 0 to 15 from the body's first sprite, 37 to 52 with a weapon (Char::UpdateAnimState).
     const s32 idx = pSprite->mTypeSpriteIdx;
     const s32 body = idx >= 316 ? 316 : (idx >= 158 ? 158 : 0);
-    const bool armed = idx - body >= 37;
+    const s32 frame = idx - body - (idx - body >= 37 ? 37 : 0);
+    const s32 step = frame % 8;
     const s32 off = Diff(sMove, pSprite->mRotation.rValue);
-    if (!off || idx - body - (armed ? 37 : 0) > 15)
+    if (!off || frame > 15)
     {
         return false;
     }
-    // Walking backward the walk plays backward; the switch holds until 5 degrees past 135.
-    const s32 side = abs(off);
-    sBackward = side > 560 || (sBackward && side > 520);
-    const s32 cycle = idx - (idx - body - (armed ? 37 : 0)) % 8;
-    const s32 step = sBackward ? 7 - (idx - cycle) : idx - cycle;
-    // As Hotline Miami's, seen from above: off the facing the feet step out from under the torso along the move, in time
-    // with the walk; toward the back the trailing leg comes back up along the move.
-    const Frame walk = GetFrame(pSprite, cycle + step);
-    if (walk.mWidth > kMaxFrame || walk.mHeight > kMaxFrame)
+    // Past 90 degrees off the facing the cycle plays backward, switching on a step that both ways show (0 or 4).
+    sBackward = (abs(off) > 360) != sBackward && step % 4 == 0 ? !sBackward : sBackward;
+    const s32 cycle = idx - step;
+    const s32 drawn = sBackward ? (8 - step) % 8 : step;
+    const s32 rel = sBackward ? off - (off > 0 ? 720 : -720) : off;
+    const Split* pS = GetSplit(pSprite, cycle + drawn);
+    if (!pS)
     {
         return false;
     }
-    Leg leg;
-    const bool hasLeg = FindLeg(walk, &leg);
-    const f32 hips = leg.mSplit + (walk.mHeight - leg.mSplit) * kHips;
-    const f32 out = fminf(fminf(side, 720 - side) / static_cast<f32>(kFeetTurn), 1.0f);
-    if (hasLeg && out < 1.0f)
+    const f32 sn = sinf(rel * (3.14159265f / 720.0f));
+    const f32 cs = cosf(rel * (3.14159265f / 720.0f));
+    const f32 t = sn * sn;
+    // The stride the legs keep: forward the frame's own, unturned; backpedalling they turn to the move, the frame's own
+    // leg ahead and the one half a cycle on behind it.
+    const f32 full = cosf(kBackFull * (3.14159265f / 180.0f));
+    const f32 keep = sBackward ? fminf(cs * cs / fmaxf(full * full, 1e-3f), 1.0f) : 1.0f - t;
+    const s32 turn = sBackward ? rel : 0;
+    const f32 kFront = sBackward ? (1.0f - t) * keep : keep;
+    const f32 kOwn = sBackward ? (1.0f - (1.0f - kLegLead) * t) * keep : keep;
+    const f32 kOther = sBackward ? kLegTrail * t * keep : 0.0f;
+    const f32 bob = kBob * t * sinf((step - 2) * (3.14159265f / 2.0f));
+    const f32 bx = -sinf(off * (3.14159265f / 720.0f)) * bob;
+    const f32 by = cosf(off * (3.14159265f / 720.0f)) * bob;
+    if (pS->mHasFront)
     {
-        const s32 turn = side < 360 ? off : off - (off > 0 ? 720 : -720);
-        DrawLeg(walk, leg, flags, pVerts, count, turn, hips, (leg.mSplit - leg.mTop) * out);
-    }
-    // The feet the colour of the shoe of the cycle's longest leg.
-    Frame shoe = walk;
-    Leg shoeLeg = {0, 0, 0, 0};
-    for (s32 i = 0; i < 8; i++)
-    {
-        const Frame frame = GetFrame(pSprite, cycle + i);
-        Leg l;
-        if (FindLeg(frame, &l) && l.mSplit - l.mTop > shoeLeg.mSplit - shoeLeg.mTop)
+        const f32 u = LegU(pS, pS->mFront);
+        const f32 reach = pS->mFront.mSplit + 1.0f - Hips(pS);
+        const f32 shown0 = reach - TorsoCover(pS, u, 0, 1.0f);
+        const f32 shown = reach - TorsoCover(pS, u, turn, 1.0f);
+        if (shown0 * kFront >= kMinShow)
         {
-            shoe = frame;
-            shoeLeg = l;
+            DrawLeg(pS, pS, true, flags, pVerts, count, turn, Slide(shown, shown0, kFront), bx, by);
         }
     }
-    if (shoeLeg.mSplit > shoeLeg.mTop)
+    const Split* pOther = kOther > 0.0f ? GetSplit(pSprite, cycle + (drawn + 4) % 8) : NULL;
+    if (pOther && pOther->mHasLeg)
     {
-        const f32 hv = hips - (walk.mHeight - 0.3f) * 0.5f + (shoe.mHeight - 0.3f) * 0.5f;
-        const f32 ahead = kStride * out * sinf(step * (3.14159265f / 4.0f));
-        DrawFoot(shoe, shoeLeg, flags, pVerts, count, off, hv, ahead, kFootApart);
-        DrawFoot(shoe, shoeLeg, flags, pVerts, count, off, hv, -ahead, -kFootApart);
-    }
-    // The front leg, ahead of the hips: its shoe, in the colour of the longest trailing leg's foot, and the pixels in that
-    // leg's colours next to it. It sinks under the torso from the foot up as the trailing leg does.
-    static bool sHidden[kMaxFrame * kMaxFrame];
-    static bool sNext[kMaxFrame * kMaxFrame];
-    memset(sHidden, 0, sizeof(sHidden));
-    bool shoeColour[256] = {};
-    bool legColour[256] = {};
-    for (s32 y = shoeLeg.mTop; y < shoeLeg.mSplit; y++)
-    {
-        for (s32 x = shoeLeg.mLeft; x <= shoeLeg.mRight; x++)
+        const s32 back = rel + (rel > 0 ? -720 : 720);
+        const f32 u = LegU(pOther, pOther->mLeg);
+        const f32 len = Hips(pOther) - pOther->mLeg.mTop;
+        const f32 len0 = len - TorsoCover(pOther, u, 0, -1.0f);
+        if (len0 * kOther >= kMinShow)
         {
-            const u8 c = shoe.mpData[y * 256 + x];
-            shoeColour[c] = shoeColour[c] || (c && y == shoeLeg.mTop);
-            legColour[c] = legColour[c] || c;
+            const f32 slide = Slide(len - TorsoCover(pS, u, back, -1.0f), len0, kOther);
+            DrawLeg(pS, pOther, false, flags, pVerts, count, back, slide, bx, by);
         }
     }
-    const s32 w = walk.mWidth;
-    const s32 h = walk.mHeight;
-    const s32 front = leg.mSplit + kFrontLegRow;
-    for (s32 y = front; y < h; y++)
+    if (pS->mHasLeg)
     {
-        for (s32 x = 0; x < w; x++)
+        const f32 u = LegU(pS, pS->mLeg);
+        const f32 len = Hips(pS) - pS->mLeg.mTop;
+        const f32 len0 = len - TorsoCover(pS, u, 0, -1.0f);
+        if (len0 * kOwn >= kMinShow)
         {
-            sHidden[y * kMaxFrame + x] = shoeColour[walk.mpData[y * 256 + x]];
+            const f32 slide = Slide(len - TorsoCover(pS, u, turn, -1.0f), len0, kOwn);
+            DrawLeg(pS, pS, false, flags, pVerts, count, turn, slide, bx, by);
         }
     }
-    for (s32 i = 0; i < kFrontLegGrow; i++)
-    {
-        memcpy(sNext, sHidden, sizeof(sNext));
-        for (s32 y = front; y < h; y++)
-        {
-            for (s32 x = 0; x < w; x++)
-            {
-                bool next = false;
-                for (s32 n = 0; n < 9; n++)
-                {
-                    const s32 yy = y + n / 3 - 1;
-                    const s32 xx = x + n % 3 - 1;
-                    next = next || (yy >= front && yy < h && xx >= 0 && xx < w && sHidden[yy * kMaxFrame + xx]);
-                }
-                sNext[y * kMaxFrame + x] = sNext[y * kMaxFrame + x] || (next && legColour[walk.mpData[y * 256 + x]]);
-            }
-        }
-        memcpy(sHidden, sNext, sizeof(sHidden));
-    }
-    s32 first = h;
-    s32 last = -1;
-    for (s32 y = front; y < h; y++)
-    {
-        for (s32 x = 0; x < w; x++)
-        {
-            first = sHidden[y * kMaxFrame + x] && y < first ? y : first;
-            last = sHidden[y * kMaxFrame + x] ? y : last;
-        }
-    }
-    const s32 cut = last < 0 ? h : static_cast<s32>(ceilf(last + 1 - (last + 1 - first) * out));
-    for (s32 y = front; y < cut && y < h; y++)
-    {
-        memset(sHidden + y * kMaxFrame, 0, kMaxFrame);
-    }
-    const Frame torso = last < cut ? walk : MaskFrame(walk, gGtx_0x106C->get_phys_pal(pSprite->GetTruePalette()), sHidden);
-    const Box rows = {0.0f, fmaxf(leg.mSplit - 0.5f, 0.0f), walk.mWidth - 0.3f, walk.mHeight - 0.3f};
-    DrawPart(torso, flags, pVerts, count, rows, rows, 0, 0.0f);
+    // The feet side by side behind the back go under it with the legs.
+    const f32 top = pS->mHasLeg ? pS->mLeg.mSplit + (pS->mBack - pS->mLeg.mSplit) * (1.0f - keep) : 0.0f;
+    const f32 sway = kSway * (1.0f - keep) * sinf((step - 2) * (3.14159265f / 4.0f));
+    DrawTorso(pS, flags, pVerts, count, top, 1.0f - keep, sway, bx, by);
     return true;
 }
 
