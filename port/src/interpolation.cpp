@@ -21,7 +21,9 @@ const s32 kTurn = 1440;
 
 // Fix16 screen units: an arrow moving further in one step found a new target or came back into view.
 const s32 kMaxArrowStepMove = 64 * 16384;
-const s32 kNumArrows = sizeof(gHud_2B00->mArrows.mArray) / sizeof(gHud_2B00->mArrows.mArray[0]);
+const s32 kNumHudArrows = sizeof(gHud_2B00->mArrows.mArray) / sizeof(gHud_2B00->mArrows.mArray[0]);
+// The HUD's arrows, then the marker over the player under a roof.
+const s32 kNumArrows = kNumHudArrows + 1;
 
 const s32 kNumSprites = sizeof(gSpritePool->mPool.mPool) / sizeof(gSpritePool->mPool.mPool[0]);
 
@@ -76,11 +78,20 @@ Camera* spCamera;
 CameraPos sCameraPos;
 bool sValid;
 
+struct ArrowRef
+{
+    Fix16* mpX;
+    Fix16* mpY;
+    Ang16* mpRot;
+    bool mShown;
+};
+
 struct ArrowPose
 {
     s32 mX;
     s32 mY;
     s16 mRot;
+    bool mShown; // a hidden arrow keeps the spot it was last shown at
 };
 ArrowPose sArrows[kNumArrows];
 ArrowPose sArrowsDrawn[kNumArrows];
@@ -93,12 +104,35 @@ u32 sSnapped;
 Camera* spAppliedCamera;
 u8 sCameraBytes[sizeof(Camera)];
 
-ArrowPose PoseOf(const Hud_Arrow& arrow)
+ArrowRef ArrowAt(s32 i)
+{
+    ArrowRef ref;
+    if (i < kNumHudArrows)
+    {
+        Hud_Arrow& arrow = gHud_2B00->mArrows.mArray[i];
+        ref.mpX = &arrow.mScreenPosX;
+        ref.mpY = &arrow.mScreenPosY;
+        ref.mpRot = &arrow.mRotation;
+        ref.mShown = !arrow.HasNeitherTarget() && arrow.IsVisible();
+    }
+    else
+    {
+        Hud_UnderRoofArrowMarker& marker = gHud_2B00->mUnderRoofArrowMarker;
+        ref.mpX = &marker.mScreenX;
+        ref.mpY = &marker.mScreenY;
+        ref.mpRot = &marker.mRotation;
+        ref.mShown = marker.mPedUnderSolid;
+    }
+    return ref;
+}
+
+ArrowPose PoseOf(const ArrowRef& arrow)
 {
     ArrowPose pose;
-    pose.mX = arrow.mScreenPosX.mValue;
-    pose.mY = arrow.mScreenPosY.mValue;
-    pose.mRot = arrow.mRotation.rValue;
+    pose.mX = arrow.mpX->mValue;
+    pose.mY = arrow.mpY->mValue;
+    pose.mRot = arrow.mpRot->rValue;
+    pose.mShown = arrow.mShown;
     return pose;
 }
 
@@ -224,7 +258,7 @@ void Snapshot()
     sCameraPos = spCamera->mCurPos;
     for (s32 i = 0; gHud_2B00 && i < kNumArrows; i++)
     {
-        sArrows[i] = PoseOf(gHud_2B00->mArrows.mArray[i]);
+        sArrows[i] = PoseOf(ArrowAt(i));
     }
 }
 
@@ -281,17 +315,18 @@ void Apply(f32 alpha)
     sArrowsApplied = gHud_2B00 != NULL;
     for (s32 i = 0; sArrowsApplied && i < kNumArrows; i++)
     {
-        Hud_Arrow& arrow = gHud_2B00->mArrows.mArray[i];
+        const ArrowRef arrow = ArrowAt(i);
         const ArrowPose cur = PoseOf(arrow);
         const ArrowPose& prev = sArrows[i];
         const s32 turn = TurnBetween(prev.mRot, cur.mRot);
         sArrowsDrawn[i] = cur;
-        if (Abs(cur.mX - prev.mX) <= kMaxArrowStepMove && Abs(cur.mY - prev.mY) <= kMaxArrowStepMove && Abs(turn) <= kMaxStepTurn)
+        if (prev.mShown && cur.mShown && Abs(cur.mX - prev.mX) <= kMaxArrowStepMove && Abs(cur.mY - prev.mY) <= kMaxArrowStepMove &&
+            Abs(turn) <= kMaxStepTurn)
         {
-            arrow.mScreenPosX.mValue = Lerp(prev.mX, cur.mX, alpha);
-            arrow.mScreenPosY.mValue = Lerp(prev.mY, cur.mY, alpha);
-            arrow.mRotation.rValue = static_cast<s16>(cur.mRot - turn + Lerp(0, turn, alpha));
-            arrow.mRotation.Normalize();
+            arrow.mpX->mValue = Lerp(prev.mX, cur.mX, alpha);
+            arrow.mpY->mValue = Lerp(prev.mY, cur.mY, alpha);
+            arrow.mpRot->rValue = static_cast<s16>(cur.mRot - turn + Lerp(0, turn, alpha));
+            arrow.mpRot->Normalize();
         }
     }
 }
@@ -300,10 +335,10 @@ void Restore()
 {
     for (s32 i = 0; sArrowsApplied && i < kNumArrows; i++)
     {
-        Hud_Arrow& arrow = gHud_2B00->mArrows.mArray[i];
-        arrow.mScreenPosX.mValue = sArrowsDrawn[i].mX;
-        arrow.mScreenPosY.mValue = sArrowsDrawn[i].mY;
-        arrow.mRotation.rValue = sArrowsDrawn[i].mRot;
+        const ArrowRef arrow = ArrowAt(i);
+        arrow.mpX->mValue = sArrowsDrawn[i].mX;
+        arrow.mpY->mValue = sArrowsDrawn[i].mY;
+        arrow.mpRot->rValue = sArrowsDrawn[i].mRot;
     }
     sArrowsApplied = false;
     if (spAppliedCamera)
