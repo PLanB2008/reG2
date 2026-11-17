@@ -76,6 +76,8 @@ off shortens their reach as the original's backward walk does). Walking off the 
 are: from 45 to 135 degrees off, the walk frame's legs hidden, behind and in front, his feet, rounded boxes the colour of his shoes, step out from under his torso along the move, one ahead while the other is behind, the rest of him at the aim; further back his legs come back, the trailing one along the move, and his walk plays backward. In a jump the move steers him toward its way, as fast as the
 original's left and right turn him in the air. The machine guns fire straight along the aim: the original bends
 their shots toward a ped up to 16 degrees off the line of fire. The electro weapons keep their lock on a target.
+Peds standing to shoot at him with a pistol or a machine gun lead him by a part of his move while their bullets
+fly, drawn between 0.4 and 1.0 every half second: walking sideways still dodges most shots, no longer all.
 AIM CAMERA (on by default) leads the view a little ahead of the player on foot, as Hotline Miami does: 0.3 of
 the half screen height along the aim (the mouse's direction from him or the right stick's), however far the
 cursor or the reticle is, and along the last aim once the stick is released; held, left Shift, LT (instead of

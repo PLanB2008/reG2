@@ -8,9 +8,12 @@
 #include "char.hpp"
 #include "gbh_graphics.hpp"
 #include "gtx_0x106C.hpp"
+#include "ObjectDefinitions.hpp"
 #include "settings.hpp"
 #include "sprite.hpp"
 #include "TextureCache.hpp"
+#include "Weapon.hpp"
+#include "rng.hpp"
 #include "view.hpp"
 #include <math.h>
 #include <stdlib.h>
@@ -50,6 +53,14 @@ const f32 kLookFurther = 2.5f;
 const f32 kMaxLookFurther = 1.2f;
 const f32 kLookEdge = 0.1f;
 const f32 kLookFollow = 0.12f;
+// A ped shooting at the player on foot leads him by this part of his move while the bullet flies, drawn between
+// these anew every this many steps, and by this many blocks at most.
+const f32 kMinLead = 0.4f;
+const f32 kMaxLead = 1.0f;
+const u32 kLeadSteps = 15;
+const f32 kMaxLeadBlocks = 1.5f;
+// A move further than this in one step is a jump in place (a teleport), not a walk.
+const f32 kMaxStepMove = 0.25f;
 // A walking ped's sprite faces down, its trailing leg the rows above the torso no wider than this.
 const s32 kLegWidth = 5;
 // From this far off the facing to as far off its back, in Ang16 units (45 degrees), only the feet show, the trailing
@@ -83,6 +94,12 @@ f32 sAimDirX; // the last aim's direction in the world, zero before any aim
 f32 sAimDirY;
 f32 sLookX; // in blocks
 f32 sLookY;
+const Sprite* spTracked; // the player on foot at the last step, where he was and how far he went over it
+Fix16 sTrackedX;
+Fix16 sTrackedY;
+s32 sTrackedCycle;
+f32 sMovedX;
+f32 sMovedY;
 
 f32 ToF(Fix16 v)
 {
@@ -390,12 +407,37 @@ Frame MaskFrame(const Frame& frame, u16 physPal, const bool* pHidden)
     const Frame masked = {pCopy->mpTexture, frame.mWidth, frame.mHeight, pCopy->mData};
     return masked;
 }
+
+// The player's move over the last step, as walls stop or turn him whatever his velocity.
+void TrackMove(const Ped* pPed)
+{
+    const Sprite* pSprite = pPed && pPed == OnFootPed() ? pPed->GetSprite() : NULL;
+    const s32 cycle = gpRng->get_cur_rng();
+    sMovedX = sMovedY = 0.0f;
+    if (pSprite && pSprite == spTracked && cycle == sTrackedCycle + 1)
+    {
+        sMovedX = ToF(pSprite->mXy.x - sTrackedX);
+        sMovedY = ToF(pSprite->mXy.y - sTrackedY);
+        if (sMovedX * sMovedX + sMovedY * sMovedY > kMaxStepMove * kMaxStepMove)
+        {
+            sMovedX = sMovedY = 0.0f;
+        }
+    }
+    spTracked = pSprite;
+    if (pSprite)
+    {
+        sTrackedX = pSprite->mXy.x;
+        sTrackedY = pSprite->mXy.y;
+    }
+    sTrackedCycle = cycle;
+}
 } // namespace
 
 void PedControls(Player* pPlayer, Ped* pPed)
 {
     spWalker = NULL;
     sMoving = false;
+    TrackMove(pPed);
 #if defined(GTA2_PORT_SDL)
     if (!pPed || pPed != OnFootPed())
     {
@@ -617,6 +659,43 @@ void AimTurret(Car* pCar)
 bool FreeAim(const Ped* pPed)
 {
     return pPed == OnFootPed();
+}
+
+void LeadAim(Ped* pShooter)
+{
+    Ped* pTarget = OnFootPed();
+    Weapon* pWeapon = pTarget && pShooter->mInternalTargetPed == pTarget ? pShooter->GetWeaponFromPed() : NULL;
+    if (!pWeapon || spTracked != pTarget->GetSprite() || (!sMovedX && !sMovedY))
+    {
+        return;
+    }
+    switch (pWeapon->mWeaponType)
+    {
+        case weapon_type::pistol:
+        case weapon_type::smg:
+        case weapon_type::silence_smg:
+        case weapon_type::dual_pistol:
+            break;
+        default:
+            return;
+    }
+    const f32 dx = ToF(pTarget->mCam.x - pShooter->mCam.x);
+    const f32 dy = ToF(pTarget->mCam.y - pShooter->mCam.y);
+    // The bullets these weapons fire at peds; the part of the lead is drawn anew every kLeadSteps for each shooter.
+    const f32 speed = ToF(gObjectDefinitions->GetObjectDefinition(objects::machine_gun_bullet_254)->mSpeed);
+    u32 hash = (pShooter->mId * 0x9E3779B1u) ^ (static_cast<u32>(gpRng->get_cur_rng()) / kLeadSteps * 0x85EBCA6Bu);
+    hash = (hash ^ (hash >> 15)) * 0x2C1B3C6Du;
+    const f32 part = kMinLead + (kMaxLead - kMinLead) * ((hash >> 8) & 0xFFFF) / 65535.0f;
+    const f32 steps = sqrtf(dx * dx + dy * dy) / speed * part;
+    f32 lx = sMovedX * steps;
+    f32 ly = sMovedY * steps;
+    const f32 lead = sqrtf(lx * lx + ly * ly);
+    if (lead > kMaxLeadBlocks)
+    {
+        lx *= kMaxLeadBlocks / lead;
+        ly *= kMaxLeadBlocks / lead;
+    }
+    pShooter->mTargetFacingAngle = Ang16(static_cast<s16>(Angle(dx + lx, dy + ly)), 0);
 }
 
 void DrawReticle()

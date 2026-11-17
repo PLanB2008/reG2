@@ -1,6 +1,6 @@
 #include "Ped.hpp"
 #if defined(GTA2_PORT)
-// Port: TWIN STICK's free aim (ComputeAimAngle).
+// Port: TWIN STICK's free aim (ComputeAimAngle) and the shooters' lead (UpdateFacingAngle).
 #include "../port/src/twin_stick.hpp"
 #endif
 #include "ped_move_target_type.hpp"
@@ -3675,6 +3675,11 @@ void Ped::UpdateFacingAngle()
             if (this->mPedState2 == ped_state_2::attacking_standing_11)
             {
                 this->mTargetFacingAngle = Fix16::atan2_fixed(this->mMoveTargetY - this->mCam.y, this->mMoveTargetX - this->mCam.x);
+#if defined(GTA2_PORT)
+                // Port: TWIN STICK lets the player strafe sideways while he shoots, and bullets aimed where he is then
+                // miss him nearly always; the shooters lead him part of the way (port/src/twin_stick.cpp).
+                PortTwinStick::LeadAim(this);
+#endif
             }
             break;
         }
