@@ -51,6 +51,7 @@ enum Page
     kSoundPage,
     kControlsPage,
     kStatsPage,
+    kTranscriptPage,
     kSavesPage,
     kLoadPage,
     kQuitPage,
@@ -81,8 +82,8 @@ struct Item
 };
 
 const s32 kMaxItems = 16;
-const wchar_t* const kTitles[kNumPages] =
-    {L"OPTIONS", L"GAME", L"GRAPHICS", L"DISPLAY", L"SOUND", L"CONTROLS", L"STATISTICS", L"LOAD GAME", L"LOAD GAME", L"QUIT GAME"};
+const wchar_t* const kTitles[kNumPages] = {L"OPTIONS", L"GAME", L"GRAPHICS", L"DISPLAY", L"SOUND", L"CONTROLS", L"STATISTICS",
+                                           L"MISSION TRANSCRIPT", L"LOAD GAME", L"LOAD GAME", L"QUIT GAME"};
 
 const s32 kNumControls = 12;
 const s32 kDefaultControls[kNumControls] = {DIK_UP, DIK_DOWN, DIK_LEFT, DIK_RIGHT, DIK_LCONTROL, DIK_RETURN,
@@ -144,6 +145,7 @@ s32 sRetryMoney;
 long long sRetryTime;
 PortSaves::JobName sRetryJob;
 s32 sStatRows;
+f32 sTranscript = -1; // MISSION TRANSCRIPT's height, -1 if not offered
 // QUIT GAME's choices offered, and why SAVE AND QUIT is greyed, NULL if it is not.
 bool sQuitChoices;
 const wchar_t* sQuitBlocked;
@@ -200,6 +202,10 @@ s32 Items(Page page, Item* pItems)
             {
                 pItems[n++] = Item{kGoTo, kStatsPage, false};
             }
+            if (inGame && sTranscript >= 0)
+            {
+                pItems[n++] = Item{kGoTo, kTranscriptPage, false};
+            }
             if (inGame && sNumSaves)
             {
                 pItems[n++] = Item{kGoTo, kLoadPage, false};
@@ -219,6 +225,7 @@ s32 Items(Page page, Item* pItems)
         case kSoundPage:
             return SettingsPage(pItems, PortSettings::kSoundSettings, PortSettings::kNumSoundSettings);
         case kStatsPage:
+        case kTranscriptPage:
             pItems[n++] = Item{kBack, 0, false};
             break;
         case kSavesPage:
@@ -1058,8 +1065,9 @@ void GetLayout(Layout* pLayout)
             }
         }
     }
-    // The statistics' BACK centred as their rows.
-    const f32 x = controls ? 80.0f : (saves ? 40.0f : (sPage == kStatsPage ? 320 - Width(ItemName(pItems[0]), normal) / 2 : 140.0f));
+    // The statistics' and the transcript's BACK centred as their rows.
+    const bool centred = sPage == kStatsPage || sPage == kTranscriptPage;
+    const f32 x = controls ? 80.0f : (saves ? 40.0f : (centred ? 320 - Width(ItemName(pItems[0]), normal) / 2 : 140.0f));
     f32 columnX[kNumColumns];
     f32 right;
     // Narrower gaps for a page wider than the screen even moved left.
@@ -1103,8 +1111,10 @@ void GetLayout(Layout* pLayout)
     for (f32 step = controls ? kLineStep - 1 : kLineStep;; step--)
     {
         pLayout->mLineStep = step;
-        // BACK under the statistics; the saves under the tabs, BACK under NO SAVE; LOAD GAME's choices under its two lines.
+        // BACK under the statistics, the briefs or NO MESSAGES YET; the saves under the tabs, BACK under NO SAVE; LOAD GAME's
+        // choices under its two lines.
         f32 y = ListTop() + (sPage == kStatsPage ? sStatRows * kStatStep + kGapStep - kLineStep : 0);
+        y += sPage == kTranscriptPage ? Max(sTranscript, kLineStep) + kGapStep - kLineStep : 0;
         y += sPage == kLoadPage ? kLineStep + kGapStep : 0;
         y += saves ? (count == 1 ? kTabsStep - kHeadingsStep + kGapStep : kTabsStep) : 0;
         for (s32 i = 0; i < count; i++)
@@ -1387,6 +1397,7 @@ void Open()
     sSelected[kMainPage] = 0;
     sRetry = PortSaves::kNoCheckpoint;
     sStatRows = 0;
+    sTranscript = -1;
     sNumSaves = 0;
     sQuitChoices = false;
     sQuitBlocked = NULL;
@@ -1411,6 +1422,18 @@ void OfferRetry(PortSaves::Checkpoint kind, s32 money, long long time, const Por
 void OfferStatistics(s32 rows)
 {
     sStatRows = rows;
+}
+
+void OfferTranscript(f32 height)
+{
+    sTranscript = height;
+}
+
+bool OnTranscript(f32* pTop, f32* pRoom)
+{
+    *pTop = ListTop();
+    *pRoom = kHintsY - kLineStep - kGapStep - ListTop();
+    return sPage == kTranscriptPage;
 }
 
 bool OnStatistics(f32* pTop, f32* pStep)
@@ -1730,6 +1753,11 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
     if (sPage == kSavesPage)
     {
         DrawTabs(layout);
+    }
+    if (sPage == kTranscriptPage && !sTranscript)
+    {
+        const wchar_t* pEmpty = Translate(L"NO MESSAGES YET");
+        Text(pEmpty, 320 - Width(pEmpty, normal) / 2, ListTop(), normal, false, true);
     }
     if (sPage == kLoadPage)
     {

@@ -47,6 +47,10 @@ void OfferRetry(PortSaves::Checkpoint kind, s32 money, long long time, const Por
 void OfferStatistics(s32 rows);
 // On that page: true, with the layout's top of its first row and the distance between rows.
 bool OnStatistics(f32* pTop, f32* pStep);
+// After Open in game: MISSION TRANSCRIPT under STATISTICS, a page with briefs of that height (0: NO MESSAGES YET).
+void OfferTranscript(f32 height);
+// On that page: true; either way the layout's top of the briefs and the height they may take.
+bool OnTranscript(f32* pTop, f32* pRoom);
 // The menu is gone: the settings changed in it are saved now rather than at each change.
 void Close();
 
