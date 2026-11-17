@@ -71,8 +71,8 @@ The left stick, the d-pad or the movement keys walk; the right stick aims (its r
 further out the more it is pushed, up to the screen's edge, and held a moment once released), or the mouse does (confined to the window,
 a reticle in place of the cursor). RT attacks (held from driving or getting in, once pressed again), the other controls stay as bound. Without an aim the player faces the
 way he walks; with one he turns to it and walks any way at the same speed (backward with the run
-animation, as the original's back key; his shots and flames take on his speed along the way he walks, so backing
-off shortens their reach as the original's backward walk does). Walking off the aim, his steps shorten the
+animation, as the original's back key; his shots, flames and throws take on only the part of his walk toward the aim,
+as the original's forward walk does, so walking sideways or backing off leaves them where a standing throw goes). Walking off the aim, his steps shorten the
 more the move is to the side, down to none at 90 degrees, where his legs stay under him, his back rounded, and he
 bobs a little along the move; further back his walk plays backward, his legs turned along the move, the one ahead
 longer than the one behind. In a jump the move steers him toward its way, as fast as the
@@ -162,8 +162,9 @@ OPTIONS has five pages: GAME (language, text speed, AUTOSAVE, RETRY JOBS, FRENZY
 day and night cycle), GRAPHICS, DISPLAY (full screen, frame rate, zoom, HUD), SOUND and CONTROLS.
 Their settings are grouped under small titles, and the less common ones say under the page what they
 do, or what their value does (PRESET, LIGHTING, FRAME LIMIT, CONTROLS, AIM CAMERA).
-In a game, Escape opens the same menu as a pause menu, with RESUME, STATISTICS (the original pause
-screen's lines), LOAD GAME and QUIT GAME. The hints under the pages show the keys, or once a pad is used its
+In a game, Escape opens the same menu as a pause menu, with RESUME, RADIO (in a car with a radio: its station by
+name, Left and Right or Enter to change it, as F1 and F2 did), STATISTICS (the original pause screen's lines),
+MISSION TRANSCRIPT (the last mission messages, newest first), LOAD GAME and QUIT GAME. The hints under the pages show the keys, or once a pad is used its
 buttons: PlayStation's symbols on a PlayStation pad, otherwise Xbox's pictures with the letters
 printed on the pad (a Nintendo pad's bottom button is B), from SDL's pad type and button labels.
 
