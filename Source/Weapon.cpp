@@ -650,7 +650,12 @@ void Weapon::throwable(s32 obj_idx, s32 throw_strength, s32 throw_charge)
                         {
                             if (!mpPed->mGameObject->mFlagsBf.bReverseVelocity)
                             {
+#if defined(GTA2_PORT)
+                                // Port: TWIN STICK, the throw stays along the aim every way the player walks (ThrowLead).
+                                vector = PortTwinStick::ThrowLead(mpPed);
+#else
                                 vector = mpPed->GetVelocityVector();
+#endif
                                 pProjectile->SetMovementVector(vector);
                                 if (!vector.IsNull_420360())
                                 {

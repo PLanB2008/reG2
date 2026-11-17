@@ -688,6 +688,20 @@ Fix16_Point ShotLead(const Char* pChar)
     return Fix16_Point(pChar->mVelocityVector.x, pChar->mVelocityVector.y);
 }
 
+Fix16_Point ThrowLead(const Ped* pPed)
+{
+    Fix16_Point lead = pPed->GetVelocityVector();
+    if (pPed == OnFootPed())
+    {
+        const Fix16 sin = Ang16::sine(pPed->GetAimAngle());
+        const Fix16 cos = Ang16::cosine(pPed->GetAimAngle());
+        Fix16 along = lead.x * sin + lead.y * cos;
+        along = along.mValue > 0 ? along : Fix16(0);
+        lead.SetXY(along * sin, along * cos);
+    }
+    return lead;
+}
+
 bool DrawLegs(const Sprite* pSprite, STexture*, u32 flags, const Vert* pVerts, s32 count)
 {
     Ped* pPed = OnFootPed();
