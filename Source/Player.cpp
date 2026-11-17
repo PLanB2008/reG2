@@ -979,6 +979,8 @@ void Player::Hud_Controls(u16 action)
             // ordered above
 
             // ordered below
+#if !defined(GTA2_PORT)
+            // Port: F3 and F4 changed the saved music volume unseen; the SOUND options set it.
             case DIK_F3:
                 if (gRoot_sound.GetCDVol() - 10 > 0)
                 {
@@ -1003,6 +1005,7 @@ void Player::Hud_Controls(u16 action)
                 gRoot_sound.SetCDVol(vol);
                 gRegistry.Set_Sound_Setting("CDVol", gRoot_sound.GetCDVol());
                 break;
+#endif
             case DIK_F6:
                 gGame_0x40->TogglePause();
                 break;
