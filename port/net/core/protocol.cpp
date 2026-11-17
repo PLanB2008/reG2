@@ -76,7 +76,7 @@ bool net::ReadWelcome(BitReader& r, Welcome& m)
     {
         ok = ReadString(r, m.maps[i]);
     }
-    return ok && !r.Overflow() && m.slot < m.players;
+    return ok && !r.Overflow() && m.slot < m.players && m.players <= 6; // the game has 6 player slots
 }
 
 void net::WriteReject(BitWriter& w, const Reject& m)
