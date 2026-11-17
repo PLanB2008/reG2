@@ -86,7 +86,7 @@ toward the mouse or the right stick's reticle at the original's turret speed; AT
 too (instead of NEXT WEAPON, while that keeps its default RB), and SPECIAL with left or right still turns it
 while held. The stick and mouse are not recorded in replays.
 Movies are skipped. Renderer options are in `gta2gl.ini` (`renderer/gta2gl.ini.example`);
-Scroll Lock toggles them.
+with the debug setting `do_debug_keys`, Scroll Lock toggles them.
 
 ## Game data and first start
 

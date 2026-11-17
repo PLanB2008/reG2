@@ -1,7 +1,7 @@
 ; gta2gl.ini: optional enhancements of the GL renderer. Copy next to glvideo.dll as gta2gl.ini.
-; Re-read while the game runs (checked once per second). Scroll Lock toggles between these
-; options and the faithful renderer. Without the file (or with every value 0) the output is
-; the faithful one.
+; Re-read while the game runs (checked once per second). With the debug setting do_debug_keys,
+; Scroll Lock toggles between these options and the faithful renderer. Without the file (or
+; with every value 0) the output is the faithful one.
 [graphics]
 ; 1: 8-bit palette colours and a 32-bit target (no 16-bit textures, no ARGB4444, no RGB565)
 truecolor = 0

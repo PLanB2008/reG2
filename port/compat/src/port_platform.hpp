@@ -107,6 +107,7 @@ bool port_QuitMessageShown(); // or the pause menu
 bool port_FrontendActive();
 bool port_FrontendTyping(); // a player name or password: the letters type it
 bool port_MenuUsesMouse(); // the frontend or the pause menu
+bool port_DebugKeys(); // the game's do_debug_keys debug setting
 // TWIN STICK and the local player with the controls on: 1 on foot, 2 in a vehicle, else 0.
 int port_TwinStick();
 // TWIN STICK aims: on foot, or in a vehicle with a roof gun.

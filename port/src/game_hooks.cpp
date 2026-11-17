@@ -3,6 +3,7 @@
 #include "Game.hpp"
 #include "Player.hpp"
 #include "Camera.hpp"
+#include "debug.hpp"
 #include "pause_menu.hpp"
 #include "settings.hpp"
 
@@ -25,6 +26,11 @@ bool port_FrontendTyping()
 bool port_MenuUsesMouse()
 {
     return port_FrontendActive() || PortPauseMenu::IsOpen();
+}
+
+bool port_DebugKeys()
+{
+    return bDo_debug_keys;
 }
 
 bool port_QuitMessageShown()

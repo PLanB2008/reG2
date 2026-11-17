@@ -979,6 +979,8 @@ void Player::Hud_Controls(u16 action)
             // ordered above
 
             // ordered below
+#if !defined(GTA2_PORT)
+            // Port: F3 and F4 changed the saved music volume unseen; the SOUND options set it.
             case DIK_F3:
                 if (gRoot_sound.GetCDVol() - 10 > 0)
                 {
@@ -1003,21 +1005,28 @@ void Player::Hud_Controls(u16 action)
                 gRoot_sound.SetCDVol(vol);
                 gRegistry.Set_Sound_Setting("CDVol", gRoot_sound.GetCDVol());
                 break;
+#endif
+#if !defined(GTA2_PORT)
+            // Port: F6 paused the game without a menu, a duplicate of Escape's pause menu.
             case DIK_F6:
                 gGame_0x40->TogglePause();
                 break;
+#endif
             case DIK_F7:
                 if (this->IsUser())
                 {
                     gHud_2B00->mBrief.ShowBrief();
                 }
                 break;
+#if !defined(GTA2_PORT)
+            // Port: F8 opened the GTA2 Manager, which closes the game; the port has its own options.
             case DIK_F8:
                 if (this->IsUser())
                 {
                     Start_GTA2Manager();
                 }
                 break;
+#endif
             case DIK_F9:
                 if (this->IsUser())
                 {
