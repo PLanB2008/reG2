@@ -635,6 +635,15 @@ void WalkVelocity(Char* pChar)
     }
 }
 
+Fix16_Point ShotLead(const Char* pChar)
+{
+    if (pChar->mpPed && pChar->mpPed == OnFootPed())
+    {
+        return Fix16_Point(Fix16(0), Fix16(0));
+    }
+    return Fix16_Point(pChar->mVelocityVector.x, pChar->mVelocityVector.y);
+}
+
 bool DrawLegs(const Sprite* pSprite, STexture*, u32 flags, const Vert* pVerts, s32 count)
 {
     Ped* pPed = OnFootPed();

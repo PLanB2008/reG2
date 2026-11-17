@@ -8,6 +8,7 @@
 class Camera;
 class Car;
 class Char;
+class Fix16_Point;
 class Ped;
 class Player;
 class Sprite;
@@ -23,6 +24,10 @@ bool Walk(Char* pChar, Ang16* pFacing);
 // In Char::Update, after the velocity along the facing: the walk's velocity is along its own direction, as
 // the original's backward walk gives it (the shots inherit it).
 void WalkVelocity(Char* pChar);
+// The muzzle flash and the machine gun's bullet start at the gun plus this lead, the ped's velocity in the original.
+// The flash moves with the ped and the bullet inherits his velocity, so for the TWIN STICK player a lead only puts
+// them off the gun: none.
+Fix16_Point ShotLead(const Char* pChar);
 // In Sprite::Draw, for a quad of the sprite (its world corners after it if count is 8): draws the player's walk off the
 // facing, its steps shorter toward the side and turned to the move backpedalling. False if the quad is drawn as usual.
 bool DrawLegs(const Sprite* pSprite, STexture* pTexture, u32 flags, const Vert* pVerts, s32 count);

@@ -12,6 +12,10 @@
 #include "Object_5C.hpp"
 #include "sprite.hpp"
 #include "rng.hpp"
+#if defined(GTA2_PORT)
+// Port: TWIN STICK shot leads.
+#include "../port/src/twin_stick.hpp"
+#endif
 
 // Forward declarations: the functions below are in address order
 static inline Ang16 AddAng16_ool(const Ang16& a, const Ang16& b);
@@ -258,7 +262,12 @@ void ParticleManager::GunMuzzelFlash(Sprite* pSprite)
                 ped_offset.x = -kFpPoint03_6FD464;
                 ped_offset.y = kFpPoint02 + kFpPoint1_6FD2E8;
                 ped_offset.RotateByAngle(pSprite->mRotation);
+#if defined(GTA2_PORT)
+                // Port: TWIN STICK, no lead for the player (ShotLead): the flash stays at the gun every way he walks.
+                ped_offset = ped_offset + PortTwinStick::ShotLead(pChar);
+#else
                 ped_offset = ped_offset + *reinterpret_cast<Fix16_Point*>(&pChar->mVelocityVector);
+#endif
 
                 pParticle->mpOwnSprite->set_ang_lazy(pSprite->mRotation);
                 pParticle->mpOwnSprite->set_xyz_lazy(pSprite->mXy.x + ped_offset.x, pSprite->mXy.y + ped_offset.y, zpos);
