@@ -45,12 +45,11 @@ void LogFirstFrames()
     }
 }
 
-// Scroll Lock toggles faithful rendering and the gta2gl.ini options.
+// With the game's debug keys, Scroll Lock toggles faithful rendering and the gta2gl.ini options, unsaved.
 void PollToggleKey(VidSystem* pSys)
 {
     static bool sWasDown;
-    static const bool sDisabled = getenv("GTA2GL_NO_TOGGLE_KEY") != NULL;
-    if (sDisabled)
+    if (!port_DebugKeys())
     {
         return;
     }
