@@ -96,6 +96,14 @@ void port_MousePos(float* pX, float* pY);
 // The size of the frame the game draws (video_port.cpp).
 void port_FrameSize(int* pW, int* pH);
 float port_PixelScale();
+// A movie frame (bink.cpp): RGBA rows presented alone, letterboxed; it counts as a test frame.
+void port_ShowMovieFrame(const unsigned char* pRgba, int width, int height);
+
+// Movie sound (miles.cpp): 16-bit PCM queued as it is decoded, mixed with the game's at the master volume.
+// Open is false without a sound driver.
+bool port_MovieSoundOpen(int rate, int channels);
+void port_MovieSoundQueue(const void* pPcm, int bytes);
+void port_MovieSoundClose();
 
 // Keyboard events for the game (dinput.cpp).
 DWORD port_DikFromScancode(SDL_Scancode sc);

@@ -44,6 +44,8 @@ class VidSystem
     void FreeSurface();
     // scanSurface false: nothing wrote the CPU surface since GetSurface, so it is not composited.
     void Flip(bool scanSurface = true);
+    // Presents an RGBA image alone, letterboxed in the window (GLRenderer::PresentImage), in place of a frame.
+    void ShowImage(const u8* pRgba, s32 width, s32 height);
     // Shows the last flipped frame again, for one more refresh.
     void Represent();
     void Clear(u8 r, u8 g, u8 b, s32 left, s32 top, s32 right, s32 bottom);

@@ -89,7 +89,12 @@ In vehicles the controls stay classic, but the fire truck's, the tank's and the 
 toward the mouse or the right stick's reticle at the original's turret speed; ATTACK fires it as before, RB
 too (instead of NEXT WEAPON, while that keeps its default RB), and SPECIAL with left or right still turns it
 while held. The stick and mouse are not recorded in replays.
-Movies are skipped. Renderer options are in `gta2gl.ini` (`renderer/gta2gl.ini.example`);
+The intro movie (`data/Movie/intro.bik`, after `preintro.bik` in the editions that have one) plays as in
+the original, and any key or a pad button that works in the menus skips it. libbink decodes it at the file's
+frame rate and shows it in true colour, letterboxed, whatever the renderer settings; its sound goes through
+the game's mixer. The start turns `do_play_movie` on once, as soon as the game has the intro; set to 0
+afterwards, it stays. A movie that cannot be decoded is skipped.
+Renderer options are in `gta2gl.ini` (`renderer/gta2gl.ini.example`);
 with the debug setting `do_debug_keys`, Scroll Lock toggles them.
 
 ## Game data and first start
@@ -248,10 +253,14 @@ Then add `-DGTA2_OPENAL_DIR=$PWD/openal_linux32` (or `openal_mingw32`) to the po
 | Code | Version | License | Use |
 |---|---|---|---|
 | [SDL 3](https://libsdl.org) | 3.4 | zlib | platform layer (linked) |
+| [libbink](https://github.com/raynorpat/libbink) | 73d884f4 | LGPL 2.1 | the movies' Bink 1 decoder (`3rdParty/libbink`, built in, static) |
 | [OpenAL Soft](https://github.com/kcat/openal-soft) | 1.25.2 | LGPL | 3D sound (loaded at run time, optional) |
 | [libarchive](https://github.com/libarchive/libarchive/releases/tag/v3.8.11) | 3.8.11 | BSD | setup: disc images and archives (linked) |
 | [unshield](https://github.com/twogood/unshield/releases/tag/1.6.2) | 1.6.2 | MIT | setup: InstallShield cabinets (linked) |
 | [zlib](https://github.com/madler/zlib/releases/tag/v1.3.2), [xz](https://github.com/tukaani-project/xz/releases/tag/v5.8.4) | 1.3.2, 5.8.4 | zlib, 0BSD | their compression, where the system has none (MinGW) |
+
+libbink is linked statically, so the LGPL asks that its users can rebuild the game with a changed copy:
+the port's source, which holds it, is public, and the packages carry its licence.
 
 The key and button pictures (`resources/prompts_*.png`, made by `resources/prompts_atlas.py`) are from
 [Gamepad UI / Controller Prompts Pack](https://greatdocbrown.itch.io/gamepad-ui) by greatdocbrown (CC0).

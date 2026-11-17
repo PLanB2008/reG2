@@ -28,5 +28,5 @@ The setup's file chooser is the desktop's (xdg-desktop-portal), or zenity.
 - `reg2`: checks the libraries, then starts `bin/reg2`.
 - `bin/reg2`: the game, which finds `libSDL3.so.0` and `libopenal.so.1` (3D sound) next to itself.
 - `reG2.png`: the icon, for a desktop launcher.
-- `licenses/`: the licences of SDL 3, OpenAL Soft (LGPL), and libarchive, unshield, zlib and xz, which
+- `licenses/`: the licences of SDL 3, OpenAL Soft (LGPL), libbink (LGPL, the movies), and libarchive, unshield, zlib and xz, which
   the game links for its setup.

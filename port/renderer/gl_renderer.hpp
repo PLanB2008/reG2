@@ -46,6 +46,10 @@ class GLRenderer : public IRenderer
     void FinishFrame();
     // Draws the finished frame into the default framebuffer, letterboxed.
     void Present(s32 drawableW, s32 drawableH);
+    // Draws RGBA rows, top first, into the default framebuffer instead of the frame: as large as fits
+    // with their shape, the rest black. ReadPresented reads it back, top row first.
+    void PresentImage(const u8* pRgba, s32 width, s32 height, s32 drawableW, s32 drawableH);
+    void ReadPresented(std::vector<u8>& out, s32 drawableW, s32 drawableH);
     // Call after the swap: waits for the previous frame, so at most one frame is queued ahead of the display.
     void ThrottleFrames();
     void SetGamma(f32 r, f32 g, f32 b);

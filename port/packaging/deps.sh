@@ -136,6 +136,7 @@ cp "$B/unshield-1.6.2/LICENSE" "$P/licenses/unshield.txt"
 cp "$B/libarchive-3.8.11/COPYING" "$P/licenses/libarchive.txt"
 cp "$B/zlib-1.3.2/LICENSE" "$P/licenses/zlib.txt"
 cat "$B/xz-5.8.4/COPYING" "$B/xz-5.8.4/COPYING.0BSD" > "$P/licenses/xz.txt"
+cp "$PORT/3rdParty/libbink/LICENSE" "$P/licenses/libbink.txt"
 if [ "${MINGW:-}" = "" ]; then
     cp "$B/SDL3-3.4.18/LICENSE.txt" "$P/licenses/SDL3.txt"
 else

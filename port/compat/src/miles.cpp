@@ -521,6 +521,21 @@ class Limiter
 
 Limiter sLimiter;
 
+// port_MovieSoundOpen's stream, converted to the mix's format and rate.
+SDL_AudioStream* sMovieSound;
+
+void MixMovieSound(float* out, int frames)
+{
+    static std::vector<float> sBuf;
+    sBuf.resize((size_t)frames * 2);
+    const int got = SDL_GetAudioStreamData(sMovieSound, sBuf.data(), (int)(sBuf.size() * sizeof(float)));
+    const float vol = sDriver->mMasterVolume / 127.0f;
+    for (int i = 0; i < got / (int)sizeof(float); i++)
+    {
+        out[i] += sBuf[i] * vol;
+    }
+}
+
 void SDLCALL AudioCallback(void*, SDL_AudioStream* stream, int additional, int)
 {
     const int frames = additional / (int)(2 * sizeof(float));
@@ -571,6 +586,10 @@ void SDLCALL AudioCallback(void*, SDL_AudioStream* stream, int additional, int)
                 fclose(s->mFile);
                 delete s;
                 sDriver->mFadingStreams.erase(sDriver->mFadingStreams.begin() + i);
+            }
+            if (sMovieSound)
+            {
+                MixMovieSound(mix.data(), frames);
             }
         }
     }
@@ -927,4 +946,38 @@ DXDEC void AILCALL AIL_stream_ms_position(HSTREAM h, S32 FAR* total_milliseconds
     {
         *current_milliseconds = (S32)(s->mPos * 1000 / s->mRate);
     }
+}
+
+bool port_MovieSoundOpen(int rate, int channels)
+{
+    LOCK;
+    port_MovieSoundClose();
+    if (!sDriver)
+    {
+        return false;
+    }
+    const SDL_AudioSpec src = {SDL_AUDIO_S16, channels, rate};
+    const SDL_AudioSpec dst = {SDL_AUDIO_F32, 2, kOutRate};
+    sMovieSound = SDL_CreateAudioStream(&src, &dst);
+    if (!sMovieSound)
+    {
+        SDL_Log("Movie sound: %s", SDL_GetError());
+    }
+    return sMovieSound != NULL;
+}
+
+void port_MovieSoundQueue(const void* pPcm, int bytes)
+{
+    LOCK;
+    if (sMovieSound)
+    {
+        SDL_PutAudioStreamData(sMovieSound, pPcm, bytes);
+    }
+}
+
+void port_MovieSoundClose()
+{
+    LOCK;
+    SDL_DestroyAudioStream(sMovieSound);
+    sMovieSound = NULL;
 }
