@@ -72,8 +72,10 @@ further out the more it is pushed, up to the screen's edge, and held a moment on
 a reticle in place of the cursor). RT attacks (held from driving or getting in, once pressed again), the other controls stay as bound. Without an aim the player faces the
 way he walks; with one he turns to it and walks any way at the same speed (backward with the run
 animation, as the original's back key; his shots and flames take on his speed along the way he walks, so backing
-off shortens their reach as the original's backward walk does). Walking off the aim, he is drawn as Hotline Miami's peds
-are: from 45 to 135 degrees off, the walk frame's legs hidden, behind and in front, his feet, rounded boxes the colour of his shoes, step out from under his torso along the move, one ahead while the other is behind, the rest of him at the aim; further back his legs come back, the trailing one along the move, and his walk plays backward. In a jump the move steers him toward its way, as fast as the
+off shortens their reach as the original's backward walk does). Walking off the aim, his steps shorten the
+more the move is to the side, down to none at 90 degrees, where his legs stay under him, his back rounded, and he
+bobs a little along the move; further back his walk plays backward, his legs turned along the move, the one ahead
+longer than the one behind. In a jump the move steers him toward its way, as fast as the
 original's left and right turn him in the air. The machine guns fire straight along the aim: the original bends
 their shots toward a ped up to 16 degrees off the line of fire. The electro weapons keep their lock on a target.
 AIM CAMERA (on by default) leads the view a little ahead of the player on foot, as Hotline Miami does: 0.3 of

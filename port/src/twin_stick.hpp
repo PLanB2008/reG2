@@ -23,8 +23,8 @@ bool Walk(Char* pChar, Ang16* pFacing);
 // In Char::Update, after the velocity along the facing: the walk's velocity is along its own direction, as
 // the original's backward walk gives it (the shots inherit it).
 void WalkVelocity(Char* pChar);
-// In Sprite::Draw, for a quad of the sprite (its world corners after it if count is 8): draws the player's walk with the
-// legs turned toward the move and the torso at the facing. False if the quad is drawn as usual.
+// In Sprite::Draw, for a quad of the sprite (its world corners after it if count is 8): draws the player's walk off the
+// facing, its steps shorter toward the side and turned to the move backpedalling. False if the quad is drawn as usual.
 bool DrawLegs(const Sprite* pSprite, STexture* pTexture, u32 flags, const Vert* pVerts, s32 count);
 // In Car::HandleUserInput, unless SPECIAL turns the roof gun: the player's fire truck, tank or gun jeep
 // turns its roof gun toward the aim.
