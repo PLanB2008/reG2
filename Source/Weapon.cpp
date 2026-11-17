@@ -526,7 +526,7 @@ void Weapon::smg()
             point.RotateByAngle(mpPed->mGameObject->mSpritePtr->mRotation);
 
 #if defined(GTA2_PORT)
-            // Port: TWIN STICK, ahead along the facing only, so the bullet leaves the gun when walking sideways.
+            // Port: TWIN STICK, no lead for the player (ShotLead): the bullet leaves the gun every way he walks.
             point = point.Add(PortTwinStick::ShotLead(mpPed->mGameObject));
 #else
             point = point.Add(mpPed->GetVelocityVector());

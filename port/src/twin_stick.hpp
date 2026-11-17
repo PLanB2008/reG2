@@ -24,8 +24,9 @@ bool Walk(Char* pChar, Ang16* pFacing);
 // In Char::Update, after the velocity along the facing: the walk's velocity is along its own direction, as
 // the original's backward walk gives it (the shots inherit it).
 void WalkVelocity(Char* pChar);
-// For the gun's muzzle flash and the machine gun's bullet, placed at the gun ahead by the ped's velocity: that velocity
-// as the original's always was, along the facing, so they stay at the gun while the player walks sideways.
+// The muzzle flash and the machine gun's bullet start at the gun plus this lead, the ped's velocity in the original.
+// The flash moves with the ped and the bullet inherits his velocity, so for the TWIN STICK player a lead only puts
+// them off the gun: none.
 Fix16_Point ShotLead(const Char* pChar);
 // In Sprite::Draw, for a quad of the sprite (its world corners after it if count is 8): draws the player's walk with the
 // legs turned toward the move and the torso at the facing. False if the quad is drawn as usual.
