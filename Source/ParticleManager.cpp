@@ -263,7 +263,7 @@ void ParticleManager::GunMuzzelFlash(Sprite* pSprite)
                 ped_offset.y = kFpPoint02 + kFpPoint1_6FD2E8;
                 ped_offset.RotateByAngle(pSprite->mRotation);
 #if defined(GTA2_PORT)
-                // Port: TWIN STICK, no lead for the player (ShotLead): the flash stays at the gun every way he walks.
+                // Port: TWIN STICK, only the walk toward the aim leads (ShotLead): the flash stays at the gun.
                 ped_offset = ped_offset + PortTwinStick::ShotLead(pChar);
 #else
                 ped_offset = ped_offset + *reinterpret_cast<Fix16_Point*>(&pChar->mVelocityVector);

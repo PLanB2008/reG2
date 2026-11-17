@@ -526,7 +526,7 @@ void Weapon::smg()
             point.RotateByAngle(mpPed->mGameObject->mSpritePtr->mRotation);
 
 #if defined(GTA2_PORT)
-            // Port: TWIN STICK, no lead for the player (ShotLead): the bullet leaves the gun every way he walks.
+            // Port: TWIN STICK, only the walk toward the aim leads (ShotLead): the bullet leaves the gun.
             point = point.Add(PortTwinStick::ShotLead(mpPed->mGameObject));
 #else
             point = point.Add(mpPed->GetVelocityVector());
@@ -651,8 +651,8 @@ void Weapon::throwable(s32 obj_idx, s32 throw_strength, s32 throw_charge)
                             if (!mpPed->mGameObject->mFlagsBf.bReverseVelocity)
                             {
 #if defined(GTA2_PORT)
-                                // Port: TWIN STICK, the throw stays along the aim every way the player walks (ThrowLead).
-                                vector = PortTwinStick::ThrowLead(mpPed);
+                                // Port: TWIN STICK, the throw stays along the aim every way the player walks (ShotLead).
+                                vector = PortTwinStick::ShotLead(mpPed->mGameObject);
 #else
                                 vector = mpPed->GetVelocityVector();
 #endif
