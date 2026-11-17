@@ -1181,6 +1181,10 @@ s32 ExplosionPool::FreeLowestPriority()
         cur_idx = ++idx;
     } while (idx < GTA2_COUNTOF(mExplosions));
     this->mExplosions[lowest_idx].mTimer = 0;
+#if defined(GTA2_PORT)
+    // Port: clang drops the loop bound when the function can fall off its end, then writes past the pool.
+    return lowest_idx;
+#endif
 }
 #pragma warning(pop)
 

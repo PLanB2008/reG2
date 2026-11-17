@@ -32,7 +32,18 @@ void SpriteRenderer::DisplayAdd(Sprite* pSprite)
     const s32 rdtsc = get_rdtsc();
     if (pSprite->mZpos >= kFpOne_67B434)
     {
+#if defined(GTA2_PORT)
+        // Port: a sprite at z >= 8 (a car thrown off a roof, a corrected network state) gives a layer past mLayers,
+        // read out of bounds by the original too. It goes on the top layer.
+        s32 layer = pSprite->ComputeZLayer();
+        if (layer > k_num_layers - 1)
+        {
+            layer = k_num_layers - 1;
+        }
+        mLayers[layer]->AddSprite(pSprite);
+#else
         mLayers[pSprite->ComputeZLayer()]->AddSprite(pSprite);
+#endif
     }
     gDisplayAdd += get_rdtsc() - rdtsc;
 }
