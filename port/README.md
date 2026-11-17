@@ -64,7 +64,8 @@ They also take the mouse: pointing selects, a click enters or changes a value, t
 button goes back, the wheel changes a value; the cursor shows while the mouse is in use over a menu.
 Each control has a key, a second key (ALTERNATE: a key, a mouse button or a wheel notch, by default
 WASD by their position (ZQSD on AZERTY) to move, F to enter or exit, the left button to attack and the
-wheel to change weapons; Delete clears it) and a gamepad input.
+wheel to change weapons; Delete clears it) and a gamepad input. F1 to F12 cannot be bound: they keep their
+own uses (F7 the brief, F9 the zone name, F10 the network chat).
 CONTROLS on the controls page chooses how the player walks on foot: CLASSIC, the original's tank
 controls, or TWIN STICK, which moves and aims apart, both relative to the screen.
 The left stick, the d-pad or the movement keys walk; the right stick aims (its reticle

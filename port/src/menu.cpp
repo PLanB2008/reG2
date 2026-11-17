@@ -1621,6 +1621,12 @@ bool IsCapturing()
     return sCapturing >= 0;
 }
 
+// F1 to F12 stay the game's own keys (brief, zone name, chat, debug cameras), never a control.
+bool IsFunctionKey(s32 key)
+{
+    return (key >= DIK_F1 && key <= DIK_F10) || key == DIK_F11 || key == DIK_F12;
+}
+
 Result UpdateCapture()
 {
     if (sCapturing < 0)
@@ -1648,7 +1654,8 @@ Result UpdateCapture()
         return kLowered;
     }
     const s32 binding = padColumn ? pad : key;
-    if (binding < 0 || (!padColumn && binding == 0) || (sColumn == kKeyColumn && binding >= kMouseCode))
+    if (binding < 0 || (!padColumn && (binding == 0 || IsFunctionKey(binding))) ||
+        (sColumn == kKeyColumn && binding >= kMouseCode))
     {
         return kNothing;
     }
