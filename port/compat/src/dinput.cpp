@@ -431,6 +431,10 @@ void port_PushKey(DWORD dik, bool down)
 
 void port_OnInputEvent(const SDL_Event& e)
 {
+    if (port_IsAltEnter(e))
+    {
+        return;
+    }
     port_PadEvent(e);
     port_MouseEvent(e);
     if (e.type == SDL_EVENT_WINDOW_FOCUS_LOST)
