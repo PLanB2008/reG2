@@ -19,6 +19,8 @@ void port_LogExit(int code);
 void port_InstallCrashHandler();
 
 SDL_Window* port_GetSDLWindow(HWND h);
+// Alt+Enter pressed or repeated: it switches full screen, and is no key press for the game or the menus.
+bool port_IsAltEnter(const SDL_Event& e);
 void port_SetFullscreen(HWND h, bool fullscreen);
 SDL_Window* port_MainSDLWindow();
 

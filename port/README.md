@@ -51,7 +51,8 @@ GTA2_DIR=~/games/gta2 ./build_linux/reg2
 ```
 
 Settings live in `gta2_registry.ini` (the registry keys of the Windows game). Alt+Enter switches
-between window and full screen. Every gamepad drives the player (only those whose name contains
+between window and full screen, and is no Enter for the game or the menus. Other keys pressed with Left Alt
+(SPECIAL 2 by default) act as usual: the original dropped Space, Tab and Enter while it was held. Every gamepad drives the player (only those whose name contains
 `GTA2_GAMEPAD` if set): a button counts on any of them, the sticks are those of the pad used last.
 Bind them in the game's control options (stick and d-pad are the two axes).
 In a vehicle, with FORWARD and BACKWARD on the pad's up and down (the default), RT accelerates, LT brakes
@@ -64,7 +65,8 @@ They also take the mouse: pointing selects, a click enters or changes a value, t
 button goes back, the wheel changes a value; the cursor shows while the mouse is in use over a menu.
 Each control has a key, a second key (ALTERNATE: a key, a mouse button or a wheel notch, by default
 WASD by their position (ZQSD on AZERTY) to move, F to enter or exit, the left button to attack and the
-wheel to change weapons; Delete clears it) and a gamepad input.
+wheel to change weapons; Delete clears it) and a gamepad input. F1 to F12 cannot be bound: they keep their
+own uses (F7 the brief, F9 the zone name, F10 the network chat).
 CONTROLS on the controls page chooses how the player walks on foot: CLASSIC, the original's tank
 controls, or TWIN STICK, which moves and aims apart, both relative to the screen.
 The left stick, the d-pad or the movement keys walk; the right stick aims (its reticle

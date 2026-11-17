@@ -349,11 +349,10 @@ void InputDevices::flush_keyboard_and_gamepad()
     }
 #if defined(GTA2_PORT)
     // Port: keys stuck after Alt+Tab. The flushed events can hold key releases, so the held keys are read back from
-    // the keyboard: a stuck Alt drops every Enter, Space and Tab.
+    // the keyboard.
     BYTE keys[256];
     if (gKeyboardDevice && SUCCEEDED(gKeyboardDevice->GetDeviceState(sizeof(keys), keys)))
     {
-        SetAltKeyState(keys[DIK_LMENU]);
         for (s32 input = 0; input < 12; input++)
         {
             if (sControlDeviceType[input] == 0 && !(keys[sPlayerControlsBinding[input] & 0xFF] & 0x80))
@@ -452,12 +451,16 @@ void InputDevices::read_input_device(s32* input_bits, bool bApplyKeyboardControl
             {
                 SetAltKeyState(sKeyboardDeviceData.dwData);
             }
+#if !defined(GTA2_PORT)
+            // Port: Left Alt is SPECIAL 2 by default and must not block jump, enter and SPECIAL 1. Shortcuts the
+            // desktop takes (Alt+Tab) never reach SDL, and the compat layer drops Alt+Enter (port_IsAltEnter).
             else if ((sKeyboardDeviceData.dwOfs == DIK_SPACE || sKeyboardDeviceData.dwOfs == DIK_TAB ||
                       sKeyboardDeviceData.dwOfs == DIK_RETURN) &&
                      sAltKeyDown == 1)
             {
                 return;
             }
+#endif
 
             if (!gHud_2B00->IsInputKeyConsumed(sKeyboardDeviceData.dwOfs))
             {
