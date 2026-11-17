@@ -109,6 +109,15 @@ else()
         target_compile_options(gta2setup PRIVATE -fno-short-wchar)
     endif()
 
+    # The Bink 1 decoder for the movies (3rdParty/libbink/README.md), vendored unmodified: its warnings stay off.
+    file(GLOB libbink_src ${CMAKE_CURRENT_LIST_DIR}/3rdParty/libbink/*.c)
+    add_library(bink STATIC ${libbink_src})
+    set_target_properties(bink PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED ON)
+    target_compile_options(bink PRIVATE -w)
+    if(NOT WIN32)
+        target_link_libraries(bink PRIVATE m)
+    endif()
+
     set(compat ${CMAKE_CURRENT_LIST_DIR}/compat)
     set(compat_src crt cursor dinput dll guids kernel log main miles mouse pad miles3d registry test_input video_port window)
     if(WIN32)
