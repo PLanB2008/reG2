@@ -18,6 +18,10 @@ EXTERN_GLOBAL(Fix16, kFP16Zero_6FD49C);
 #include "ScriptManager.hpp"
 #include "Object_3C.hpp"
 #include "CarPhysics.hpp"
+#if defined(GTA2_PORT)
+// Port: TWIN STICK shot leads.
+#include "../port/src/twin_stick.hpp"
+#endif
 
 EXTERN_GLOBAL(Fix16, kFpPoint2_6FD2F0);
 EXTERN_GLOBAL(Fix16, kFpOne64th_6FD448);
@@ -1052,7 +1056,12 @@ bool Particle_4C::UpdateSkidOrScrapeSpark_state_40_41()
             offset.y = kFpPoint4;
         }
         offset.RotateByAngle(mpSprite->mRotation);
+#if defined(GTA2_PORT)
+        // Port: TWIN STICK, ahead along the facing only, so the flash stays at the gun when walking sideways.
+        offset = offset.Add(PortTwinStick::ShotLead(pChar));
+#else
         offset = offset.Add(pChar->mVelocityVector);
+#endif
 
         mpOwnSprite->set_id_lazy(gObjectDefinitions->mDef112BaseSpriteIdx + mSubState + 197);
         mpOwnSprite->mFlags = 0xA2;

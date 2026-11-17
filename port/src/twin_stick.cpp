@@ -467,6 +467,19 @@ void WalkVelocity(Char* pChar)
     }
 }
 
+Fix16_Point ShotLead(const Char* pChar)
+{
+    Fix16_Point lead(pChar->mVelocityVector.x, pChar->mVelocityVector.y);
+    if (pChar->mpPed && pChar->mpPed == OnFootPed())
+    {
+        const Fix16 sin = Ang16::sine(pChar->mSpritePtr->mRotation);
+        const Fix16 cos = Ang16::cosine(pChar->mSpritePtr->mRotation);
+        const Fix16 along = lead.x * sin + lead.y * cos;
+        lead.SetXY(along * sin, along * cos);
+    }
+    return lead;
+}
+
 bool DrawLegs(const Sprite* pSprite, STexture*, u32 flags, const Vert* pVerts, s32 count)
 {
     Ped* pPed = OnFootPed();
