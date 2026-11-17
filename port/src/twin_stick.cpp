@@ -9,6 +9,7 @@
 #include "gbh_graphics.hpp"
 #include "gtx_0x106C.hpp"
 #include "ObjectDefinitions.hpp"
+#include "saves.hpp"
 #include "settings.hpp"
 #include "sprite.hpp"
 #include "TextureCache.hpp"
@@ -130,9 +131,10 @@ s32 Diff(s32 a, s32 b)
     return ((a - b) % 1440 + 2160) % 1440 - 720;
 }
 
+// The player the port's controls move. None while a recording plays (the attract demo): it was made with the original's.
 Ped* ControlledPed()
 {
-    Player* pPlayer = gGame_0x40 && !gFrontend && gGame_0x40->mNumPlayers == 1 ? gGame_0x40->mLocalPlayer : NULL;
+    Player* pPlayer = gGame_0x40 && !gFrontend && gGame_0x40->mNumPlayers == 1 && !PortSaves::Replaying() ? gGame_0x40->mLocalPlayer : NULL;
     return pPlayer && !pPlayer->mDisableAllControls && pPlayer->mCameraMode == 0 ? pPlayer->mPlayerPed : NULL;
 }
 
@@ -864,6 +866,11 @@ void AimCamera(Camera* pCamera, Ped* pPed, Fix16& x, Fix16& y)
     if (!pPlayer || pCamera != &pPlayer->mGameCamera || !gViewCamera)
     {
         return;
+    }
+    if (PortSaves::Replaying())
+    {
+        // A lead left from the last game would move the demo's view, and with it where traffic appears.
+        sLookX = sLookY = 0.0f;
     }
     f32 wantX = 0.0f;
     f32 wantY = 0.0f;
