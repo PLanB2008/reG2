@@ -1057,7 +1057,7 @@ bool Particle_4C::UpdateSkidOrScrapeSpark_state_40_41()
         }
         offset.RotateByAngle(mpSprite->mRotation);
 #if defined(GTA2_PORT)
-        // Port: TWIN STICK, no lead for the player (ShotLead): the flash stays at the gun every way he walks.
+        // Port: TWIN STICK, only the walk toward the aim leads (ShotLead): the flash stays at the gun.
         offset = offset.Add(PortTwinStick::ShotLead(pChar));
 #else
         offset = offset.Add(pChar->mVelocityVector);
