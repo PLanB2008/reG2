@@ -56,7 +56,7 @@ const f32 kLookFollow = 0.12f;
 // A ped shooting at the player on foot leads him by this part of his move while the bullet flies, drawn between
 // these anew every this many steps, and by this many blocks at most.
 const f32 kMinLead = 0.4f;
-const f32 kMaxLead = 1.0f;
+const f32 kMaxLead = 0.95f;
 const u32 kLeadSteps = 15;
 const f32 kMaxLeadBlocks = 1.5f;
 // A move further than this in one step is a jump in place (a teleport), not a walk.
