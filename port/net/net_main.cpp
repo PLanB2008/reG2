@@ -68,7 +68,11 @@ void NetworkSetup(bool server)
     {
         gPortDrawOverlay = net::engine::DrawOverlay; // the ping, an outage, and (GTA2_NET_MARKER) where the newest snapshot has us
     }
+#if defined(_WIN32)
+    setvbuf(stdout, NULL, _IONBF, 0); // the CRT has no line buffering (_IOLBF is full buffering, and a size of 0 is refused)
+#else
     setvbuf(stdout, NULL, _IOLBF, 0); // the net: lines as they happen, also when the process is killed
+#endif
 }
 
 // A client the server welcomed: its game is the one the game starts next
