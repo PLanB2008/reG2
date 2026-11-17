@@ -1006,9 +1006,12 @@ void Player::Hud_Controls(u16 action)
                 gRegistry.Set_Sound_Setting("CDVol", gRoot_sound.GetCDVol());
                 break;
 #endif
+#if !defined(GTA2_PORT)
+            // Port: F6 paused the game without a menu, a duplicate of Escape's pause menu.
             case DIK_F6:
                 gGame_0x40->TogglePause();
                 break;
+#endif
             case DIK_F7:
                 if (this->IsUser())
                 {
