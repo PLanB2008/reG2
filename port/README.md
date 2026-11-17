@@ -248,6 +248,11 @@ Then add `-DGTA2_OPENAL_DIR=$PWD/openal_linux32` (or `openal_mingw32`) to the po
 `-DHAVE_WFUNCTION_EFFECTS=OFF` works around recent clang rejecting OpenAL Soft 1.25.2's
 `-Werror=function-effects`.
 
+## License
+
+The port's own code in `port/` is under the MIT license (`port/LICENSE`), except the third-party code
+below, under its own license. The rest of the repository comes from gta2_re, which has no license.
+
 ## Third-party code
 
 | Code | Version | License | Use |
