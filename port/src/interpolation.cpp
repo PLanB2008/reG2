@@ -19,8 +19,10 @@ const s32 kMaxCameraStepMove = 4 * 16384;
 const s32 kMaxStepTurn = 360;
 const s32 kTurn = 1440;
 
-// Fix16 screen units: an arrow moving further in one step found a new target or came back into view.
+// Fix16 pixels of a 480 line screen, scaled to the screen's height: an arrow moving further in one step
+// found a new target or came back into view.
 const s32 kMaxArrowStepMove = 64 * 16384;
+const s32 kArrowScreenHeight = 480;
 const s32 kNumHudArrows = sizeof(gHud_2B00->mArrows.mArray) / sizeof(gHud_2B00->mArrows.mArray[0]);
 // The HUD's arrows, then the marker over the player under a roof.
 const s32 kNumArrows = kNumHudArrows + 1;
@@ -313,6 +315,8 @@ void Apply(f32 alpha)
 
     // The HUD's arrows: their screen spot and angle are worked out once a step, from the player and the camera.
     sArrowsApplied = gHud_2B00 != NULL;
+    const s32 height = pCamera->mScreenPxHeight > 0 ? pCamera->mScreenPxHeight : kArrowScreenHeight;
+    const s32 maxArrowMove = static_cast<s32>(static_cast<long long>(kMaxArrowStepMove) * height / kArrowScreenHeight);
     for (s32 i = 0; sArrowsApplied && i < kNumArrows; i++)
     {
         const ArrowRef arrow = ArrowAt(i);
@@ -320,8 +324,7 @@ void Apply(f32 alpha)
         const ArrowPose& prev = sArrows[i];
         const s32 turn = TurnBetween(prev.mRot, cur.mRot);
         sArrowsDrawn[i] = cur;
-        if (prev.mShown && cur.mShown && Abs(cur.mX - prev.mX) <= kMaxArrowStepMove && Abs(cur.mY - prev.mY) <= kMaxArrowStepMove &&
-            Abs(turn) <= kMaxStepTurn)
+        if (prev.mShown && cur.mShown && Abs(cur.mX - prev.mX) <= maxArrowMove && Abs(cur.mY - prev.mY) <= maxArrowMove && Abs(turn) <= kMaxStepTurn)
         {
             arrow.mpX->mValue = Lerp(prev.mX, cur.mX, alpha);
             arrow.mpY->mValue = Lerp(prev.mY, cur.mY, alpha);
