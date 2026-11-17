@@ -33,6 +33,8 @@ enum Result
     kLoadSave,
     kRetryCheckpoint,
     kSaveAndQuitGame,
+    kPreviousStation,
+    kNextStation,
 };
 
 // The gamepad gave the last input.
@@ -47,6 +49,9 @@ void OfferRetry(PortSaves::Checkpoint kind, s32 money, long long time, const Por
 void OfferStatistics(s32 rows);
 // On that page: true, with the layout's top of its first row and the distance between rows.
 bool OnStatistics(f32* pTop, f32* pStep);
+// After Open in game, again as the station changes: RADIO under RESUME with that station's name, left and right (or the
+// line's arrows) giving kPreviousStation and kNextStation, Enter kNextStation; no line if NULL.
+void OfferRadio(const wchar_t* pStation);
 // The menu is gone: the settings changed in it are saved now rather than at each change.
 void Close();
 

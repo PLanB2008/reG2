@@ -1,5 +1,5 @@
 // The in-game pause menu: Escape pauses the game and opens the settings menu (menu.hpp), with RESUME, LOAD
-// GAME, QUIT GAME and STATISTICS, the lines of the original's pause screen.
+// GAME, QUIT GAME and STATISTICS, the lines of the original's pause screen, and RADIO in a car that has one.
 #pragma once
 
 #include "Player.hpp"
