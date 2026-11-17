@@ -1012,12 +1012,15 @@ void Player::Hud_Controls(u16 action)
                     gHud_2B00->mBrief.ShowBrief();
                 }
                 break;
+#if !defined(GTA2_PORT)
+            // Port: F8 opened the GTA2 Manager, which closes the game; the port has its own options.
             case DIK_F8:
                 if (this->IsUser())
                 {
                     Start_GTA2Manager();
                 }
                 break;
+#endif
             case DIK_F9:
                 if (this->IsUser())
                 {
