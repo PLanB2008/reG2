@@ -26,6 +26,10 @@
 // Port: the gamepad's analog triggers and stick for the player's car (port/compat/src/pad.cpp).
 void port_PadVehicleInput(float* pForward, float* pBackward, float* pSteer);
 #endif
+#if defined(GTA2_PORT)
+// Port: skid marks drawn between logic steps (SpawnSkidSegment).
+#include "../port/src/interpolation.hpp"
+#endif
 
 // Forward declarations: the functions below are in address order
 EXPORT s32 __stdcall get_skid_obj_type(s32 surface, Fix16 skid_len);
@@ -1748,6 +1752,11 @@ void CarPhysics::SpawnSkidSegment(s32 box_idx, Fix16_Point wheel_offset, s32 sur
                     gObject_5C->NewPhysicsObj(get_skid_obj_type(surface, len), obj_x, obj_y, mCp3, r);
                 if (pObj)
                 {
+#if defined(GTA2_PORT)
+                    // Port: frames between steps draw the wheel short of where it laid the mark; the mark comes
+                    // along with it, so it never shows ahead of the wheel.
+                    PortInterp::LaidMoving(pObj->mSprite, skid_vec.x.mValue, skid_vec.y.mValue);
+#endif
                     if (pObj->mSprite->IsStraddlingSlopeAndFlat())
                     {
                         pObj->RequestRemoval();

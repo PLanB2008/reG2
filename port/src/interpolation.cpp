@@ -233,6 +233,22 @@ void Clear()
     sValid = false;
 }
 
+void LaidMoving(Sprite* pSprite, s32 dx, s32 dy)
+{
+    if (!sValid || !gSpritePool)
+    {
+        return;
+    }
+    const s32 i = static_cast<s32>(pSprite - gSpritePool->mPool.mPool);
+    if (i < 0 || i >= kNumSprites)
+    {
+        return;
+    }
+    sPoses[i] = PoseOf(*pSprite);
+    sPoses[i].mX -= dx;
+    sPoses[i].mY -= dy;
+}
+
 void Apply(f32 alpha)
 {
     sSaved.clear();
