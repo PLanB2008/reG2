@@ -67,6 +67,7 @@ modules:
       - install -Dm755 build/reg2 /app/bin/reg2
       - sh port/packaging/linux/install_desktop.sh /app build
       - install -Dm644 -t /app/share/doc/reG2 port/README.md
+      - install -Dm644 port/3rdParty/libbink/LICENSE /app/share/licenses/$FLATPAK_ID/libbink.txt
     sources:
       - type: dir
         path: ../../..

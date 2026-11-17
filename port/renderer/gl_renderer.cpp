@@ -1267,6 +1267,67 @@ void GLRenderer::Present(s32 drawableW, s32 drawableH)
     }
 }
 
+void GLRenderer::PresentImage(const u8* pRgba, s32 width, s32 height, s32 drawableW, s32 drawableH)
+{
+    if (!mReady || !pRgba || width <= 0 || height <= 0)
+    {
+        return;
+    }
+    Flush();
+    gl.glBindTexture(GL_TEXTURE_2D, mSurfaceTex);
+    if (mSurfaceW != width || mSurfaceH != height)
+    {
+        gl.glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pRgba);
+        mSurfaceW = width;
+        mSurfaceH = height;
+    }
+    else
+    {
+        gl.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pRgba);
+    }
+    gl.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    gl.glViewport(0, 0, drawableW, drawableH);
+    gl.glClearColor(0, 0, 0, 1);
+    gl.glClear(GL_COLOR_BUFFER_BIT);
+    s32 w = drawableW;
+    s32 h = (s32)((long long)drawableW * height / width);
+    if (h > drawableH)
+    {
+        h = drawableH;
+        w = (s32)((long long)drawableH * width / height);
+    }
+    gl.glViewport((drawableW - w) / 2, (drawableH - h) / 2, w, h);
+    gl.glUseProgram(mPresentProgram);
+    gl.glUniform3f(mUniGamma, mGamma[0], mGamma[1], mGamma[2]);
+    gl.glUniform1i(mUniFlipY, 1);
+    gl.glActiveTexture(GL_TEXTURE0);
+    gl.glBindSampler(0, w % width == 0 && h % height == 0 ? mSamplerNearest : mSamplerLinear);
+    gl.glDisable(GL_BLEND);
+    DrawFullscreen();
+    mStateValid = false;
+}
+
+void GLRenderer::ReadPresented(std::vector<u8>& out, s32 drawableW, s32 drawableH)
+{
+    out.resize((size_t)drawableW * drawableH * 4);
+    if (!mReady)
+    {
+        return;
+    }
+    gl.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    gl.glReadPixels(0, 0, drawableW, drawableH, GL_RGBA, GL_UNSIGNED_BYTE, &out[0]);
+    const size_t row = (size_t)drawableW * 4;
+    std::vector<u8> tmp(row);
+    for (s32 y = 0; y < drawableH / 2; y++)
+    {
+        u8* a = &out[(size_t)y * row];
+        u8* b = &out[(size_t)(drawableH - 1 - y) * row];
+        memcpy(&tmp[0], a, row);
+        memcpy(a, b, row);
+        memcpy(b, &tmp[0], row);
+    }
+}
+
 void GLRenderer::ReadLogical(std::vector<u8>& out)
 {
     out.resize((size_t)mTargetW * mTargetH * 4);

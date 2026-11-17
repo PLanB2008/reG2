@@ -137,14 +137,26 @@ void SetValue(Key& k, const std::string& name, DWORD type, const void* data, siz
     k.mValues[Lower(name)] = std::make_pair(name, v);
 }
 
-// What GTA2's installer writes and the game does not create itself. Movies are off: the Bink
-// library is a stub.
+// What GTA2's installer writes and the game does not create itself.
 void SetDefaults()
 {
     DWORD cities = 3;
     SetValue(GetKey("HKLM\\Software\\freeloader.com\\GTA2"), "CityInstalled", REG_DWORD, &cities, 4);
-    DWORD noMovie = 0;
-    SetValue(GetKey("HKLM\\SOFTWARE\\DMA Design Ltd\\GTA2\\Screen"), "do_play_movie", REG_DWORD, &noMovie, 4);
+}
+
+// The intro on, once per profile (port_movie_default), as soon as the game has it; do_play_movie = 0
+// set afterwards stays. True if it changed the settings.
+bool EnableMovieOnce()
+{
+    Key& screen = GetKey("HKLM\\SOFTWARE\\DMA Design Ltd\\GTA2\\Screen");
+    if (screen.mValues.count("port_movie_default") || GetFileAttributesA("data\\Movie\\intro.bik") == INVALID_FILE_ATTRIBUTES)
+    {
+        return false;
+    }
+    DWORD on = 1;
+    SetValue(screen, "do_play_movie", REG_DWORD, &on, 4);
+    SetValue(screen, "port_movie_default", REG_DWORD, &on, 4);
+    return true;
 }
 
 void Load()
@@ -158,6 +170,7 @@ void Load()
     if (!f)
     {
         SetDefaults();
+        EnableMovieOnce();
         Save();
         return;
     }
@@ -214,6 +227,10 @@ void Load()
         }
     }
     fclose(f);
+    if (EnableMovieOnce())
+    {
+        Save();
+    }
 }
 
 LONG Open(HKEY root, LPCSTR subKey, PHKEY pResult, bool create)

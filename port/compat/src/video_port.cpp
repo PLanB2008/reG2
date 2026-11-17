@@ -171,6 +171,18 @@ int port_SetFrameWidth(bool wide)
     return w;
 }
 
+void port_ShowMovieFrame(const unsigned char* pRgba, int width, int height)
+{
+    if (!sVidSystem)
+    {
+        return;
+    }
+    sTestFrame++;
+    sVidSystem->SetTestFrame(sTestFrame);
+    sVidSystem->ShowImage(pRgba, width, height);
+    LogFirstFrames();
+}
+
 namespace
 {
 DWORD ScreenGet(const char* name, DWORD def)
