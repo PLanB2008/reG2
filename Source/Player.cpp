@@ -969,12 +969,15 @@ void Player::Hud_Controls(u16 action)
                     this->mDbgZoomOut = true;
                 }
                 break;
+#if !defined(GTA2_PORT)
+            // Port: the pause menu's RADIO line changes the station, with its name shown.
             case DIK_F1:
                 gRoot_sound.CycleRadioStation(0);
                 break;
             case DIK_F2:
                 gRoot_sound.CycleRadioStation(1);
                 break;
+#endif
 
             // ordered above
 

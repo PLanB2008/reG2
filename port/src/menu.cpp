@@ -71,6 +71,7 @@ enum Kind
     kRetry,
     kContinue,
     kSaveAndQuit,
+    kRadio,
 };
 
 struct Item
@@ -146,6 +147,8 @@ long long sRetryTime;
 PortSaves::JobName sRetryJob;
 s32 sStatRows;
 f32 sTranscript = -1; // MISSION TRANSCRIPT's height, -1 if not offered
+// The station RADIO shows, NULL without the line.
+const wchar_t* sRadio;
 // QUIT GAME's choices offered, and why SAVE AND QUIT is greyed, NULL if it is not.
 bool sQuitChoices;
 const wchar_t* sQuitBlocked;
@@ -197,6 +200,10 @@ s32 Items(Page page, Item* pItems)
             if (inGame)
             {
                 pItems[n++] = Item{kResume, 0, sRetry != PortSaves::kNoCheckpoint};
+            }
+            if (inGame && sRadio)
+            {
+                pItems[n++] = Item{kRadio, 0, false};
             }
             if (inGame && sStatRows)
             {
@@ -301,6 +308,8 @@ const wchar_t* EnglishName(const Item& item)
             return sRetry == PortSaves::kBeforeFrenzy ? L"RETRY FRENZY" : L"RETRY JOB";
         case kContinue:
             return L"CONTINUE";
+        case kRadio:
+            return L"RADIO";
         default:
             return item.mArg ? L"CANCEL" : L"BACK";
     }
@@ -904,6 +913,11 @@ void ItemValues(const Item& item, wchar_t (*pTexts)[kTextLength])
     {
         PortSettings::Value(static_cast<PortSettings::Id>(item.mArg), pTexts[0]);
     }
+    else if (item.mKind == kRadio)
+    {
+        wcsncpy(pTexts[0], sRadio, kTextLength - 1);
+        pTexts[0][kTextLength - 1] = 0;
+    }
     else if (item.mKind == kBinding)
     {
         KeyName(GetKey(item.mArg), pTexts[kKeyColumn]);
@@ -1055,7 +1069,7 @@ void GetLayout(Layout* pLayout)
     for (s32 i = 0; i < (saves ? sNumSaves : count); i++)
     {
         const Item item = saves ? Item{kSave, i, false} : pItems[i];
-        if (item.mKind == kSetting || item.mKind == kBinding || item.mKind == kSave)
+        if (item.mKind == kSetting || item.mKind == kBinding || item.mKind == kSave || item.mKind == kRadio)
         {
             ItemValues(item, texts);
             nameWidth = Max(nameWidth, Width(ItemName(item), normal));
@@ -1401,6 +1415,7 @@ void Open()
     sNumSaves = 0;
     sQuitChoices = false;
     sQuitBlocked = NULL;
+    sRadio = NULL;
     sCapturing = -1;
     sDragging = false;
     DiscardMouse();
@@ -1441,6 +1456,11 @@ bool OnStatistics(f32* pTop, f32* pStep)
     *pTop = ListTop();
     *pStep = kStatStep;
     return sPage == kStatsPage;
+}
+
+void OfferRadio(const wchar_t* pStation)
+{
+    sRadio = pStation;
 }
 
 void OfferQuitChoices(const wchar_t* pBlocked)
@@ -1513,6 +1533,10 @@ Result HandleInput(Input input)
             {
                 return ChangeTab(sTab + (input == kLeft ? -1 : 1), input == kLeft ? -1 : 1);
             }
+            if (item.mKind == kRadio)
+            {
+                return input == kLeft ? kPreviousStation : kNextStation;
+            }
             if (!IsEnabled(item))
             {
                 return kNothing;
@@ -1567,6 +1591,8 @@ Result HandleInput(Input input)
                     return Back();
                 case kResume:
                     return kClosed;
+                case kRadio:
+                    return kNextStation;
                 case kSave:
                     return kLoadSave;
                 case kRetry:
@@ -1705,10 +1731,14 @@ Result HandleMouse(f32 scale, f32 left, f32 top)
         const Result changed = SetSliderAt(item, x, layout.mColumnX[0]);
         return changed != kNothing ? changed : result;
     }
-    if (item.mKind == kSetting && (wheel || leftClicks))
+    if ((item.mKind == kSetting || item.mKind == kRadio) && (wheel || leftClicks))
     {
         // The left arrow lowers, the rest of the line raises.
         const bool lower = wheel ? wheel < 0 : x >= layout.mColumnX[0] - kArrowGap * 2 && x < layout.mColumnX[0] - 2;
+        if (item.mKind == kRadio)
+        {
+            return lower ? kPreviousStation : kNextStation;
+        }
         PortSettings::Change(static_cast<PortSettings::Id>(item.mArg), lower ? -1 : 1);
         return lower ? kLowered : kRaised;
     }
@@ -1822,7 +1852,8 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
         {
             Sprite(kArrowSprite, layout.mColumnX[sColumn] - 12, y + 6);
         }
-        if (selected && item.mKind == kSetting && !dim && MouseMode())
+        // RADIO's arrows whatever the input, as its previous and next.
+        if (selected && ((item.mKind == kSetting && !dim && MouseMode()) || item.mKind == kRadio))
         {
             Sprite(kLeftArrowSprite, layout.mColumnX[0] - kArrowGap, y + 6);
             Sprite(kArrowSprite, valueX + Width(texts[0], normal) + kArrowGap, y + 6);

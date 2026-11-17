@@ -33,6 +33,8 @@ enum Result
     kLoadSave,
     kRetryCheckpoint,
     kSaveAndQuitGame,
+    kPreviousStation,
+    kNextStation,
 };
 
 // The gamepad gave the last input.
@@ -51,6 +53,9 @@ bool OnStatistics(f32* pTop, f32* pStep);
 void OfferTranscript(f32 height);
 // On that page: true; either way the layout's top of the briefs and the height they may take.
 bool OnTranscript(f32* pTop, f32* pRoom);
+// After Open in game, again as the station changes: RADIO under RESUME with that station's name, left and right (or the
+// line's arrows) giving kPreviousStation and kNextStation, Enter kNextStation; no line if NULL.
+void OfferRadio(const wchar_t* pStation);
 // The menu is gone: the settings changed in it are saved now rather than at each change.
 void Close();
 

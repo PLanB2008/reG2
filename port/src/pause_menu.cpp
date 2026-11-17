@@ -18,13 +18,16 @@
 #include "menu.hpp"
 #include "options_menu.hpp"
 #include "registry.hpp"
+#include "root_sound.hpp"
 #include "settings.hpp"
+#include "sound_obj.hpp"
 #include "winmain.hpp"
 #include <stdio.h>
 #include <vector>
 
 EXTERN_GLOBAL(s16, word_7064D8);
 EXTERN_GLOBAL(u16, gBriefFont);
+EXTERN_GLOBAL(u8, gSoundSwitchRadioCoolDown);
 
 namespace PortPauseMenu
 {
@@ -225,6 +228,16 @@ void PlaySound(PortMenu::Result result)
     sNextPair = (sNextPair + 1) % kSoundPairs;
 }
 
+// The stations by number, as GTAudio\<n>.wav: the game's data has no names.
+const wchar_t* const kStations[] = {NULL, L"HEAD RADIO", L"ROCKSTAR RADIO", L"KREZ", L"LO-FI FM", L"FUTURO FM", L"FUNAMI FM",
+                                    L"LITHIUM FM", L"KING 130.7", L"OSMOSIS FM", L"HEAVENLY RADIO", L"KGBH"};
+
+const wchar_t* StationName()
+{
+    const s32 station = gSound_obj.RadioStation();
+    return station > 0 && station < GTA2_COUNTOF_S(kStations) ? kStations[station] : NULL;
+}
+
 void Close()
 {
     sOpen = false;
@@ -243,6 +256,13 @@ bool Closes(PortMenu::Result result)
 
 void Apply(PortMenu::Result result)
 {
+    // As the original's F1 and F2, with their wait between changes; the sound takes the change on its next frame.
+    if (result == PortMenu::kPreviousStation || result == PortMenu::kNextStation)
+    {
+        const bool next = result == PortMenu::kNextStation;
+        result = gSoundSwitchRadioCoolDown > 0 ? PortMenu::kNothing : (next ? PortMenu::kRaised : PortMenu::kLowered);
+        gRoot_sound.CycleRadioStation(next);
+    }
     PlaySound(result);
     if (Closes(result))
     {
@@ -335,6 +355,7 @@ bool HandleKey(s32 action, Player* pPlayer)
             const PortSaves::Checkpoint kind = PortSaves::GetCheckpoint(&money, &time, &job);
             PortMenu::OfferRetry(kind, money, time, job, PortRetry::JustFailed(), PortRetry::Running());
         }
+        PortMenu::OfferRadio(StationName());
         u8 sections[7];
         PortMenu::OfferStatistics(StatSections(sections));
         f32 top;
@@ -495,6 +516,7 @@ void Draw()
     const f32 left = (gViewCamera->mScreenPxWidth - 640.0f * scale) / 2;
     const f32 top = (gViewCamera->mScreenPxHeight - 480.0f * scale) / 2;
     const f32 menuTop = top + 10 * scale;
+    PortMenu::OfferRadio(StationName());
     UseFrontendStyle(false);
     const PortMenu::Result result = PortMenu::HandleMouse(scale, left, menuTop);
     if (Closes(result))
@@ -503,7 +525,7 @@ void Draw()
         Apply(result);
         return;
     }
-    PlaySound(result);
+    Apply(result);
     PortMenu::Draw(scale, left, menuTop, true);
     UseGameStyle();
     f32 rowTop;
