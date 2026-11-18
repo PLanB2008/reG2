@@ -8,6 +8,7 @@
 #include <string.h>
 #include <map>
 #include <memory>
+#include <set>
 
 namespace setup
 {
@@ -18,11 +19,13 @@ const char* const kEssential[] = {
     "data/fstyle.sty", "data/wil.sty", "data/ste.sty", "data/bil.sty",
     "data/wil.gmp", "data/ste.gmp", "data/bil.gmp",
     "data/wil.scr", "data/ste.scr", "data/bil.scr",
-    "data/e.gxt", "data/nyc.gci", "data/keyboard/eng_kb.cfg",
+    "data/nyc.gci", "data/keyboard/eng_kb.cfg",
     "data/audio/fstyle.sdt", "data/audio/fstyle.raw", "data/audio/wil.sdt", "data/audio/wil.raw",
     "data/audio/ste.sdt", "data/audio/ste.raw", "data/audio/bil.sdt", "data/audio/bil.raw",
     "data/frontend/1.tga", "data/frontend/2.tga", "data/frontend/3.tga", "data/frontend/mask.tga",
 };
+// At least one is essential: the game starts in one that is there.
+const std::pair<char, const char*> kLanguages[] = {{'e', "English"}, {'f', "French"}, {'g', "German"}, {'i', "Italian"}, {'s', "Spanish"}};
 
 // The game's music and radio, read from the CD (X:\GTAUDIO) by the original; data/GTAudio here.
 const char* const kMusic[] = {
@@ -30,6 +33,8 @@ const char* const kMusic[] = {
     "5a", "6", "6a", "7", "7a", "8", "8a", "9", "9a", "a", "d",
 };
 const char kMusicDir[] = "data/GTAudio/";
+// On the CD beside the installer, in data/ once installed.
+const char kMovie[] = "data/Movie/intro.bik";
 // Constant data only: the setup runs before the global constructors.
 const char kStaging[] = "setup.tmp";
 
@@ -396,7 +401,7 @@ std::unique_ptr<Source> OpenSource(const fs::path& path)
 }
 
 // What goes where. The source's data folder is the one holding fstyle.sty, the music any folder
-// named GTAudio.
+// named GTAudio, the intro movie Movie/intro.bik.
 struct Plan
 {
     std::map<size_t, fs::path> mFiles; // into kStaging
@@ -435,6 +440,10 @@ Plan MakePlan(const std::vector<Entry>& entries)
         {
             dest = std::string(kMusicDir) + entries[i].mPath.substr(slash + 1);
         }
+        else if (lower == "movie/intro.bik" || EndsWith(lower, "/movie/intro.bik"))
+        {
+            dest = kMovie;
+        }
         if (Lower(dest).compare(0, strlen(kMusicDir), Lower(kMusicDir)) == 0)
         {
             dest = kMusicDir + dest.substr(strlen(kMusicDir));
@@ -472,19 +481,27 @@ InstallResult Fail(const std::string& error, const Progress& progress)
     return result;
 }
 
-// The InstallShield cabinets beside data1.hdr, copied out of the source so that unshield can open them.
-std::unique_ptr<Source> ExtractCabinets(Source& source, Progress& progress, std::string* pError)
+// InstallShield's data1.hdr, which lists the files of its cabinets.
+bool FindHeader(const std::vector<Entry>& entries, size_t* pIndex)
 {
-    std::string dir;
     bool found = false;
-    for (const Entry& e : source.mEntries)
+    for (size_t i = 0; i < entries.size(); i++)
     {
-        if (Lower(e.mPath) == "data1.hdr" || EndsWith(Lower(e.mPath), "/data1.hdr"))
+        if (Lower(entries[i].mPath) == "data1.hdr" || EndsWith(Lower(entries[i].mPath), "/data1.hdr"))
         {
-            dir = Lower(e.mPath.substr(0, e.mPath.size() - 9));
+            *pIndex = i;
             found = true;
         }
     }
+    return found;
+}
+
+// The InstallShield cabinets beside data1.hdr, copied out of the source so that unshield can open them.
+std::unique_ptr<Source> ExtractCabinets(Source& source, Progress& progress, std::string* pError)
+{
+    size_t hdr = 0;
+    const bool found = FindHeader(source.mEntries, &hdr);
+    const std::string dir = found ? Lower(source.mEntries[hdr].mPath.substr(0, source.mEntries[hdr].mPath.size() - 9)) : "";
     std::map<size_t, fs::path> cabinets;
     uint64_t bytes = 0;
     for (size_t i = 0; found && i < source.mEntries.size(); i++)
@@ -525,7 +542,82 @@ bool MoveInto(const fs::path& from, const fs::path& to, std::string* pError)
     return !ec;
 }
 
+// The data check, with has(rel) telling whether data/... is there.
+template <class Has> DataCheck CheckFiles(Has has)
+{
+    DataCheck check;
+    for (const char* rel : kEssential)
+    {
+        if (!has(rel))
+        {
+            check.mMissing.push_back(rel);
+        }
+    }
+    for (const char* name : kMusic)
+    {
+        check.mMusicTotal++;
+        check.mMusicFound += has(std::string(kMusicDir) + name + ".wav");
+    }
+    check.mMovie = has(kMovie);
+    bool anyLanguage = false;
+    for (const auto& language : kLanguages)
+    {
+        check.mLanguages.push_back({language.second, has(std::string("data/") + language.first + ".gxt")});
+        anyLanguage |= check.mLanguages.back().second;
+    }
+    if (!anyLanguage)
+    {
+        check.mMissing.push_back("data/e.gxt, f.gxt, g.gxt, i.gxt or s.gxt");
+    }
+    return check;
+}
 } // namespace
+
+InstallResult CheckSource(const fs::path& sourcePath, Progress& progress)
+{
+    std::error_code ec;
+    fs::remove_all(kStaging, ec);
+    progress.SetStatus("Reading the source...");
+    std::unique_ptr<Source> source = OpenSource(sourcePath);
+    if (!source)
+    {
+        return Fail("This file is not an installer, disc image or archive the port can read.", progress);
+    }
+    const Plan plan = MakePlan(source->mEntries);
+    Plan cabPlan;
+    std::string error;
+    size_t hdr;
+    if (!plan.mHasData && FindHeader(source->mEntries, &hdr))
+    {
+        // unshield lists the cabinets' files from data1.hdr alone.
+        const fs::path copy = fs::path(kStaging) / "data1.hdr";
+        std::unique_ptr<Source> cab;
+        if (!source->Extract({{hdr, copy}}, progress, &error) || !(cab = CabinetSource::Open(copy)))
+        {
+            return Fail(error.empty() ? "These InstallShield cabinets cannot be read." : error, progress);
+        }
+        cabPlan = MakePlan(cab->mEntries);
+    }
+    InstallResult result;
+    result.mAddOnly = !plan.mHasData && !cabPlan.mHasData && !plan.mFiles.empty() && CheckGameData(".").mMissing.empty();
+    if (plan.mFiles.empty() && cabPlan.mFiles.empty())
+    {
+        return Fail(std::string("No GTA2 data found here. The setup reads ") + kSourceKinds + ".", progress);
+    }
+    std::set<std::string> files;
+    for (const auto& f : plan.mFiles)
+    {
+        files.insert(Lower(Generic(f.second.lexically_relative(kStaging))));
+    }
+    for (const auto& f : cabPlan.mFiles)
+    {
+        files.insert(Lower(Generic(f.second.lexically_relative(kStaging))));
+    }
+    result.mCheck = CheckFiles([&](const std::string& rel) { return files.count(Lower(rel)) != 0; });
+    result.mOk = true;
+    fs::remove_all(kStaging, ec);
+    return result;
+}
 
 InstallResult Install(const fs::path& sourcePath, Progress& progress)
 {
@@ -537,14 +629,17 @@ InstallResult Install(const fs::path& sourcePath, Progress& progress)
     {
         return Fail("This file is not an installer, disc image or archive the port can read.", progress);
     }
-    Plan plan = MakePlan(source->mEntries);
+    // The original CD: the game data in InstallShield cabinets, the music and the movie beside them.
+    const Plan plan = MakePlan(source->mEntries);
+    std::unique_ptr<Source> cab;
+    Plan cabPlan;
+    std::string error;
     if (!plan.mHasData)
     {
-        std::string error;
-        if (std::unique_ptr<Source> cab = ExtractCabinets(*source, progress, &error))
+        cab = ExtractCabinets(*source, progress, &error);
+        if (cab)
         {
-            source = std::move(cab);
-            plan = MakePlan(source->mEntries);
+            cabPlan = MakePlan(cab->mEntries);
         }
         else if (!error.empty())
         {
@@ -552,39 +647,37 @@ InstallResult Install(const fs::path& sourcePath, Progress& progress)
         }
     }
     const bool haveData = CheckGameData(".").mMissing.empty();
-    const bool musicOnly = !plan.mHasData && !plan.mFiles.empty() && haveData;
-    if (!plan.mHasData && !musicOnly)
-    {
-        return Fail("No GTA2 data found here (looked for data/fstyle.sty, or InstallShield's data1.hdr).", progress);
-    }
-    std::string error;
-    if (!EnoughSpace(plan.mBytes, &error))
+    // The music or the movie, added to the installed data.
+    const bool addOnly = !plan.mHasData && !cabPlan.mHasData && !plan.mFiles.empty() && haveData;
+    if (!EnoughSpace(plan.mBytes + cabPlan.mBytes, &error))
     {
         return Fail(error, progress);
     }
-    progress.mTotal = plan.mBytes;
-    if (!source->Extract(plan.mFiles, progress, &error))
+    progress.mTotal = plan.mBytes + cabPlan.mBytes;
+    if (!source->Extract(plan.mFiles, progress, &error) || (cab && !cab->Extract(cabPlan.mFiles, progress, &error)))
     {
         return Fail(error, progress);
     }
+    cab.reset();
     source.reset();
     progress.SetStatus("Checking the files...");
 
     fs::path found;
-    if (musicOnly)
+    if (addOnly)
     {
-        fs::path musicDir = kMusicDir;
-        if (FindNoCase(".", kMusicDir, &found))
-        {
-            musicDir = found;
-        }
         for (const auto& f : plan.mFiles)
         {
-            if (FindNoCase(musicDir, PathToUtf8(f.second.filename()), &found))
+            const fs::path rel = f.second.lexically_relative(kStaging);
+            fs::path dir = rel.parent_path();
+            if (FindNoCase(".", Generic(dir), &found))
+            {
+                dir = found;
+            }
+            if (FindNoCase(dir, PathToUtf8(rel.filename()), &found))
             {
                 fs::remove(found, ec);
             }
-            if (!MoveInto(f.second, musicDir / f.second.filename(), &error))
+            if (!MoveInto(f.second, dir / rel.filename(), &error))
             {
                 return Fail(error, progress);
             }
@@ -615,7 +708,7 @@ InstallResult Install(const fs::path& sourcePath, Progress& progress)
 
         // A folder the port already ran from: its settings and saves come along.
         const fs::path root = (sourcePath / PathFromUtf8(plan.mRoot)).lexically_normal();
-        if (fs::is_directory(sourcePath, ec) && !haveData)
+        if (fs::is_directory(sourcePath, ec) && plan.mHasData && !haveData)
         {
             for (const char* name : {"gta2_registry.ini", "gta2gl.ini"})
             {
@@ -633,7 +726,6 @@ InstallResult Install(const fs::path& sourcePath, Progress& progress)
     }
     fs::remove_all(kStaging, ec);
     InstallResult result;
-    result.mCheck = CheckGameData(".");
     result.mOk = true;
     return result;
 }
@@ -693,20 +785,7 @@ bool FindNoCase(const fs::path& root, const std::string& rel, fs::path* pFound)
 
 DataCheck CheckGameData(const fs::path& root)
 {
-    DataCheck check;
     fs::path found;
-    for (const char* rel : kEssential)
-    {
-        if (!FindNoCase(root, rel, &found))
-        {
-            check.mMissing.push_back(rel);
-        }
-    }
-    for (const char* name : kMusic)
-    {
-        check.mMusicTotal++;
-        check.mMusicFound += FindNoCase(root, std::string(kMusicDir) + name + ".wav", &found);
-    }
-    return check;
+    return CheckFiles([&](const std::string& rel) { return FindNoCase(root, rel, &found); });
 }
 } // namespace setup

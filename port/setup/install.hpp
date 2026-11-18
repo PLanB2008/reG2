@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace setup
@@ -25,6 +26,8 @@ struct DataCheck
     std::vector<std::string> mMissing; // essential files
     int mMusicFound = 0;
     int mMusicTotal = 0;
+    bool mMovie = false; // data/Movie/intro.bik
+    std::vector<std::pair<const char*, bool>> mLanguages; // the game's five, and whether data/<code>.gxt is there
 };
 DataCheck CheckGameData(const fs::path& root);
 
@@ -52,9 +55,16 @@ struct InstallResult
     bool mOk = false;
     bool mCancelled = false;
     std::string mError;
-    DataCheck mCheck;
+    DataCheck mCheck; // CheckSource: what the source holds
+    bool mAddOnly = false; // CheckSource: no game data, but music or the movie for the installed game
 };
 
-// source: a folder, or a file (InstallShield setup, disc image, archive).
+// What the setup reads, for its messages.
+inline constexpr char kSourceKinds[] = "a GTA2 game folder, the game's CD (or a copy of it as a folder), its .iso, "
+                                       "the Rockstar Classics installer GTA2.exe, or a .zip or .7z of an installed game";
+
+// What source (a folder, or a file: InstallShield setup, disc image, archive) holds, from its list
+// of files; of InstallShield cabinets only data1.hdr is extracted.
+InstallResult CheckSource(const fs::path& source, Progress& progress);
 InstallResult Install(const fs::path& source, Progress& progress);
 } // namespace setup
