@@ -450,7 +450,6 @@ bool SetupLoop(const std::string& gameDir)
         }
         if (choice != 0)
         {
-            RemoveTemporary();
             if (choice == 2 || (fromEnv && !source.mOk))
             {
                 return false;
@@ -458,8 +457,7 @@ bool SetupLoop(const std::string& gameDir)
             reopen = source.mOk;
             continue;
         }
-        const InstallResult result = RunJob(Install, source.mInstallFrom, "Copying GTA2's game files...");
-        RemoveTemporary();
+        const InstallResult result = RunJob(Install, PathFromUtf8(path), "Copying GTA2's game files...");
         if (result.mOk)
         {
             return true;

@@ -37,7 +37,6 @@ const char kMusicDir[] = "data/GTAudio/";
 const char kMovie[] = "data/Movie/intro.bik";
 // Constant data only: the setup runs before the global constructors.
 const char kStaging[] = "setup.tmp";
-const char kInnerDir[] = "setup.inner.tmp";
 
 std::string Lower(std::string s)
 {
@@ -543,23 +542,6 @@ bool MoveInto(const fs::path& from, const fs::path& to, std::string* pError)
     return !ec;
 }
 
-// An installer or a disc image inside a downloaded archive: the largest one.
-bool FindInner(const std::vector<Entry>& entries, size_t* pIndex)
-{
-    bool found = false;
-    for (size_t i = 0; i < entries.size(); i++)
-    {
-        const std::string lower = Lower(entries[i].mPath);
-        if (entries[i].mSize >= (64u << 20) && (!found || entries[i].mSize > entries[*pIndex].mSize) &&
-            (EndsWith(lower, ".exe") || EndsWith(lower, ".iso") || EndsWith(lower, ".zip") || EndsWith(lower, ".7z")))
-        {
-            *pIndex = i;
-            found = true;
-        }
-    }
-    return found;
-}
-
 // The data check, with has(rel) telling whether data/... is there.
 template <class Has> DataCheck CheckFiles(Has has)
 {
@@ -591,8 +573,10 @@ template <class Has> DataCheck CheckFiles(Has has)
 }
 } // namespace
 
-static InstallResult CheckFrom(const fs::path& sourcePath, Progress& progress, bool nested)
+InstallResult CheckSource(const fs::path& sourcePath, Progress& progress)
 {
+    std::error_code ec;
+    fs::remove_all(kStaging, ec);
     progress.SetStatus("Reading the source...");
     std::unique_ptr<Source> source = OpenSource(sourcePath);
     if (!source)
@@ -615,26 +599,10 @@ static InstallResult CheckFrom(const fs::path& sourcePath, Progress& progress, b
         cabPlan = MakePlan(cab->mEntries);
     }
     InstallResult result;
-    const bool hasData = plan.mHasData || cabPlan.mHasData;
-    result.mAddOnly = !hasData && !plan.mFiles.empty() && CheckGameData(".").mMissing.empty();
-    size_t inner;
-    if (!hasData && !result.mAddOnly && !nested && FindInner(source->mEntries, &inner))
+    result.mAddOnly = !plan.mHasData && !cabPlan.mHasData && !plan.mFiles.empty() && CheckGameData(".").mMissing.empty();
+    if (plan.mFiles.empty() && cabPlan.mFiles.empty())
     {
-        const fs::path innerPath = fs::path(kInnerDir) / PathFromUtf8(source->mEntries[inner].mPath).filename();
-        progress.mTotal = source->mEntries[inner].mSize;
-        if (!EnoughSpace(progress.mTotal, &error) || !source->Extract({{inner, innerPath}}, progress, &error))
-        {
-            return Fail(error, progress);
-        }
-        source.reset();
-        progress.mDone = 0;
-        progress.mTotal = 0;
-        result = CheckFrom(innerPath, progress, true);
-        if (!result.mOk && !result.mCancelled)
-        {
-            result.mError = PathToUtf8(innerPath.filename()) + ", in this archive: " + result.mError;
-        }
-        return result;
+        return Fail("No GTA2 data found here (looked for data/fstyle.sty, or InstallShield's data1.hdr).", progress);
     }
     std::set<std::string> files;
     for (const auto& f : plan.mFiles)
@@ -646,17 +614,9 @@ static InstallResult CheckFrom(const fs::path& sourcePath, Progress& progress, b
         files.insert(Lower(Generic(f.second.lexically_relative(kStaging))));
     }
     result.mCheck = CheckFiles([&](const std::string& rel) { return files.count(Lower(rel)) != 0; });
-    result.mInstallFrom = sourcePath;
     result.mOk = true;
-    std::error_code ec;
     fs::remove_all(kStaging, ec);
     return result;
-}
-
-InstallResult CheckSource(const fs::path& sourcePath, Progress& progress)
-{
-    RemoveTemporary();
-    return CheckFrom(sourcePath, progress, false);
 }
 
 InstallResult Install(const fs::path& sourcePath, Progress& progress)
@@ -686,14 +646,9 @@ InstallResult Install(const fs::path& sourcePath, Progress& progress)
             return Fail(error, progress);
         }
     }
-    const bool hasData = plan.mHasData || cabPlan.mHasData;
     const bool haveData = CheckGameData(".").mMissing.empty();
     // The music or the movie, added to the installed data.
-    const bool addOnly = !hasData && !plan.mFiles.empty() && haveData;
-    if (!hasData && !addOnly)
-    {
-        return Fail("No GTA2 data found here (looked for data/fstyle.sty, or InstallShield's data1.hdr).", progress);
-    }
+    const bool addOnly = !plan.mHasData && !cabPlan.mHasData && !plan.mFiles.empty() && haveData;
     if (!EnoughSpace(plan.mBytes + cabPlan.mBytes, &error))
     {
         return Fail(error, progress);
@@ -773,13 +728,6 @@ InstallResult Install(const fs::path& sourcePath, Progress& progress)
     InstallResult result;
     result.mOk = true;
     return result;
-}
-
-void RemoveTemporary()
-{
-    std::error_code ec;
-    fs::remove_all(kStaging, ec);
-    fs::remove_all(kInnerDir, ec);
 }
 
 fs::path PathFromUtf8(const std::string& s)

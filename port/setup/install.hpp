@@ -57,14 +57,10 @@ struct InstallResult
     std::string mError;
     DataCheck mCheck; // CheckSource: what the source holds
     bool mAddOnly = false; // CheckSource: no game data, but music or the movie for the installed game
-    fs::path mInstallFrom; // CheckSource: the source, or the installer or disc image extracted from it
 };
 
 // What source (a folder, or a file: InstallShield setup, disc image, archive) holds, from its list
-// of files. Only InstallShield's data1.hdr, or the installer or disc image in an archive, is extracted.
+// of files; of InstallShield cabinets only data1.hdr is extracted.
 InstallResult CheckSource(const fs::path& source, Progress& progress);
-// source: mInstallFrom of CheckSource.
 InstallResult Install(const fs::path& source, Progress& progress);
-// The temporary files of CheckSource and Install.
-void RemoveTemporary();
 } // namespace setup

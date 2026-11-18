@@ -139,14 +139,13 @@ Before anything is copied, a message lists what the chosen copy holds, each with
 cross: the game files (the essential ones are listed in `setup/install.cpp`), the music, the intro
 movie and the five languages (`data/<code>.gxt`; the 2004 freeware has only English and Spanish; at
 least one is needed). It comes from the source's list of files: of InstallShield cabinets only
-`data1.hdr` is extracted (unshield lists their files from it), of an archive holding an installer or
-a disc image only that file. **Install** then copies the files into a temporary folder, checks them,
-moves them into place and starts the game. Without the music (the 22 tracks of `GTAudio` on the
-original CD) or the intro movie the message warns and still offers Install; the music can be added
-later from a folder (the CD, its `GTAudio`), a disc image or the installer. Without an essential file
-it offers only **Choose another...** and **Quit**. `reg2 --setup` lists the installed data the same
-way, to replace it or add the music: a source with only the music or the movie (a `GTAudio` folder) is
-added to a complete install.
+`data1.hdr` is extracted (unshield lists their files from it). **Install** then copies the files into
+a temporary folder, checks them, moves them into place and starts the game. Without the music (the 22
+tracks of `GTAudio` on the original CD) or the intro movie the message warns and still offers
+Install; the music can be added later from a folder (the CD, its `GTAudio`), a disc image or the
+installer. Without an essential file it offers only **Choose another...** and **Quit**. `reg2 --setup`
+lists the installed data the same way, to replace it or add the music: a source with only the music
+or the movie (a `GTAudio` folder) is added to a complete install.
 
 | Source | Read with |
 |---|---|
@@ -154,7 +153,6 @@ added to a complete install.
 | InstallShield setup `.exe` (the 2004 Rockstar Classics `GTA2.exe`): its files follow the PE image | `setup/install.cpp`, then unshield |
 | InstallShield cabinets (`data1.hdr`, `data*.cab`: the original CD), in a folder or a disc image, with the CD's `GTAudio` and `Movie/intro.bik` beside them | unshield |
 | Disc images (`.iso`, Joliet names), `.zip`, `.7z` and the other formats of libarchive | libarchive |
-| An archive without the data but holding one of these (a download): its largest `.exe`, `.iso`, `.zip` or `.7z`, extracted then read | libarchive |
 
 Other installers (NSIS, Inno Setup) are not read: install the game with them, then use its folder.
 The original 1999 CD is read as a folder (the disc, or a copy of its files): libarchive refuses its
