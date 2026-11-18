@@ -2,6 +2,7 @@
 //   name = dword:<hex> | sz:<text> | hex:<bytes>
 // Keys and value names ignore case, as in the Windows registry.
 #include <windows.h>
+#include <SDL3/SDL.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -159,6 +160,49 @@ bool EnableMovieOnce()
     return true;
 }
 
+// Unless the stored language has its data\<code>.gxt: the system's first one there, else English, else
+// the first there. True if it changed the settings.
+bool ChooseLanguage()
+{
+    Key& option = GetKey("HKLM\\SOFTWARE\\DMA Design Ltd\\GTA2\\Option");
+    const auto installed = [](char code)
+    {
+        char path[] = "data\\?.gxt";
+        path[5] = code;
+        return code && strchr("efgisjr", code) && GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES;
+    };
+    auto it = option.mValues.find("language");
+    if (it != option.mValues.end() && !it->second.second.mData.empty() && installed(it->second.second.mData[0]))
+    {
+        return false;
+    }
+    std::string order;
+    if (SDL_Locale** ppLocales = SDL_GetPreferredLocales(NULL))
+    {
+        for (int i = 0; ppLocales[i]; i++)
+        {
+            for (const char* pCode : {"ene", "frf", "deg", "iti", "ess"})
+            {
+                if (strncmp(ppLocales[i]->language, pCode, 2) == 0)
+                {
+                    order += pCode[2];
+                }
+            }
+        }
+        SDL_free(ppLocales);
+    }
+    for (const char code : order + "efgis")
+    {
+        if (installed(code))
+        {
+            const char value[2] = {code, 0};
+            SetValue(option, "language", REG_SZ, value, sizeof(value));
+            return true;
+        }
+    }
+    return false;
+}
+
 void Load()
 {
     if (sLoaded)
@@ -171,6 +215,7 @@ void Load()
     {
         SetDefaults();
         EnableMovieOnce();
+        ChooseLanguage();
         Save();
         return;
     }
@@ -227,7 +272,7 @@ void Load()
         }
     }
     fclose(f);
-    if (EnableMovieOnce())
+    if (EnableMovieOnce() | ChooseLanguage())
     {
         Save();
     }

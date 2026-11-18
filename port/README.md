@@ -50,7 +50,9 @@ A developer can also run it from a copy of the game folder, or point `GTA2_DIR` 
 GTA2_DIR=~/games/gta2 ./build_linux/reg2
 ```
 
-Settings live in `gta2_registry.ini` (the registry keys of the Windows game). Alt+Enter switches
+Settings live in `gta2_registry.ini` (the registry keys of the Windows game). When its `language` is unset or
+has no `data/<code>.gxt`, the start picks the first of the system's preferred languages that the game has, else
+English, else any language there. Alt+Enter switches
 between window and full screen, and is no Enter for the game or the menus. Other keys pressed with Left Alt
 (SPECIAL 2 by default) act as usual: the original dropped Space, Tab and Enter while it was held. Every gamepad drives the player (only those whose name contains
 `GTA2_GAMEPAD` if set): a button counts on any of them, the sticks are those of the pad used last.
