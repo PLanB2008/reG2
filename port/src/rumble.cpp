@@ -73,7 +73,7 @@ void Explosion(Fix16 x, Fix16 y)
     const f32 strength = 1.0f - sqrtf(dx * dx + dy * dy) / kExplosionRange;
     if (strength >= 0.1f)
     {
-        Play(strength, strength * 0.7f, static_cast<s32>(150 + 150 * strength));
+        Play(0.9f * strength, 0.63f * strength, static_cast<s32>(150 + 150 * strength));
     }
 }
 
