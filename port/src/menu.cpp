@@ -951,17 +951,29 @@ struct Layout
     f32 mBottom; // the page's, with the two lines of help it has room for
 };
 
-// The first line's top: under the frontend's logo, or near the top of the pause menu's panel, which
-// starts under the HUD's gang bars on a 4:3 screen.
+// The first line's top: under the frontend's logo, under its title bar on the pages that hide the logo, or near the
+// top of the pause menu's panel, which starts under the HUD's gang bars on a 4:3 screen.
 const f32 kListTop = 160;
+const f32 kNoLogoListTop = 70;
 const f32 kGameListTop = 110;
 const f32 kGamePanelTop = 80;
+// The GTA2 logo in the frontend background's picture (LevelComplete.tga), on black.
+const f32 kGta2LogoLeft = 147;
+const f32 kGta2LogoTop = 53;
+const f32 kGta2LogoRight = 494;
+const f32 kGta2LogoBottom = 144;
 // The statistics' rows, from one's top to the next.
 const f32 kStatStep = 24;
 
+// The frontend's settings and CONTROLS pages cover the logo, for room.
+bool HidesLogo()
+{
+    return !port_GameRunning() && sPage >= kGamePage && sPage <= kControlsPage;
+}
+
 f32 ListTop()
 {
-    return port_GameRunning() ? kGameListTop : kListTop;
+    return port_GameRunning() ? kGameListTop : (HidesLogo() ? kNoLogoListTop : kListTop);
 }
 
 // From a line's top to the next, or to one set apart; a save's line, and the space after it; from the saves page's
@@ -1783,6 +1795,10 @@ void Draw(f32 scale, f32 left, f32 top, bool panel)
     if (panel)
     {
         Rect(layout.mPanelLeft, kGamePanelTop, layout.mPanelRight, hintsY + kGameListTop - kGamePanelTop, 0);
+    }
+    if (HidesLogo())
+    {
+        Rect(kGta2LogoLeft, kGta2LogoTop, kGta2LogoRight, kGta2LogoBottom, 0);
     }
     for (s32 c = 0; c < layout.mColumns && layout.mControls; c++)
     {
