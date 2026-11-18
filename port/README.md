@@ -162,8 +162,8 @@ The original 1999 CD is read as a folder (the disc, or a copy of its files): lib
 (2352-byte sectors) are not read.
 
 Message boxes are SDL's: task dialogs on Windows, `NSAlert` on macOS. On Linux, zenity if installed
-(GTK dialogs), else SDL's own X11 box; when neither is available (Wayland without XWayland) the port
-draws the question in a window of its own. The folder and file pickers are SDL's (the
+(GTK dialogs), else SDL's own X11 box; when neither is available (Wayland without XWayland) the setup
+logs the question and quits, and `GTA2_SETUP_PATH` can name the source. The folder and file pickers are SDL's (the
 xdg-desktop-portal on Linux, else zenity). The progress is a small SDL
 window; closing it cancels the copy.
 
@@ -427,8 +427,7 @@ the AppImage in a clean Debian, Ubuntu or Arch Linux container with the librarie
 | `GTA2_AUDIO_DRIVER`, `GTA2_AUDIO_FILE` | SDL's audio driver and disk output file (wine hides `SDL_*` variables from Windows programs) |
 | `GTA2_DEBUG_OUTPUT=1` | the game's debug strings on stderr and in the log |
 | `GTA2_SETUP_PATH=<folder or file>` | the setup installs from it without asking; a source missing an essential file, or an error, still shows its message, unless `GTA2_NO_MESSAGEBOX=1` |
-| `GTA2_SETUP_DRAWN=1` | the setup's questions in its own window, not in message boxes |
-| `GTA2_SETUP_CAPTURE=<dir>` | the setup's windows written there as BMP |
+| `GTA2_SETUP_CAPTURE=<dir>` | the setup's progress window written there as BMP |
 
 Frames count presented frames, except that while the game runs they count its logic steps, so a
 script does the same at any frame rate. A run nobody sees, with the sound written to a file:

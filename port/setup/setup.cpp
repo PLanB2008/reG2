@@ -1,5 +1,5 @@
 // The game folder, and the setup that fills it: native message boxes and file dialogs, and a small
-// SDL window for the progress (and for the questions where no message box is available).
+// SDL window for the progress.
 #include "setup.hpp"
 
 #include "install.hpp"
@@ -27,12 +27,8 @@ const char kNoGameText[] =
     "installers. Download GTA2.exe from there, then choose \"Install from a file\" and pick it.";
 const char kNoGameUrl[] = "https://archive.org/details/rockstar-classics";
 
-// U+2713 and U+2717, drawn by SetupWindow::Text in its own window.
+// U+2713 and U+2717.
 const char kCheck[] = "\xE2\x9C\x93", kCross[] = "\xE2\x9C\x97";
-const Uint8 kMarkBits[2][8] = {
-    {0x00, 0x66, 0x3C, 0x18, 0x3C, 0x66, 0x00, 0x00},
-    {0x00, 0x03, 0x06, 0xCC, 0x78, 0x30, 0x00, 0x00},
-};
 
 const SDL_DialogFileFilter kFileFilters[] = {
     {"GTA2 installer or disc image", "exe;iso;zip;7z"},
@@ -66,16 +62,9 @@ bool ZenityFound()
     }
     return false;
 }
-#endif
 
-bool EnvSet(const char* name)
-{
-    const char* v = SDL_getenv(name);
-    return v && *v && *v != '0';
-}
-
-// Lines of at most width characters, cut at spaces (a longer word only if breakWords).
-std::string Wrap(const std::string& text, size_t width, bool breakWords)
+// Lines of at most width characters, cut at spaces.
+std::string Wrap(const std::string& text, size_t width)
 {
     std::string out, line;
     for (size_t pos = 0; pos <= text.size(); pos++)
@@ -89,7 +78,7 @@ std::string Wrap(const std::string& text, size_t width, bool breakWords)
                 continue;
             }
             size_t cut = line.rfind(' ', width);
-            cut = cut != std::string::npos && cut > 0 ? cut : breakWords ? width : line.find(' ', width);
+            cut = cut != std::string::npos && cut > 0 ? cut : line.find(' ', width);
             if (cut == std::string::npos)
             {
                 continue;
@@ -102,6 +91,13 @@ std::string Wrap(const std::string& text, size_t width, bool breakWords)
         line.clear();
     }
     return out;
+}
+#endif
+
+bool EnvSet(const char* name)
+{
+    const char* v = SDL_getenv(name);
+    return v && *v && *v != '0';
 }
 
 // A window drawn with SDL's renderer and its 8x8 font, in units of font pixels.
@@ -145,31 +141,8 @@ public:
         SDL_RenderRect(mRenderer, &r);
     }
 
-    // The debug font has no check mark or cross: those are drawn from kMarkBits, in green and red.
-    void Text(float x, float y, std::string s, Uint32 rgb)
+    void Text(float x, float y, const std::string& s, Uint32 rgb)
     {
-        float cx = x;
-        for (size_t i = 0; i < s.size(); i++)
-        {
-            const bool check = s.compare(i, 3, kCheck) == 0;
-            if (check || s.compare(i, 3, kCross) == 0)
-            {
-                s.replace(i, 3, " ");
-                Color(check ? 0x26A269 : 0xC01C28);
-                for (int row = 0; row < 8; row++)
-                {
-                    for (int col = 0; col < 8; col++)
-                    {
-                        const SDL_FRect r = {cx + col, y + row, 1, 1};
-                        if (kMarkBits[check][row] & (0x80 >> col))
-                        {
-                            SDL_RenderFillRect(mRenderer, &r);
-                        }
-                    }
-                }
-            }
-            cx += ((unsigned char)s[i] & 0xC0) != 0x80 ? 8 : 0;
-        }
         Color(rgb);
         SDL_RenderDebugText(mRenderer, x, y, s.c_str());
     }
@@ -190,76 +163,18 @@ public:
         SDL_RenderClear(mRenderer);
     }
 
-    float mScale = 2.0f;
-
 private:
+    float mScale = 2.0f;
     bool mVideo = false;
     SDL_Window* mWindow = NULL;
     SDL_Renderer* mRenderer = NULL;
 };
 
-// The question in a window of our own, without a native message box (GTA2_SETUP_DRAWN=1 forces
-// it): a click or the button's number answers it, Escape or closing gives escapeButton.
-int DrawnBox(const std::string& message, const std::vector<const char*>& buttons, int escapeButton)
-{
-    const int w = 340;
-    const std::string text = Wrap(message, (w - 16) / 8, true);
-    const int top = 24 + 10 * (int)std::count(text.begin(), text.end(), '\n'), h = top + 20 * (int)buttons.size() + 6;
-    SetupWindow win;
-    if (!win.Open(w, h))
-    {
-        return escapeButton;
-    }
-    for (bool first = true;; first = false)
-    {
-        float mx, my;
-        SDL_GetMouseState(&mx, &my);
-        const int hover = mx / win.mScale >= 8 && mx / win.mScale < w - 8 ? (int)floorf((my / win.mScale - top) / 20) : -1;
-        SDL_Event e;
-        while (SDL_PollEvent(&e))
-        {
-            if (e.type == SDL_EVENT_QUIT || e.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED ||
-                (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE))
-            {
-                return escapeButton;
-            }
-            if (e.type == SDL_EVENT_KEY_DOWN && e.key.key >= SDLK_1 && e.key.key < SDLK_1 + (SDL_Keycode)buttons.size())
-            {
-                return (int)(e.key.key - SDLK_1);
-            }
-            if (e.type == SDL_EVENT_MOUSE_BUTTON_UP && hover >= 0 && hover < (int)buttons.size())
-            {
-                return hover;
-            }
-        }
-        size_t line = 0;
-        for (size_t start = 0; start < text.size(); line++)
-        {
-            const size_t end = std::min(text.find('\n', start), text.size());
-            win.Text(8, 10 + 10.0f * line, text.substr(start, end - start), 0x202020);
-            start = end + 1;
-        }
-        for (size_t i = 0; i < buttons.size(); i++)
-        {
-            const std::string label = std::to_string(i + 1) + ". " + buttons[i];
-            win.Rect(8, top + 20.0f * i, w - 16, 16, (int)i == hover ? 0xD6E6FA : 0xFFFFFF, 0x9A9A9A);
-            win.Text(roundf((w - label.size() * 8.0f) / 2), top + 20.0f * i + 4, label, 0x202020);
-        }
-        win.Present(first);
-        SDL_Delay(10);
-    }
-}
-
-// A native message box; buttons are numbered from 0, closing it gives escapeButton.
+// A native message box; buttons are numbered from 0, closing it (or no message box) gives escapeButton.
 int Ask(SDL_MessageBoxFlags flags, const std::string& message, const std::vector<const char*>& buttons,
         int returnButton, int escapeButton)
 {
-    if (EnvSet("GTA2_NO_MESSAGEBOX"))
-    {
-        SDL_Log("%s: %s", kTitle, message.c_str());
-        return escapeButton;
-    }
-    if (!EnvSet("GTA2_SETUP_DRAWN"))
+    if (!EnvSet("GTA2_NO_MESSAGEBOX"))
     {
         std::vector<SDL_MessageBoxButtonData> data;
         for (int i = 0; i < (int)buttons.size(); i++)
@@ -272,7 +187,7 @@ int Ask(SDL_MessageBoxFlags flags, const std::string& message, const std::vector
         const std::string text = message;
 #else
         // zenity and SDL's X11 box do not wrap lines.
-        std::string text = Wrap(message, 72, false);
+        std::string text = Wrap(message, 72);
         const bool ascii = !ZenityFound();
         for (size_t i; ascii && (i = std::min(text.find(kCheck), text.find(kCross))) != std::string::npos;)
         {
@@ -286,9 +201,10 @@ int Ask(SDL_MessageBoxFlags flags, const std::string& message, const std::vector
         {
             return id < 0 ? escapeButton : id;
         }
-        SDL_Log("No message box (%s): drawing the question", SDL_GetError());
+        SDL_Log("No message box (%s); GTA2_SETUP_PATH can name the folder or file to install from", SDL_GetError());
     }
-    return DrawnBox(message, buttons, escapeButton);
+    SDL_Log("%s: %s", kTitle, message.c_str());
+    return escapeButton;
 }
 
 struct Pick
