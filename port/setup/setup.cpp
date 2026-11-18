@@ -331,32 +331,41 @@ std::string PickPath(bool folder)
     return pick.mPath;
 }
 
+using JobFunction = InstallResult (*)(const fs::path&, Progress&);
+
 struct Job
 {
+    JobFunction mFunction;
     fs::path mSource;
     Progress mProgress;
     InstallResult mResult;
     std::atomic<bool> mDone{false};
 };
 
-// The copy runs in a thread while the window shows its progress; closing the window cancels it.
-InstallResult RunInstall(const fs::path& source)
+// The job runs in a thread; after a moment a window shows its progress, and closing it cancels the job.
+InstallResult RunJob(JobFunction function, const fs::path& source, const char* heading)
 {
     Job job;
+    job.mFunction = function;
     job.mSource = source;
     SDL_Thread* thread = SDL_CreateThread(
         [](void* p) {
             Job* job = static_cast<Job*>(p);
-            job->mResult = Install(job->mSource, job->mProgress);
+            job->mResult = job->mFunction(job->mSource, job->mProgress);
             job->mDone = true;
             return 0;
         },
         "gta2 setup", &job);
     const int w = 300, h = 66;
     SetupWindow win;
-    const bool shown = thread && win.Open(w, h);
-    for (Uint64 lastCapture = 0; thread && !job.mDone;)
+    bool shown = false;
+    for (Uint64 lastCapture = 0, start = SDL_GetTicks(); thread && !job.mDone;)
     {
+        if (!lastCapture && SDL_GetTicks() - start >= 300)
+        {
+            shown = win.Open(w, h);
+            lastCapture = 1;
+        }
         SDL_Event e;
         while (SDL_PollEvent(&e))
         {
@@ -371,12 +380,12 @@ InstallResult RunInstall(const fs::path& source)
         status = status.size() > room ? "..." + status.substr(status.size() - room + 3) : status;
         if (shown)
         {
-            win.Text(8, 8, job.mProgress.mCancel ? "Cancelling..." : "Copying GTA2's game files...", 0x202020);
+            win.Text(8, 8, job.mProgress.mCancel ? "Cancelling..." : heading, 0x202020);
             win.Rect(8, 24, w - 16, 14, 0xFFFFFF, 0x9A9A9A);
             win.Rect(9, 25, total ? (w - 18) * (float)done / total : 0, 12, 0x3584E4, 0x3584E4);
             win.Text(8, 48, status, 0x505050);
             win.Text(w - 8 - amount.size() * 8.0f, 48, amount, 0x505050);
-            const bool capture = lastCapture == 0 || SDL_GetTicks() - lastCapture >= 1000;
+            const bool capture = lastCapture == 1 || SDL_GetTicks() - lastCapture >= 1000;
             lastCapture = capture ? SDL_GetTicks() : lastCapture;
             win.Present(capture);
         }
@@ -388,32 +397,81 @@ InstallResult RunInstall(const fs::path& source)
     }
     else
     {
-        job.mResult = Install(source, job.mProgress);
+        job.mResult = function(source, job.mProgress);
     }
     return job.mResult;
 }
 
-// What the game folder holds, one item a line with a check mark or a cross.
-std::string Report(const DataCheck& check)
+// What a game folder or a source holds, one item a line with a check mark or a cross.
+std::string Report(const DataCheck& check, bool gameFiles)
 {
     const auto item = [](bool ok, const char* name) { return std::string(ok ? kCheck : kCross) + " " + name + "\n"; };
-    std::string s = item(check.mMissing.empty(), "Game files") + item(check.mMusicFound >= check.mMusicTotal, "Music") +
-                    item(check.mMovie, "Intro movie") + "Languages:\n";
-    for (const auto& language : check.mLanguages)
+    std::string s = gameFiles ? item(check.mMissing.empty(), "Game files") : "";
+    s += item(check.mMusicFound >= check.mMusicTotal, "Music") + item(check.mMovie, "Intro movie");
+    for (size_t i = 0; gameFiles && i < check.mLanguages.size(); i++)
     {
-        s += "  " + item(language.second, language.first);
+        s += (i ? "  " : "Languages:\n  ") + item(check.mLanguages[i].second, check.mLanguages[i].first);
     }
     return s;
 }
 
+std::string MusicMissing(const DataCheck& check)
+{
+    return "The music was not found (" + std::to_string(check.mMusicFound) + " of " + std::to_string(check.mMusicTotal) +
+           " tracks): the game runs without music and radio. The music is in the GTAudio folder of the original CD, "
+           "or in the installer: choose one to add it.";
+}
+
+// The source's report: 0 install, 1 choose another, 2 quit.
+int AskSource(const InstallResult& source, const std::string& gameDir)
+{
+    const DataCheck& check = source.mCheck;
+    const std::string text = "This copy contains:\n\n" + Report(check, !source.mAddOnly) + "\n";
+    if (!check.mMissing.empty() && !source.mAddOnly)
+    {
+        return 1 + Ask(SDL_MESSAGEBOX_ERROR,
+                       text + "Some of GTA2's essential game files are missing: the game cannot be installed from it.",
+                       {"Choose another...", "Quit"}, 0, 1);
+    }
+    const bool music = check.mMusicFound >= check.mMusicTotal;
+    const std::string warning = !music ? MusicMissing(check) + "\n\n"
+                                : !check.mMovie ? "The intro movie was not found: the game starts without it.\n\n"
+                                                : "";
+    return Ask(warning.empty() ? SDL_MESSAGEBOX_INFORMATION : SDL_MESSAGEBOX_WARNING,
+               text + warning + (source.mAddOnly ? "Install adds it to the game in:\n" : "Install copies it to:\n") + gameDir,
+               {"Install", "Choose another...", "Quit"}, 0, 2);
+}
+
+void LogDataCheck(const char* what, const DataCheck& check)
+{
+    std::string missing;
+    for (size_t i = 0; i < check.mMissing.size() && i < 10; i++)
+    {
+        missing += (i ? ", " : "") + check.mMissing[i];
+    }
+    if (check.mMissing.size() > 10)
+    {
+        missing += ", ...";
+    }
+    const std::string state =
+        check.mMissing.empty() ? "complete" : "missing " + std::to_string(check.mMissing.size()) + " files: " + missing;
+    SDL_Log("%s: %s, music %d of %d tracks", what, state.c_str(), check.mMusicFound, check.mMusicTotal);
+}
 // The questions until the game has its data: false to quit.
 bool SetupLoop(const std::string& gameDir)
 {
     // GTA2_SETUP_PATH: the folder or file to install from, instead of the first question and the dialog.
     const char* envPath = SDL_getenv("GTA2_SETUP_PATH");
     std::string path = envPath ? envPath : "";
+    // reopen: "Choose another..." opens the last dialog again.
+    bool folder = true, reopen = false;
     for (bool fromEnv = !path.empty();; fromEnv = false, path.clear())
     {
+        if (reopen)
+        {
+            path = PickPath(folder);
+            reopen = false;
+        }
         const DataCheck check = CheckGameData(".");
         fs::path found;
         if (path.empty() && !check.mMissing.empty())
@@ -440,36 +498,61 @@ bool SetupLoop(const std::string& gameDir)
                 }
                 continue;
             }
-            path = PickPath(choice == 0);
+            folder = choice == 0;
+            path = PickPath(folder);
         }
         else if (path.empty())
         {
             const bool music = check.mMusicFound >= check.mMusicTotal;
             const int choice = Ask(
                 music ? SDL_MESSAGEBOX_INFORMATION : SDL_MESSAGEBOX_WARNING,
-                "GTA2's game files are installed in:\n" + gameDir + "\n\n" + Report(check) + "\n" +
-                    (music ? std::string("Choose a folder or a file to replace them.")
-                           : "The music was not found (" + std::to_string(check.mMusicFound) + " of " +
-                                 std::to_string(check.mMusicTotal) +
-                                 " tracks): the game runs without music and radio. The music is in the GTAudio "
-                                 "folder of the original CD, or in the installer: choose one to add it."),
+                "GTA2's game files are installed in:\n" + gameDir + "\n\n" + Report(check, true) + "\n" +
+                    (music ? "Choose a folder or a file to replace them." : MusicMissing(check)),
                 {"Use a folder...", "Use a file...", "Play"}, 2, 2);
             if (choice == 2)
             {
                 return true;
             }
-            path = PickPath(choice == 0);
+            folder = choice == 0;
+            path = PickPath(folder);
         }
         if (path.empty())
         {
             continue;
         }
-        const InstallResult result = RunInstall(PathFromUtf8(path));
-        if (!result.mOk && !result.mCancelled)
+        const InstallResult source = RunJob(CheckSource, PathFromUtf8(path), "Reading the source...");
+        int choice = 1;
+        if (!source.mOk && !source.mCancelled)
+        {
+            Ask(SDL_MESSAGEBOX_ERROR, source.mError, {"OK"}, 0, 0);
+        }
+        else if (source.mOk)
+        {
+            LogDataCheck("Source", source.mCheck);
+            // GTA2_SETUP_PATH installs without asking, when it can.
+            choice = fromEnv && (source.mCheck.mMissing.empty() || source.mAddOnly) ? 0 : AskSource(source, gameDir);
+        }
+        if (choice != 0)
+        {
+            RemoveTemporary();
+            if (choice == 2 || (fromEnv && !source.mOk))
+            {
+                return false;
+            }
+            reopen = source.mOk;
+            continue;
+        }
+        const InstallResult result = RunJob(Install, source.mInstallFrom, "Copying GTA2's game files...");
+        RemoveTemporary();
+        if (result.mOk)
+        {
+            return true;
+        }
+        if (!result.mCancelled)
         {
             Ask(SDL_MESSAGEBOX_ERROR, result.mError, {"OK"}, 0, 0);
         }
-        if (fromEnv && !result.mOk)
+        if (fromEnv)
         {
             return false;
         }
@@ -512,21 +595,6 @@ fs::path GameFolder(bool* pPerUser, const char** pWhy)
     return dir;
 }
 
-void LogDataCheck(const DataCheck& check)
-{
-    std::string missing;
-    for (size_t i = 0; i < check.mMissing.size() && i < 10; i++)
-    {
-        missing += (i ? ", " : "") + check.mMissing[i];
-    }
-    if (check.mMissing.size() > 10)
-    {
-        missing += ", ...";
-    }
-    const std::string state =
-        check.mMissing.empty() ? "complete" : "missing " + std::to_string(check.mMissing.size()) + " files: " + missing;
-    SDL_Log("Game data: %s, music %d of %d tracks", state.c_str(), check.mMusicFound, check.mMusicTotal);
-}
 } // namespace
 
 void port_SetWindowIcon(SDL_Window* pWindow)
@@ -563,7 +631,7 @@ bool port_PrepareGameFolder(bool forceSetup)
         }
     }
     const DataCheck check = CheckGameData(".");
-    LogDataCheck(check);
+    LogDataCheck("Game data", check);
     if (!perUser || (!forceSetup && check.mMissing.empty()))
     {
         SDL_Log("Setup skipped: %s", perUser ? "the game data is there" : "not the per-user folder");
@@ -576,7 +644,7 @@ bool port_PrepareGameFolder(bool forceSetup)
     SDL_Log("Setup %s", ok ? "done" : "left: quitting");
     if (ok)
     {
-        LogDataCheck(CheckGameData("."));
+        LogDataCheck("Game data", CheckGameData("."));
     }
     return ok;
 }

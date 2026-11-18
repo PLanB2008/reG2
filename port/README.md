@@ -135,13 +135,18 @@ Without the data there, a message box offers three choices:
   Internet Archive item [rockstar-classics](https://archive.org/details/rockstar-classics), which
   holds the 2004 Rockstar Classics `GTA2.exe`.
 
-The files are copied into a temporary folder, checked (the essential files are listed in
-`setup/install.cpp`), then moved into place. A message then lists, each with a check mark or a cross,
-the game files, the music, the intro movie and the five languages (`data/<code>.gxt`; the 2004
-freeware has only English and Spanish), before Play: at least one language is needed. Without the music (the 22 tracks of `GTAudio` on
-the original CD) the game runs, and the setup warns and offers to add it from a folder (the CD, its
-`GTAudio`), a disc image or the installer. Without an essential file the game cannot start: the setup
-says so and asks for the game again. `reg2 --setup` shows the setup again, to replace the data or add the music.
+Before anything is copied, a message lists what the chosen copy holds, each with a check mark or a
+cross: the game files (the essential ones are listed in `setup/install.cpp`), the music, the intro
+movie and the five languages (`data/<code>.gxt`; the 2004 freeware has only English and Spanish; at
+least one is needed). It comes from the source's list of files: of InstallShield cabinets only
+`data1.hdr` is extracted (unshield lists their files from it), of an archive holding an installer or
+a disc image only that file. **Install** then copies the files into a temporary folder, checks them,
+moves them into place and starts the game. Without the music (the 22 tracks of `GTAudio` on the
+original CD) or the intro movie the message warns and still offers Install; the music can be added
+later from a folder (the CD, its `GTAudio`), a disc image or the installer. Without an essential file
+it offers only **Choose another...** and **Quit**. `reg2 --setup` lists the installed data the same
+way, to replace it or add the music: a source with only the music or the movie (a `GTAudio` folder) is
+added to a complete install.
 
 | Source | Read with |
 |---|---|
@@ -421,7 +426,7 @@ the AppImage in a clean Debian, Ubuntu or Arch Linux container with the librarie
 | `GTA2_TEST_CRASH=1`, `GTA2_TEST_CRASH=abort` | a null pointer write or `abort()` once the window exists, to try the crash report |
 | `GTA2_AUDIO_DRIVER`, `GTA2_AUDIO_FILE` | SDL's audio driver and disk output file (wine hides `SDL_*` variables from Windows programs) |
 | `GTA2_DEBUG_OUTPUT=1` | the game's debug strings on stderr and in the log |
-| `GTA2_SETUP_PATH=<folder or file>` | the setup installs from it, without the first question and the dialog (messages shown after it still wait, unless `GTA2_NO_MESSAGEBOX=1`) |
+| `GTA2_SETUP_PATH=<folder or file>` | the setup installs from it without asking; a source missing an essential file, or an error, still shows its message, unless `GTA2_NO_MESSAGEBOX=1` |
 | `GTA2_SETUP_DRAWN=1` | the setup's questions in its own window, not in message boxes |
 | `GTA2_SETUP_CAPTURE=<dir>` | the setup's windows written there as BMP |
 
