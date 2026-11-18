@@ -34,6 +34,7 @@ const char kMusicDir[] = "data/GTAudio/";
 const char kMovie[] = "data/Movie/intro.bik";
 // Constant data only: the setup runs before the global constructors.
 const char kStaging[] = "setup.tmp";
+const char kInnerDir[] = "setup.inner.tmp";
 
 std::string Lower(std::string s)
 {
@@ -531,12 +532,32 @@ bool MoveInto(const fs::path& from, const fs::path& to, std::string* pError)
     return !ec;
 }
 
+// An installer or a disc image inside a downloaded archive: the largest one.
+bool FindInner(const std::vector<Entry>& entries, size_t* pIndex)
+{
+    bool found = false;
+    for (size_t i = 0; i < entries.size(); i++)
+    {
+        const std::string lower = Lower(entries[i].mPath);
+        if (entries[i].mSize >= (64u << 20) && (!found || entries[i].mSize > entries[*pIndex].mSize) &&
+            (EndsWith(lower, ".exe") || EndsWith(lower, ".iso") || EndsWith(lower, ".zip") || EndsWith(lower, ".7z")))
+        {
+            *pIndex = i;
+            found = true;
+        }
+    }
+    return found;
+}
 } // namespace
 
-InstallResult Install(const fs::path& sourcePath, Progress& progress)
+static InstallResult InstallFrom(const fs::path& sourcePath, Progress& progress, bool nested)
 {
     std::error_code ec;
     fs::remove_all(kStaging, ec);
+    if (!nested)
+    {
+        fs::remove_all(kInnerDir, ec);
+    }
     progress.SetStatus("Reading the source...");
     std::unique_ptr<Source> source = OpenSource(sourcePath);
     if (!source)
@@ -564,6 +585,27 @@ InstallResult Install(const fs::path& sourcePath, Progress& progress)
     const bool haveData = CheckGameData(".").mMissing.empty();
     // The music or the movie, added to the installed data.
     const bool addOnly = !hasData && !plan.mFiles.empty() && haveData;
+    size_t inner;
+    if (!hasData && !addOnly && !nested && FindInner(source->mEntries, &inner))
+    {
+        const fs::path innerPath = fs::path(kInnerDir) / PathFromUtf8(source->mEntries[inner].mPath).filename();
+        progress.mTotal = source->mEntries[inner].mSize;
+        if (!EnoughSpace(progress.mTotal, &error) || !source->Extract({{inner, innerPath}}, progress, &error))
+        {
+            fs::remove_all(kInnerDir, ec);
+            return Fail(error, progress);
+        }
+        cab.reset();
+        source.reset();
+        progress.mDone = 0;
+        InstallResult result = InstallFrom(innerPath, progress, true);
+        fs::remove_all(kInnerDir, ec);
+        if (!result.mOk && !result.mCancelled)
+        {
+            result.mError = PathToUtf8(innerPath.filename()) + ", in this archive: " + result.mError;
+        }
+        return result;
+    }
     if (!hasData && !addOnly)
     {
         return Fail("No GTA2 data found here (looked for data/fstyle.sty, or InstallShield's data1.hdr).", progress);
@@ -648,6 +690,11 @@ InstallResult Install(const fs::path& sourcePath, Progress& progress)
     result.mCheck = CheckGameData(".");
     result.mOk = true;
     return result;
+}
+
+InstallResult Install(const fs::path& sourcePath, Progress& progress)
+{
+    return InstallFrom(sourcePath, progress, false);
 }
 
 fs::path PathFromUtf8(const std::string& s)

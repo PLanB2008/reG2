@@ -144,6 +144,7 @@ disc image or the installer. `reg2 --setup` shows the setup again, to replace th
 | InstallShield setup `.exe` (the 2004 Rockstar Classics `GTA2.exe`): its files follow the PE image | `setup/install.cpp`, then unshield |
 | InstallShield cabinets (`data1.hdr`, `data*.cab`: the original CD), in a folder or a disc image, with the CD's `GTAudio` and `Movie/intro.bik` beside them | unshield |
 | Disc images (`.iso`, Joliet names), `.zip`, `.7z` and the other formats of libarchive | libarchive |
+| An archive without the data but holding one of these (a download): its largest `.exe`, `.iso`, `.zip` or `.7z`, extracted then read | libarchive |
 
 Other installers (NSIS, Inno Setup) are not read: install the game with them, then use its folder.
 The original 1999 CD is read as a folder (the disc, or a copy of its files): libarchive refuses its
