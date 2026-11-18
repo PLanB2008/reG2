@@ -184,6 +184,7 @@ name, Left and Right or Enter to change it, as F1 and F2 did), STATISTICS (the o
 MISSION TRANSCRIPT (the last mission messages, newest first), LOAD GAME and QUIT GAME. The hints under the pages show the keys, or once a pad is used its
 buttons: PlayStation's symbols on a PlayStation pad, otherwise Xbox's pictures with the letters
 printed on the pad (a Nintendo pad's bottom button is B), from SDL's pad type and button labels.
+The bottom right corner shows the player's position in the map's blocks (X, Y and Z, his car's in one).
 
 Saves are kept per city, in `player/`:
 
