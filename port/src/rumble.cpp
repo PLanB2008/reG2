@@ -84,8 +84,8 @@ void Crash(const Car* pCar, Fix16 damage)
     const f32 strength = Clamp01((damage.ToFloat() - 0.3f) / 2.7f);
     if (pPed && pCar->mDriver == pPed && strength > 0.0f)
     {
-        // 0.675 as strong, up to 0.9 for the biggest crashes.
-        const f32 scale = 0.9f * (0.75f + 0.25f * strength * strength * strength);
+        // 0.6 as strong, up to 0.8 for the biggest crashes.
+        const f32 scale = 0.8f * (0.75f + 0.25f * strength * strength * strength);
         Play((0.3f + 0.7f * strength) * scale, (0.2f + 0.6f * strength) * scale, static_cast<s32>(100 + 150 * strength));
     }
 }
