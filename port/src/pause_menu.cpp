@@ -9,6 +9,8 @@
 #include "GameSession.hpp"
 #include "Globals.hpp"
 #include "Hud.hpp"
+#include "Ped.hpp"
+#include "Player.hpp"
 #include "TextTable.hpp"
 #include "TextureCache.hpp"
 #include "cSampleManager.hpp"
@@ -502,6 +504,41 @@ static f32 Transcript(f32 top, f32 room, f32 scale, f32 left, f32 menuTop)
     return height;
 }
 
+// The HUD brief's text: its right end and top on the screen; a right end of 0 without one.
+static void BriefPlace(f32* pRight, f32* pTop)
+{
+    Hud_Brief& brief = gHud_2B00->mBrief;
+    *pRight = 0;
+    *pTop = 0;
+    if (brief.mCurrBriefs)
+    {
+        PortUiCentred centred;
+        *pRight = PortUiStringX(brief.mStr, Fix16(64), gBriefFont).ToFloat() +
+            Frontend::GetMaxTextWidth(brief.mStr, gBriefFont) * gViewCamera->mUiScale.ToFloat();
+        *pTop = PortUiY(Fix16(480 - GetLineSpacingFromFontType_5D7700_inlined(gBriefFont) * brief.mNumLines)).ToFloat();
+    }
+}
+
+// The local player's position, where the camera follows it (its car's in one), in the frontend's small font in the
+// safe area's bottom right corner, above the brief if it reaches there. Needs the frontend's style.
+static void DrawPosition(f32 scale, f32 briefRight, f32 briefTop)
+{
+    const Ped* pPed = gGame_0x40->mLocalPlayer ? gGame_0x40->mLocalPlayer->GetActivePed() : NULL;
+    if (!pPed)
+    {
+        return;
+    }
+    wchar_t text[48];
+    swprintf(text, L"X %.2f  Y %.2f  Z %.2f", pPed->get_cam_x().ToFloat(), pPed->get_cam_y().ToFloat(), pPed->get_cam_z().ToFloat());
+    const f32 margin = PortSettings::SafeArea();
+    const f32 inset = 6 * scale;
+    const f32 x = gViewCamera->mScreenPxWidth * (1 - margin) - inset - Frontend::GetMaxTextWidth(text, gFrontendFont7) * scale;
+    f32 bottom = gViewCamera->mScreenPxHeight * (1 - margin);
+    bottom = x < briefRight && briefTop < bottom ? briefTop : bottom;
+    const f32 y = bottom - inset - GetLineSpacingFromFontType(gFrontendFont7) * scale;
+    DrawString(text, Fx(x), Fx(y), gFrontendFont7, Fx(scale), palette_types_enum::sprites_2, 0, 0, 0);
+}
+
 void Draw()
 {
     if (!sOpen)
@@ -517,6 +554,9 @@ void Draw()
     const f32 top = (gViewCamera->mScreenPxHeight - 480.0f * scale) / 2;
     const f32 menuTop = top + 10 * scale;
     PortMenu::OfferRadio(StationName());
+    f32 briefRight;
+    f32 briefTop;
+    BriefPlace(&briefRight, &briefTop);
     UseFrontendStyle(false);
     const PortMenu::Result result = PortMenu::HandleMouse(scale, left, menuTop);
     if (Closes(result))
@@ -527,6 +567,7 @@ void Draw()
     }
     Apply(result);
     PortMenu::Draw(scale, left, menuTop, true);
+    DrawPosition(scale, briefRight, briefTop);
     UseGameStyle();
     f32 rowTop;
     f32 rowStep;
