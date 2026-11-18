@@ -175,7 +175,7 @@ shadows, the day and night cycle, twin stick controls, AUTOSAVE, RETRY JOBS and 
 keys, the mouse or a pad (Left and Right, or LB and RB, as the hint under it shows); every setting can
 be changed later. `GTA2_WELCOME=1` shows the screen again.
 
-OPTIONS has five pages: GAME (language, text speed, AUTOSAVE, RETRY JOBS, FRENZY RESPAWN, blood, lighting and the
+OPTIONS has five pages: GAME (language, text speed, AUTOSAVE, RETRY JOBS, FRENZY RESPAWN, INFINITE LIVES, blood, lighting and the
 day and night cycle), GRAPHICS, DISPLAY (full screen, frame rate, zoom, HUD), SOUND and CONTROLS.
 Their settings are grouped under small titles, and the less common ones say under the page what they
 do, or what their value does (PRESET, LIGHTING, FRAME LIMIT, CONTROLS, AIM CAMERA, STRAFE ANIMATION).
@@ -202,6 +202,9 @@ Saves are kept per city, in `player/`:
   or vehicle and its trigger are back at once; standing on the skull starts it again. The old vehicle locks the
   player out once he leaves it and despawns as traffic does; while it or the player is on the new one's spot, it stays
   the frenzy's instead. A passed one stays gone. Off in network games and bonus stages.
+- INFINITE LIVES (`port_infinite_lives`, off in both styles): dying costs no life, so never GAME OVER, but still ends at
+  the hospital; it sets the original's `do_infinite_lives` debug flag, at once in a game, and changes nothing in network
+  games, which count no lives.
 - LOAD GAME (the original's RESUME SAVED STATUS, on the Play, quit, dead and area complete pages)
   lists the saves, even a single one: a tab per city (Left and
   Right, Q and E, or LB and RB), each save with its money, jobs passed and date, newest first.
