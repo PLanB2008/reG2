@@ -8,9 +8,6 @@
 #include <math.h>
 #include <algorithm>
 #include <stdlib.h>
-#if !defined(_WIN32) && !defined(__APPLE__)
-#include <unistd.h>
-#endif
 
 using namespace setup;
 
@@ -27,8 +24,8 @@ const char kNoGameText[] =
     "installers. Download GTA2.exe from there, then choose \"Install from a file\" and pick it.";
 const char kNoGameUrl[] = "https://archive.org/details/rockstar-classics";
 
-// U+2713 and U+2717.
-const char kCheck[] = "\xE2\x9C\x93", kCross[] = "\xE2\x9C\x97";
+// Plain ASCII: SDL's X11 message box, used when zenity is missing, draws Latin-1 only.
+const char kCheck[] = "[x]", kCross[] = "[ ]";
 
 const SDL_DialogFileFilter kFileFilters[] = {
     {"GTA2 installer or disc image", "exe;iso;zip;7z"},
@@ -48,21 +45,6 @@ SDL_Surface* LoadLogo()
 #endif
 
 #if !defined(_WIN32) && !defined(__APPLE__)
-// SDL runs zenity from PATH; without it, its X11 box draws Latin-1 only.
-bool ZenityFound()
-{
-    const std::string dirs = SDL_getenv("PATH") ? SDL_getenv("PATH") : "";
-    for (size_t start = 0, end; start < dirs.size(); start = end + 1)
-    {
-        end = std::min(dirs.find(':', start), dirs.size());
-        if (access((dirs.substr(start, end - start) + "/zenity").c_str(), X_OK) == 0)
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
 // Lines of at most width characters, cut at spaces.
 std::string Wrap(const std::string& text, size_t width)
 {
@@ -187,12 +169,7 @@ int Ask(SDL_MessageBoxFlags flags, const std::string& message, const std::vector
         const std::string text = message;
 #else
         // zenity and SDL's X11 box do not wrap lines.
-        std::string text = Wrap(message, 72);
-        const bool ascii = !ZenityFound();
-        for (size_t i; ascii && (i = std::min(text.find(kCheck), text.find(kCross))) != std::string::npos;)
-        {
-            text.replace(i, 3, text.compare(i, 3, kCheck) == 0 ? "[x]" : "[ ]");
-        }
+        const std::string text = Wrap(message, 72);
 #endif
         const SDL_MessageBoxData box = {flags | SDL_MESSAGEBOX_BUTTONS_LEFT_TO_RIGHT, NULL, kTitle, text.c_str(),
                                         (int)data.size(), data.data(), NULL};
