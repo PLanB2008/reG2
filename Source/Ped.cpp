@@ -2,6 +2,8 @@
 #if defined(GTA2_PORT)
 // Port: TWIN STICK's free aim (ComputeAimAngle) and the shooters' lead (UpdateFacingAngle).
 #include "../port/src/twin_stick.hpp"
+// Port: VIBRATION for the player's hits (TakeDamage).
+#include "../port/src/rumble.hpp"
 #endif
 #include "ped_move_target_type.hpp"
 #include "ped_attack_target_type.hpp"
@@ -1669,6 +1671,10 @@ void Ped::TakeDamage(s16 damage)
 {
     if (mInvulnerability <= 0)
     {
+#if defined(GTA2_PORT)
+        // Port: VIBRATION, the pad shakes as the player loses health on foot.
+        PortRumble::Hit(this, damage);
+#endif
         mHealth -= damage;
         if (mHealth <= 0)
         {

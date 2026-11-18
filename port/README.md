@@ -94,6 +94,8 @@ In vehicles the controls stay classic, but the fire truck's, the tank's and the 
 toward the mouse or the right stick's reticle at the original's turret speed; ATTACK fires it as before, RB
 too (instead of NEXT WEAPON, while that keeps its default RB), and SPECIAL with left or right still turns it
 while held. The stick and mouse are not recorded in replays.
+VIBRATION (on by default) shakes the pad used last when the player is hit on foot, at an explosion within a few
+blocks (more the nearer it is) and when the car he drives crashes (more the harder the hit), never in the menus or the pause.
 The intro movie (`data/Movie/intro.bik`, after `preintro.bik` in the editions that have one) plays as in
 the original, and any key or a pad button that works in the menus skips it. libbink decodes it at the file's
 frame rate and shows it in true colour, letterboxed, whatever the renderer settings; its sound goes through

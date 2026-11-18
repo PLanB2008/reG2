@@ -69,6 +69,8 @@
 #if defined(GTA2_PORT)
 // Port: save checks (PortSaves::IsValid).
 #include "../port/src/saves.hpp"
+// Port: VIBRATION for explosions (ShakeCamerasAtPos).
+#include "../port/src/rumble.hpp"
 #endif
 
 DEFINE_GLOBAL_INIT(Fix16, kFpFive_67DECC, Fix16(5), 0x67DECC);
@@ -679,6 +681,10 @@ Player* Game::GetFirstPlayerWithoutPed()
 MATCH_FUNC(0x4B9790)
 void Game::ShakeCamerasAtPos(Fix16 amount, Fix16 x, Fix16 y)
 {
+#if defined(GTA2_PORT)
+    // Port: VIBRATION, the explosions that shake the cameras shake the pad, more the nearer they are to the player.
+    PortRumble::Explosion(x, y);
+#endif
     Camera* pCam = IteratePlayerCamera();
     while (pCam)
     {
