@@ -379,15 +379,8 @@ bool SetupLoop(const std::string& gameDir)
     // GTA2_SETUP_PATH: the folder or file to install from, instead of the first question and the dialog.
     const char* envPath = SDL_getenv("GTA2_SETUP_PATH");
     std::string path = envPath ? envPath : "";
-    // reopen: "Choose another..." opens the last dialog again.
-    bool folder = true, reopen = false;
     for (bool fromEnv = !path.empty();; fromEnv = false, path.clear())
     {
-        if (reopen)
-        {
-            path = PickPath(folder);
-            reopen = false;
-        }
         const DataCheck check = CheckGameData(".");
         fs::path found;
         if (path.empty() && !check.mMissing.empty())
@@ -414,8 +407,7 @@ bool SetupLoop(const std::string& gameDir)
                 }
                 continue;
             }
-            folder = choice == 0;
-            path = PickPath(folder);
+            path = PickPath(choice == 0);
         }
         else if (path.empty())
         {
@@ -429,8 +421,7 @@ bool SetupLoop(const std::string& gameDir)
             {
                 return true;
             }
-            folder = choice == 0;
-            path = PickPath(folder);
+            path = PickPath(choice == 0);
         }
         if (path.empty())
         {
@@ -448,13 +439,12 @@ bool SetupLoop(const std::string& gameDir)
             // GTA2_SETUP_PATH installs without asking, when it can.
             choice = fromEnv && (source.mCheck.mMissing.empty() || source.mAddOnly) ? 0 : AskSource(source, gameDir);
         }
+        if (choice == 2 || (fromEnv && !source.mOk))
+        {
+            return false;
+        }
         if (choice != 0)
         {
-            if (choice == 2 || (fromEnv && !source.mOk))
-            {
-                return false;
-            }
-            reopen = source.mOk;
             continue;
         }
         const InstallResult result = RunJob(Install, PathFromUtf8(path), "Copying GTA2's game files...");
