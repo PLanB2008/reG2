@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace setup
@@ -25,6 +26,8 @@ struct DataCheck
     std::vector<std::string> mMissing; // essential files
     int mMusicFound = 0;
     int mMusicTotal = 0;
+    bool mMovie = false; // data/Movie/intro.bik
+    std::vector<std::pair<const char*, bool>> mLanguages; // the game's five, and whether data/<code>.gxt is there
 };
 DataCheck CheckGameData(const fs::path& root);
 

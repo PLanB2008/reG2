@@ -23,6 +23,8 @@ const char* const kEssential[] = {
     "data/audio/ste.sdt", "data/audio/ste.raw", "data/audio/bil.sdt", "data/audio/bil.raw",
     "data/frontend/1.tga", "data/frontend/2.tga", "data/frontend/3.tga", "data/frontend/mask.tga",
 };
+// e.gxt is essential: the game falls back to English when the chosen language's file is missing.
+const std::pair<char, const char*> kLanguages[] = {{'e', "English"}, {'f', "French"}, {'g', "German"}, {'i', "Italian"}, {'s', "Spanish"}};
 
 // The game's music and radio, read from the CD (X:\GTAUDIO) by the original; data/GTAudio here.
 const char* const kMusic[] = {
@@ -706,6 +708,11 @@ DataCheck CheckGameData(const fs::path& root)
     {
         check.mMusicTotal++;
         check.mMusicFound += FindNoCase(root, std::string(kMusicDir) + name + ".wav", &found);
+    }
+    check.mMovie = FindNoCase(root, "data/Movie/intro.bik", &found);
+    for (const auto& language : kLanguages)
+    {
+        check.mLanguages.push_back({language.second, FindNoCase(root, std::string("data/") + language.first + ".gxt", &found)});
     }
     return check;
 }

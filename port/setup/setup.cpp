@@ -8,6 +8,9 @@
 #include <math.h>
 #include <algorithm>
 #include <stdlib.h>
+#if !defined(_WIN32) && !defined(__APPLE__)
+#include <unistd.h>
+#endif
 
 using namespace setup;
 
@@ -24,6 +27,13 @@ const char kNoGameText[] =
     "installers. Download GTA2.exe from there, then choose \"Install from a file\" and pick it.";
 const char kNoGameUrl[] = "https://archive.org/details/rockstar-classics";
 
+// U+2713 and U+2717, drawn by SetupWindow::Text in its own window.
+const char kCheck[] = "\xE2\x9C\x93", kCross[] = "\xE2\x9C\x97";
+const Uint8 kMarkBits[2][8] = {
+    {0x00, 0x66, 0x3C, 0x18, 0x3C, 0x66, 0x00, 0x00},
+    {0x00, 0x03, 0x06, 0xCC, 0x78, 0x30, 0x00, 0x00},
+};
+
 const SDL_DialogFileFilter kFileFilters[] = {
     {"GTA2 installer or disc image", "exe;iso;zip;7z"},
     {"All files", "*"},
@@ -38,6 +48,23 @@ const unsigned char kLogoPng[] = {
 SDL_Surface* LoadLogo()
 {
     return SDL_LoadPNG_IO(SDL_IOFromConstMem(kLogoPng, sizeof(kLogoPng)), true);
+}
+#endif
+
+#if !defined(_WIN32) && !defined(__APPLE__)
+// SDL runs zenity from PATH; without it, its X11 box draws Latin-1 only.
+bool ZenityFound()
+{
+    const std::string dirs = SDL_getenv("PATH") ? SDL_getenv("PATH") : "";
+    for (size_t start = 0, end; start < dirs.size(); start = end + 1)
+    {
+        end = std::min(dirs.find(':', start), dirs.size());
+        if (access((dirs.substr(start, end - start) + "/zenity").c_str(), X_OK) == 0)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 #endif
 
@@ -118,8 +145,31 @@ public:
         SDL_RenderRect(mRenderer, &r);
     }
 
-    void Text(float x, float y, const std::string& s, Uint32 rgb)
+    // The debug font has no check mark or cross: those are drawn from kMarkBits, in green and red.
+    void Text(float x, float y, std::string s, Uint32 rgb)
     {
+        float cx = x;
+        for (size_t i = 0; i < s.size(); i++)
+        {
+            const bool check = s.compare(i, 3, kCheck) == 0;
+            if (check || s.compare(i, 3, kCross) == 0)
+            {
+                s.replace(i, 3, " ");
+                Color(check ? 0x26A269 : 0xC01C28);
+                for (int row = 0; row < 8; row++)
+                {
+                    for (int col = 0; col < 8; col++)
+                    {
+                        const SDL_FRect r = {cx + col, y + row, 1, 1};
+                        if (kMarkBits[check][row] & (0x80 >> col))
+                        {
+                            SDL_RenderFillRect(mRenderer, &r);
+                        }
+                    }
+                }
+            }
+            cx += ((unsigned char)s[i] & 0xC0) != 0x80 ? 8 : 0;
+        }
         Color(rgb);
         SDL_RenderDebugText(mRenderer, x, y, s.c_str());
     }
@@ -154,7 +204,7 @@ int DrawnBox(const std::string& message, const std::vector<const char*>& buttons
 {
     const int w = 340;
     const std::string text = Wrap(message, (w - 16) / 8, true);
-    const int top = 18 + 10 * (int)std::count(text.begin(), text.end(), '\n'), h = top + 20 * (int)buttons.size() + 6;
+    const int top = 24 + 10 * (int)std::count(text.begin(), text.end(), '\n'), h = top + 20 * (int)buttons.size() + 6;
     SetupWindow win;
     if (!win.Open(w, h))
     {
@@ -222,7 +272,12 @@ int Ask(SDL_MessageBoxFlags flags, const std::string& message, const std::vector
         const std::string text = message;
 #else
         // zenity and SDL's X11 box do not wrap lines.
-        const std::string text = Wrap(message, 72, false);
+        std::string text = Wrap(message, 72, false);
+        const bool ascii = !ZenityFound();
+        for (size_t i; ascii && (i = std::min(text.find(kCheck), text.find(kCross))) != std::string::npos;)
+        {
+            text.replace(i, 3, text.compare(i, 3, kCheck) == 0 ? "[x]" : "[ ]");
+        }
 #endif
         const SDL_MessageBoxData box = {flags | SDL_MESSAGEBOX_BUTTONS_LEFT_TO_RIGHT, NULL, kTitle, text.c_str(),
                                         (int)data.size(), data.data(), NULL};
@@ -338,6 +393,19 @@ InstallResult RunInstall(const fs::path& source)
     return job.mResult;
 }
 
+// What the game folder holds, one item a line with a check mark or a cross.
+std::string Report(const DataCheck& check)
+{
+    const auto item = [](bool ok, const char* name) { return std::string(ok ? kCheck : kCross) + " " + name + "\n"; };
+    std::string s = item(check.mMissing.empty(), "Game files") + item(check.mMusicFound >= check.mMusicTotal, "Music") +
+                    item(check.mMovie, "Intro movie") + "Languages:\n";
+    for (const auto& language : check.mLanguages)
+    {
+        s += "  " + item(language.second, language.first);
+    }
+    return s;
+}
+
 // The questions until the game has its data: false to quit.
 bool SetupLoop(const std::string& gameDir)
 {
@@ -347,10 +415,14 @@ bool SetupLoop(const std::string& gameDir)
     for (bool fromEnv = !path.empty();; fromEnv = false, path.clear())
     {
         const DataCheck check = CheckGameData(".");
+        fs::path found;
         if (path.empty() && !check.mMissing.empty())
         {
             const int choice = Ask(SDL_MESSAGEBOX_INFORMATION,
-                                   "GTA2's game files were not found.\n\nThis port does not include them: they come "
+                                   std::string(FindNoCase(".", "data", &found)
+                                                   ? "Some of GTA2's essential game files are missing."
+                                                   : "GTA2's game files were not found.") +
+                                       "\n\nThis port does not include them: they come "
                                    "from your own copy of GTA2, an installed game folder, the game's CD or its "
                                    "installer. They will be copied to:\n" + gameDir,
                                    {"Use an existing install...", "Install from a file...", "I don't have the game",
@@ -375,7 +447,7 @@ bool SetupLoop(const std::string& gameDir)
             const bool music = check.mMusicFound >= check.mMusicTotal;
             const int choice = Ask(
                 music ? SDL_MESSAGEBOX_INFORMATION : SDL_MESSAGEBOX_WARNING,
-                "GTA2's game files are installed in:\n" + gameDir + "\n\n" +
+                "GTA2's game files are installed in:\n" + gameDir + "\n\n" + Report(check) + "\n" +
                     (music ? std::string("Choose a folder or a file to replace them.")
                            : "The music was not found (" + std::to_string(check.mMusicFound) + " of " +
                                  std::to_string(check.mMusicTotal) +
@@ -400,10 +472,6 @@ bool SetupLoop(const std::string& gameDir)
         if (fromEnv && !result.mOk)
         {
             return false;
-        }
-        if (result.mOk && result.mCheck.mMusicFound >= result.mCheck.mMusicTotal)
-        {
-            return true;
         }
     }
 }
