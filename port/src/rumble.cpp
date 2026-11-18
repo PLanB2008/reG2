@@ -80,8 +80,8 @@ void Explosion(Fix16 x, Fix16 y)
 void Crash(const Car* pCar, Fix16 damage)
 {
     const Ped* pPed = LocalPed();
-    // Up to 0.3 the car only scrapes, the original dents it past that; past 2 a taxi's fares run off.
-    const f32 strength = Clamp01((damage.ToFloat() - 0.3f) / 1.7f);
+    // Up to 0.3 the car only scrapes, the original dents it past that; full strength from 3 (600 damage).
+    const f32 strength = Clamp01((damage.ToFloat() - 0.3f) / 2.7f);
     if (pPed && pCar->mDriver == pPed && strength > 0.0f)
     {
         // Three quarters as strong, up to full for the biggest crashes.
