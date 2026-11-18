@@ -37,6 +37,7 @@ enum Id
     kClock,
     kControls,
     kAimCamera,
+    kStrafeAnimation,
     kBlood,
     kUpdateCheck,
     kShowFps,
@@ -103,6 +104,8 @@ f32 HudScale();
 bool TwinStick();
 // AIM CAMERA: with TWIN STICK, the view leads along the aim.
 bool AimCamera();
+// STRAFE ANIMATION: with TWIN STICK, the legs follow the walk rather than the aim.
+bool StrafeAnimation();
 
 // CHECK FOR UPDATES: the start menu shows a newer release (options_menu.hpp).
 bool UpdateCheck();
