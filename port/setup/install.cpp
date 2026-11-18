@@ -30,6 +30,8 @@ const char* const kMusic[] = {
     "5a", "6", "6a", "7", "7a", "8", "8a", "9", "9a", "a", "d",
 };
 const char kMusicDir[] = "data/GTAudio/";
+// On the CD beside the installer, in data/ once installed.
+const char kMovie[] = "data/Movie/intro.bik";
 // Constant data only: the setup runs before the global constructors.
 const char kStaging[] = "setup.tmp";
 
@@ -396,7 +398,7 @@ std::unique_ptr<Source> OpenSource(const fs::path& path)
 }
 
 // What goes where. The source's data folder is the one holding fstyle.sty, the music any folder
-// named GTAudio.
+// named GTAudio, the intro movie Movie/intro.bik.
 struct Plan
 {
     std::map<size_t, fs::path> mFiles; // into kStaging
@@ -434,6 +436,10 @@ Plan MakePlan(const std::vector<Entry>& entries)
         else if (slash != std::string::npos && EndsWith(lower.substr(0, slash), "gtaudio") && EndsWith(lower, ".wav"))
         {
             dest = std::string(kMusicDir) + entries[i].mPath.substr(slash + 1);
+        }
+        else if (lower == "movie/intro.bik" || EndsWith(lower, "/movie/intro.bik"))
+        {
+            dest = kMovie;
         }
         if (Lower(dest).compare(0, strlen(kMusicDir), Lower(kMusicDir)) == 0)
         {
@@ -537,54 +543,60 @@ InstallResult Install(const fs::path& sourcePath, Progress& progress)
     {
         return Fail("This file is not an installer, disc image or archive the port can read.", progress);
     }
-    Plan plan = MakePlan(source->mEntries);
+    // The original CD: the game data in InstallShield cabinets, the music and the movie beside them.
+    const Plan plan = MakePlan(source->mEntries);
+    std::unique_ptr<Source> cab;
+    Plan cabPlan;
+    std::string error;
     if (!plan.mHasData)
     {
-        std::string error;
-        if (std::unique_ptr<Source> cab = ExtractCabinets(*source, progress, &error))
+        cab = ExtractCabinets(*source, progress, &error);
+        if (cab)
         {
-            source = std::move(cab);
-            plan = MakePlan(source->mEntries);
+            cabPlan = MakePlan(cab->mEntries);
         }
         else if (!error.empty())
         {
             return Fail(error, progress);
         }
     }
+    const bool hasData = plan.mHasData || cabPlan.mHasData;
     const bool haveData = CheckGameData(".").mMissing.empty();
-    const bool musicOnly = !plan.mHasData && !plan.mFiles.empty() && haveData;
-    if (!plan.mHasData && !musicOnly)
+    // The music or the movie, added to the installed data.
+    const bool addOnly = !hasData && !plan.mFiles.empty() && haveData;
+    if (!hasData && !addOnly)
     {
         return Fail("No GTA2 data found here (looked for data/fstyle.sty, or InstallShield's data1.hdr).", progress);
     }
-    std::string error;
-    if (!EnoughSpace(plan.mBytes, &error))
+    if (!EnoughSpace(plan.mBytes + cabPlan.mBytes, &error))
     {
         return Fail(error, progress);
     }
-    progress.mTotal = plan.mBytes;
-    if (!source->Extract(plan.mFiles, progress, &error))
+    progress.mTotal = plan.mBytes + cabPlan.mBytes;
+    if (!source->Extract(plan.mFiles, progress, &error) || (cab && !cab->Extract(cabPlan.mFiles, progress, &error)))
     {
         return Fail(error, progress);
     }
+    cab.reset();
     source.reset();
     progress.SetStatus("Checking the files...");
 
     fs::path found;
-    if (musicOnly)
+    if (addOnly)
     {
-        fs::path musicDir = kMusicDir;
-        if (FindNoCase(".", kMusicDir, &found))
-        {
-            musicDir = found;
-        }
         for (const auto& f : plan.mFiles)
         {
-            if (FindNoCase(musicDir, PathToUtf8(f.second.filename()), &found))
+            const fs::path rel = f.second.lexically_relative(kStaging);
+            fs::path dir = rel.parent_path();
+            if (FindNoCase(".", Generic(dir), &found))
+            {
+                dir = found;
+            }
+            if (FindNoCase(dir, PathToUtf8(rel.filename()), &found))
             {
                 fs::remove(found, ec);
             }
-            if (!MoveInto(f.second, musicDir / f.second.filename(), &error))
+            if (!MoveInto(f.second, dir / rel.filename(), &error))
             {
                 return Fail(error, progress);
             }
@@ -615,7 +627,7 @@ InstallResult Install(const fs::path& sourcePath, Progress& progress)
 
         // A folder the port already ran from: its settings and saves come along.
         const fs::path root = (sourcePath / PathFromUtf8(plan.mRoot)).lexically_normal();
-        if (fs::is_directory(sourcePath, ec) && !haveData)
+        if (fs::is_directory(sourcePath, ec) && plan.mHasData && !haveData)
         {
             for (const char* name : {"gta2_registry.ini", "gta2gl.ini"})
             {
