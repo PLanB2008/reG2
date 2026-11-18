@@ -768,7 +768,7 @@ DataCheck CheckGameData(const fs::path& root)
         check.mMusicTotal++;
         check.mMusicFound += FindNoCase(root, std::string(kMusicDir) + name + ".wav", &found);
     }
-    check.mMovie = FindNoCase(root, "data/Movie/intro.bik", &found);
+    check.mMovie = FindNoCase(root, kMovie, &found);
     for (const auto& language : kLanguages)
     {
         check.mLanguages.push_back({language.second, FindNoCase(root, std::string("data/") + language.first + ".gxt", &found)});
