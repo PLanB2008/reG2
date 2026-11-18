@@ -20,9 +20,9 @@ const char kNoGameText[] =
     "This port does not include GTA2's game files. To play, you need your own copy of GTA2 for "
     "Windows: the original CD, a Steam copy (no longer sold since 2013), or the installer Rockstar Games "
     "gave away for free in 2004 in its \"Rockstar Classics\" series.\n\n"
-    "Rockstar no longer offers it, but the Internet Archive keeps a copy of the Rockstar Classics "
-    "installers. Download GTA2.exe from there, then choose \"Install from a file\" and pick it.";
-const char kNoGameUrl[] = "https://archive.org/details/rockstar-classics";
+    "Rockstar no longer offers it, but the Internet Archive keeps a copy of that freeware installer. "
+    "Download GTA2INSTALLER.exe from there, then choose \"Install from a file\" and pick it.";
+const char kNoGameUrl[] = "https://archive.org/details/gta2_rockstar-classics";
 
 // Plain ASCII: SDL's X11 message box, used when zenity is missing, draws Latin-1 only.
 const char kCheck[] = "[x]", kCross[] = "[ ]";

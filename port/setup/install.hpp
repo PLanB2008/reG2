@@ -61,7 +61,7 @@ struct InstallResult
 
 // What the setup reads, for its messages.
 inline constexpr char kSourceKinds[] = "a GTA2 game folder, the game's CD (or a copy of it as a folder), its .iso, "
-                                       "the Rockstar Classics installer GTA2.exe, or a .zip or .7z of an installed game";
+                                       "the 2004 Rockstar Classics freeware installer, or a .zip or .7z of an installed game";
 
 // What source (a folder, or a file: InstallShield setup, disc image, archive) holds, from its list
 // of files; of InstallShield cabinets only data1.hdr is extracted.
