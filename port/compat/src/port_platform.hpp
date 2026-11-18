@@ -60,6 +60,11 @@ enum
 void port_OpenGamepad();
 bool port_PadMode(); // the gamepad gave the last input
 SDL_Gamepad* port_ActivePad(); // the last pad to give an input, NULL without one
+// Shakes the active pad, low and high its two motors from 0 to 1, unless a stronger shake plays; port_UpdatePad stops
+// it once port_RumbleAllowed is false (rumble.cpp: a pause, a menu, VIBRATION off).
+void port_Rumble(float low, float high, int ms);
+void port_StopRumble();
+bool port_RumbleAllowed();
 bool port_MouseMode(); // the mouse gave the last input
 int port_GetPadBinding(int control);
 void port_SetPadBinding(int control, int code);

@@ -2,6 +2,8 @@
 #if defined(GTA2_PORT)
 // Port: TWIN STICK aims the roof gun (HandleUserInput).
 #include "../port/src/twin_stick.hpp"
+// Port: VIBRATION for the player's crashes (ApplyImpactDamage).
+#include "../port/src/rumble.hpp"
 #endif
 #include "car_shop_event.hpp"
 #include "car_thread_trigger.hpp"
@@ -1868,6 +1870,10 @@ bool Car::IsEnterable() const
 MATCH_FUNC(0x43D5D0)
 EXPORT s16 Car::ApplyImpactDamage(Fix16 damage)
 {
+#if defined(GTA2_PORT)
+    // Port: VIBRATION, the pad shakes as the player's car crashes, as hard as the collision's damage.
+    PortRumble::Crash(this, damage);
+#endif
     if ((mCarInfoIdx == car_model_enum::TAXI || mCarInfoIdx == car_model_enum::STYPECAB) && damage > kFpTwo_6777D4)
     {
         // Big taxi crash, time for the passengers to do a runner

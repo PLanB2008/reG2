@@ -38,6 +38,7 @@ enum Id
     kControls,
     kAimCamera,
     kStrafeAnimation,
+    kVibration,
     kBlood,
     kUpdateCheck,
     kShowFps,
@@ -106,6 +107,8 @@ bool TwinStick();
 bool AimCamera();
 // STRAFE ANIMATION: with TWIN STICK, the legs follow the walk rather than the aim.
 bool StrafeAnimation();
+// VIBRATION: the gamepad shakes as the player is hit, in explosions and in crashes (rumble.hpp).
+bool Vibration();
 
 // CHECK FOR UPDATES: the start menu shows a newer release (options_menu.hpp).
 bool UpdateCheck();

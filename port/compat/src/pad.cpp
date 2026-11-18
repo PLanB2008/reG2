@@ -58,6 +58,9 @@ int sPad[kNumControls]; // pad_<n>, read once: port_UpdatePad wants them several
 bool sPadRead;
 int sWheelCode; // a wheel notch holds its control down for two steps
 unsigned sWheelUntil;
+SDL_Gamepad* sRumblePad; // shaking (port_Rumble) until sRumbleEnd, in SDL ticks
+float sRumbleStrength;
+Uint64 sRumbleEnd;
 
 const SDL_GamepadButton kButtons[] = {SDL_GAMEPAD_BUTTON_SOUTH, SDL_GAMEPAD_BUTTON_EAST, SDL_GAMEPAD_BUTTON_WEST,
                                       SDL_GAMEPAD_BUTTON_NORTH, SDL_GAMEPAD_BUTTON_LEFT_SHOULDER,
@@ -381,6 +384,35 @@ SDL_Gamepad* port_ActivePad()
     return sActivePad;
 }
 
+void port_Rumble(float low, float high, int ms)
+{
+    const Uint64 now = SDL_GetTicks();
+    const float strength = low > high ? low : high;
+    // The shake playing goes on unless this one is clearly stronger, or it has less than half this one's time left.
+    if (!sActivePad || (sActivePad == sRumblePad && now < sRumbleEnd && strength < sRumbleStrength * 1.2f &&
+                        sRumbleEnd - now > static_cast<Uint64>(ms / 2)))
+    {
+        return;
+    }
+    if (sRumblePad != sActivePad)
+    {
+        port_StopRumble();
+    }
+    SDL_RumbleGamepad(sActivePad, static_cast<Uint16>(low * 0xFFFF), static_cast<Uint16>(high * 0xFFFF), static_cast<Uint32>(ms));
+    sRumblePad = sActivePad;
+    sRumbleStrength = strength;
+    sRumbleEnd = now + ms;
+}
+
+void port_StopRumble()
+{
+    if (sRumblePad && SDL_GetTicks() < sRumbleEnd)
+    {
+        SDL_RumbleGamepad(sRumblePad, 0, 0, 0);
+    }
+    sRumblePad = NULL;
+}
+
 bool port_MouseMode()
 {
     return sMode == kMouseMode;
@@ -543,6 +575,7 @@ void port_PadEvent(const SDL_Event& e)
                     sGamepads[i] = sGamepads[--sNumGamepads];
                     memcpy(sAxisLast[i], sAxisLast[sNumGamepads], sizeof(sAxisLast[i]));
                     sActivePad = sActivePad == pPad ? (sNumGamepads ? sGamepads[0] : NULL) : sActivePad;
+                    sRumblePad = sRumblePad == pPad ? NULL : sRumblePad;
                     SDL_CloseGamepad(pPad);
                     break;
                 }
@@ -619,6 +652,10 @@ void port_UpdatePad()
         }
         ~PadCache() { sPadCache = false; }
     } cache;
+    if (sRumblePad && !port_RumbleAllowed())
+    {
+        port_StopRumble();
+    }
     // New presses: the pad is the last device used, as when its events come too late for the input they make (a
     // pad's first press as it connects); and for binding capture (Start stays the pause button).
     int codes[kNumControls + 4];

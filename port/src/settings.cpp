@@ -66,7 +66,7 @@ namespace
 const wchar_t* const kNames[kCount] = {L"SOUND EFFECTS", L"MUSIC", L"3D SOUND", L"TEXT SPEED", L"LANGUAGE",
                                        L"FULL SCREEN", L"BRIGHTNESS", L"LIGHTING", L"EXPLODING SCORES", L"FRAME LIMIT",
                                        L"TRUE COLOUR", L"BLOOM", L"PIXEL LIGHTING", L"CAR HEADLIGHTS",
-                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"STRAFE ANIMATION", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS", L"FRENZY RESPAWN"};
+                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"STRAFE ANIMATION", L"VIBRATION", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS", L"FRENZY RESPAWN"};
 const wchar_t* const kGroupNames[kGroupsEnd - kCount - 1] = {L"SAVES", L"TIME OF DAY", L"LIGHTING", L"IMAGE", L"SCREEN", L"VIEW"};
 
 struct Language
@@ -197,6 +197,9 @@ const Translation kTranslations[] = {
     {L"THE VIEW STAYS ON THE PLAYER", NULL,
      {L"LA VUE RESTE SUR LE JOUEUR", L"DIE ANSICHT BLEIBT BEIM SPIELER", L"LA VISTA RESTA SUL GIOCATORE",
       L"LA VISTA SE QUEDA EN EL JUGADOR"}},
+    {L"THE PAD SHAKES WHEN YOU ARE HIT, IN EXPLOSIONS AND IN CRASHES", NULL,
+     {L"LA MANETTE VIBRE AUX COUPS RECUS, EXPLOSIONS ET ACCIDENTS", L"DAS GAMEPAD VIBRIERT BEI TREFFERN, EXPLOSIONEN UND UNFÄLLEN",
+      L"IL GAMEPAD VIBRA SE SEI COLPITO, IN ESPLOSIONI E SCONTRI", L"EL MANDO VIBRA AL RECIBIR GOLPES, EN EXPLOSIONES Y CHOQUES"}},
     {L"BEAMS OF LIGHT AHEAD OF CARS AFTER DARK", NULL,
      {L"FAISCEAUX DEVANT LES VOITURES A LA NUIT TOMBEE", L"LICHTKEGEL VOR DEN AUTOS, WENN ES DUNKEL IST",
       L"FASCI DI LUCE DAVANTI ALLE AUTO CON IL BUIO", L"HACES DE LUZ DELANTE DE LOS COCHES AL ANOCHECER"}},
@@ -322,6 +325,7 @@ const Translation kTranslations[] = {
     {L"CONTROLS", NULL, {L"COMMANDES", L"STEUERUNG", L"COMANDI", L"CONTROLES"}},
     {L"AIM CAMERA", NULL, {L"CAMERA DE VISEE", L"ZIELKAMERA", L"CAMERA DI MIRA", L"CÁMARA DE MIRA"}},
     {L"STRAFE ANIMATION", NULL, {L"ANIMATION DE STRAFE", L"STRAFE-ANIMATION", L"ANIMAZIONE STRAFE", L"ANIMACIÓN DE STRAFE"}},
+    {L"VIBRATION", NULL, {L"VIBRATIONS", L"VIBRATION", L"VIBRAZIONE", L"VIBRACIÓN"}},
     {L"TWIN STICK", NULL, {L"DOUBLE STICK", L"TWIN-STICK", L"DOPPIO STICK", L"DOBLE STICK"}},
     {L"DEFAULT KEYS", NULL, {L"CONTROLES PAR DEFAUT", L"STANDARDSTEUERUNG", L"COMANDI PREDEFINITI", L"CONTROLES PREDETERMINADOS"}},
     {L"KEYBOARD", NULL, {L"CLAVIER", L"TASTATUR", L"TASTIERA", L"TECLADO"}},
@@ -451,6 +455,8 @@ const char* ScreenName(Id id)
             return "port_aim_camera";
         case kStrafeAnimation:
             return "port_strafe_animation";
+        case kVibration:
+            return "port_vibration";
         case kBlood:
             return "blood";
         case kUpdateCheck:
@@ -486,6 +492,10 @@ s32 ScreenDefault(Id id)
     if (id == kStartTime)
     {
         return 12;
+    }
+    if (id == kVibration)
+    {
+        return 1;
     }
     return id == kLighting || id == kExplodingScores || id == kVsync || id == kClock || id == kAimCamera || id == kStrafeAnimation || id == kBlood || id == kUpdateCheck ? 1 : 0;
 }
@@ -783,6 +793,10 @@ bool StrafeAnimation()
 {
     return TwinStick() && Screen(kStrafeAnimation) != 0;
 }
+bool Vibration()
+{
+    return Screen(kVibration) != 0;
+}
 
 bool UpdateCheck()
 {
@@ -845,6 +859,8 @@ const wchar_t* Help(Id id)
         case kStrafeAnimation:
             return Screen(id) ? L"EXPERIMENTAL: THE LEGS FOLLOW YOUR MOVE, NOT YOUR AIM"
                               : L"THE ORIGINAL'S RUN, THE LEGS FACING THE AIM";
+        case kVibration:
+            return L"THE PAD SHAKES WHEN YOU ARE HIT, IN EXPLOSIONS AND IN CRASHES";
         case kHeadlights:
             return L"BEAMS OF LIGHT AHEAD OF CARS AFTER DARK";
         case kLightEffects:
@@ -1204,6 +1220,7 @@ void Change(Id id, s32 delta)
         case kClock:
         case kAimCamera:
         case kStrafeAnimation:
+        case kVibration:
         case kShowFps:
         case kAutosave:
         case kRetry:
