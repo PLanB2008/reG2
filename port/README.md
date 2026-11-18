@@ -136,7 +136,7 @@ Without the data there, a message box offers three choices:
 The files are copied into a temporary folder, checked (the essential files are listed in
 `setup/install.cpp`), then moved into place. A message then lists, each with a check mark or a cross,
 the game files, the music, the intro movie and the five languages (`data/<code>.gxt`; the 2004
-freeware has only English and Spanish), before Play. Without the music (the 22 tracks of `GTAudio` on
+freeware has only English and Spanish), before Play: at least one language is needed. Without the music (the 22 tracks of `GTAudio` on
 the original CD) the game runs, and the setup warns and offers to add it from a folder (the CD, its
 `GTAudio`), a disc image or the installer. Without an essential file the game cannot start: the setup
 says so and asks for the game again. `reg2 --setup` shows the setup again, to replace the data or add the music.

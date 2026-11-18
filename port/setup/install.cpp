@@ -18,12 +18,12 @@ const char* const kEssential[] = {
     "data/fstyle.sty", "data/wil.sty", "data/ste.sty", "data/bil.sty",
     "data/wil.gmp", "data/ste.gmp", "data/bil.gmp",
     "data/wil.scr", "data/ste.scr", "data/bil.scr",
-    "data/e.gxt", "data/nyc.gci", "data/keyboard/eng_kb.cfg",
+    "data/nyc.gci", "data/keyboard/eng_kb.cfg",
     "data/audio/fstyle.sdt", "data/audio/fstyle.raw", "data/audio/wil.sdt", "data/audio/wil.raw",
     "data/audio/ste.sdt", "data/audio/ste.raw", "data/audio/bil.sdt", "data/audio/bil.raw",
     "data/frontend/1.tga", "data/frontend/2.tga", "data/frontend/3.tga", "data/frontend/mask.tga",
 };
-// e.gxt is essential: the game falls back to English when the chosen language's file is missing.
+// At least one is essential: the game starts in one that is there.
 const std::pair<char, const char*> kLanguages[] = {{'e', "English"}, {'f', "French"}, {'g', "German"}, {'i', "Italian"}, {'s', "Spanish"}};
 
 // The game's music and radio, read from the CD (X:\GTAUDIO) by the original; data/GTAudio here.
@@ -769,9 +769,15 @@ DataCheck CheckGameData(const fs::path& root)
         check.mMusicFound += FindNoCase(root, std::string(kMusicDir) + name + ".wav", &found);
     }
     check.mMovie = FindNoCase(root, kMovie, &found);
+    bool anyLanguage = false;
     for (const auto& language : kLanguages)
     {
         check.mLanguages.push_back({language.second, FindNoCase(root, std::string("data/") + language.first + ".gxt", &found)});
+        anyLanguage |= check.mLanguages.back().second;
+    }
+    if (!anyLanguage)
+    {
+        check.mMissing.push_back("data/e.gxt, f.gxt, g.gxt, i.gxt or s.gxt");
     }
     return check;
 }
