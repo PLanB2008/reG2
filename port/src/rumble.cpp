@@ -56,7 +56,7 @@ void Hit(const Ped* pPed, s32 damage)
         return;
     }
     // Fire, falls and the electro gun hurt a little every step: a steady buzz rather than a pulse.
-    const f32 strength = 0.3f + 0.02f * (damage < 20 ? damage : 20);
+    const f32 strength = 0.225f + 0.015f * (damage < 20 ? damage : 20);
     Play(strength, strength * 0.8f, damage < 5 ? 120 : 200);
 }
 
@@ -84,7 +84,9 @@ void Crash(const Car* pCar, Fix16 damage)
     const f32 strength = Clamp01((damage.ToFloat() - 0.3f) / 1.7f);
     if (pPed && pCar->mDriver == pPed && strength > 0.0f)
     {
-        Play(0.3f + 0.7f * strength, 0.2f + 0.6f * strength, static_cast<s32>(100 + 150 * strength));
+        // Three quarters as strong, up to full for the biggest crashes.
+        const f32 scale = 0.75f + 0.25f * strength * strength * strength;
+        Play((0.3f + 0.7f * strength) * scale, (0.2f + 0.6f * strength) * scale, static_cast<s32>(100 + 150 * strength));
     }
 }
 } // namespace PortRumble
