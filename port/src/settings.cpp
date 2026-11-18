@@ -7,9 +7,12 @@
 #include "Globals.hpp"
 #include "Hud.hpp"
 #include "TextTable.hpp"
+#include "debug.hpp"
 #include "map_0x370.hpp"
 #include "registry.hpp"
 #include "root_sound.hpp"
+#include "saves.hpp"
+#include "winmain.hpp"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -39,7 +42,8 @@ const Id kGameSettings[] = {kLanguage, kTextSpeed, kExplodingScores, kBlood,
 #if defined(GTA2_UPDATE_CHECK)
                             kUpdateCheck,
 #endif
-                            kSavesGroup, kAutosave, kRetry, kKfRespawn,
+                            kSavesGroup, kAutosave,
+                            kDifficultyGroup, kRetry, kKfRespawn, kInfiniteLives,
                             kTimeOfDayGroup, kLighting,
 #if defined(GTA2_PORT_SDL)
                             kDayLength, kStartTime, kClock,
@@ -66,8 +70,8 @@ namespace
 const wchar_t* const kNames[kCount] = {L"SOUND EFFECTS", L"MUSIC", L"3D SOUND", L"TEXT SPEED", L"LANGUAGE",
                                        L"FULL SCREEN", L"BRIGHTNESS", L"LIGHTING", L"EXPLODING SCORES", L"FRAME LIMIT",
                                        L"TRUE COLOUR", L"BLOOM", L"PIXEL LIGHTING", L"CAR HEADLIGHTS",
-                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"STRAFE ANIMATION", L"VIBRATION", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS", L"FRENZY RESPAWN"};
-const wchar_t* const kGroupNames[kGroupsEnd - kCount - 1] = {L"SAVES", L"TIME OF DAY", L"LIGHTING", L"IMAGE", L"SCREEN", L"VIEW"};
+                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"STRAFE ANIMATION", L"VIBRATION", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS", L"FRENZY RESPAWN", L"INFINITE LIVES"};
+const wchar_t* const kGroupNames[kGroupsEnd - kCount - 1] = {L"SAVES", L"DIFFICULTY", L"TIME OF DAY", L"LIGHTING", L"IMAGE", L"SCREEN", L"VIEW"};
 
 struct Language
 {
@@ -146,6 +150,7 @@ const Translation kTranslations[] = {
      {L"VOTRE SAUVEGARDE AUTO DE %ls SERA REMPLACEE", L"DEIN AUTOSPEICHERSTAND VON %ls WIRD ERSETZT",
       L"IL TUO SALVATAGGIO AUTO DI %ls SARÀ SOSTITUITO", L"TU GUARDADO AUTO DE %ls SERÁ REEMPLAZADO"}},
     {L"SAVES", NULL, {L"SAUVEGARDES", L"SPEICHERN", L"SALVATAGGI", L"GUARDADO"}},
+    {L"DIFFICULTY", NULL, {L"DIFFICULTE", L"SCHWIERIGKEIT", L"DIFFICOLTÀ", L"DIFICULTAD"}},
     {L"TIME OF DAY", NULL, {L"HEURE DU JOUR", L"TAGESZEIT", L"ORA DEL GIORNO", L"HORA DEL DÍA"}},
     {L"IMAGE", NULL, {L"IMAGE", L"BILD", L"IMMAGINE", L"IMAGEN"}},
     {L"SCREEN", NULL, {L"ECRAN", L"BILDSCHIRM", L"SCHERMO", L"PANTALLA"}},
@@ -244,6 +249,10 @@ const Translation kTranslations[] = {
     {L"A FAILED KILL FRENZY COMES BACK ON THE MAP", NULL,
      {L"UNE FRENESIE RATEE REVIENT SUR LA CARTE", L"EIN GESCHEITERTER AMOKLAUF KEHRT AUF DIE KARTE ZURÜCK",
       L"UNA FRENESIA FALLITA TORNA SULLA MAPPA", L"UN FRENESÍ FALLIDO VUELVE AL MAPA"}},
+    {L"INFINITE LIVES", NULL, {L"VIES INFINIES", L"UNENDLICHE LEBEN", L"VITE INFINITE", L"VIDAS INFINITAS"}},
+    {L"YOU NEVER RUN OUT OF LIVES: NO GAME OVER", NULL,
+     {L"VOUS NE MANQUEZ JAMAIS DE VIES : PAS DE FIN DE PARTIE", L"DIR GEHEN NIE DIE LEBEN AUS: KEIN SPIELENDE",
+      L"NON RESTI MAI SENZA VITE: NIENTE FINE PARTITA", L"NUNCA TE QUEDAS SIN VIDAS: NO HAY FIN DE LA PARTIDA"}},
     {L"%ls: RETRY", NULL, {L"%ls : REESSAYER", L"%ls: WIEDERHOLEN", L"%ls: RIPROVA", L"%ls: REINTENTAR"}},
     {L"RETRY", NULL, {L"REESSAYER", L"WIEDERHOLEN", L"RIPROVA", L"REINTENTAR"}},
     {L"RETRY: %ls", NULL, {L"REESSAYER : %ls", L"WIEDERHOLEN: %ls", L"RIPROVA: %ls", L"REINTENTAR: %ls"}},
@@ -469,6 +478,8 @@ const char* ScreenName(Id id)
             return "port_retry";
         case kKfRespawn:
             return "port_kf_respawn";
+        case kInfiniteLives:
+            return "port_infinite_lives";
         default:
             return "car_headlights";
     }
@@ -823,6 +834,16 @@ bool KfRespawn()
     return Screen(kKfRespawn) != 0;
 }
 
+bool InfiniteLives()
+{
+    return Screen(kInfiniteLives) != 0;
+}
+
+void ApplyInfiniteLives(bool demo)
+{
+    gDo_infinite_lives = (InfiniteLives() && !demo) || gRegistry.Debug_Setting_Exists("do_infinite_lives");
+}
+
 const wchar_t* Help(Id id)
 {
     switch (id)
@@ -885,6 +906,8 @@ const wchar_t* Help(Id id)
 #endif
         case kKfRespawn:
             return L"A FAILED KILL FRENZY COMES BACK ON THE MAP";
+        case kInfiniteLives:
+            return L"YOU NEVER RUN OUT OF LIVES: NO GAME OVER";
         default:
             return NULL;
     }
@@ -1005,6 +1028,7 @@ void ApplyStyle(Style style)
     gRegistry.Set_Screen_Setting(ScreenName(kAutosave), enhanced);
     gRegistry.Set_Screen_Setting(ScreenName(kRetry), enhanced);
     gRegistry.Set_Screen_Setting(ScreenName(kKfRespawn), enhanced);
+    gRegistry.Set_Screen_Setting(ScreenName(kInfiniteLives), 0);
     // Unlimited with vsync: a frame each refresh of the screen.
     gRegistry.Set_Screen_Setting(ScreenName(kFrameLimit), 0);
     gRegistry.Set_Screen_Setting(ScreenName(kVsync), 1);
@@ -1226,6 +1250,14 @@ void Change(Id id, s32 delta)
         case kRetry:
         case kKfRespawn:
             gRegistry.Set_Screen_Setting(ScreenName(id), Screen(id) ? 0 : 1);
+            break;
+        case kInfiniteLives:
+            gRegistry.Set_Screen_Setting(ScreenName(id), Screen(id) ? 0 : 1);
+            // In a game at once; a network game keeps its cleared debug flags, a replay those it was recorded with.
+            if (port_GameRunning() && !IsNetworkGame() && !PortSaves::Replaying())
+            {
+                ApplyInfiniteLives(false);
+            }
             break;
         case kFrameLimit:
         {

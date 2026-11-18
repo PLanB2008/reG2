@@ -1714,6 +1714,14 @@ void Player::RespawnPlayer()
     }
 }
 
+#if defined(GTA2_PORT)
+// Port: with do_infinite_lives (INFINITE LIVES) a main stage's last life is kept too: dying on it is no GAME OVER.
+static bool LastLifeKept()
+{
+    return gDo_infinite_lives && gGameSession.IsBonusStage() != 1;
+}
+#endif
+
 MATCH_FUNC(0x567130)
 void Player::Wasted()
 {
@@ -1752,7 +1760,11 @@ void Player::Wasted()
     {
         if (IsUser())
         {
+#if defined(GTA2_PORT)
+            if (mLives.get_value() > 1 || bStartNetworkGame || LastLifeKept())
+#else
             if (mLives.get_value() > 1 || bStartNetworkGame)
+#endif
             {
                 gHud_2B00->mMessage.ShowMessage( //  It's really ugly, it's probably inlined
                     gText_0x14->Find(GetDeathText()),
@@ -1772,7 +1784,11 @@ void Player::Wasted()
         }
         mWastedOrBusted = true;
         mDeathCountdown = 70;
+#if defined(GTA2_PORT)
+        if (mLives.get_value() > 1 || LastLifeKept())
+#else
         if (mLives.get_value() > 1)
+#endif
         {
             mAuxPed = gPedManager->ClonePed(mPlayerPed);
             mAuxPed->mSelectedWeapon = NULL;

@@ -65,11 +65,12 @@
 #include "sprite.hpp"
 #include "TextTable.hpp"
 #if defined(GTA2_PORT)
-// Port: AUTOSAVE, the frame loop, the settings menu and RETRY JOBS.
+// Port: AUTOSAVE, the frame loop, the settings menu, RETRY JOBS and INFINITE LIVES.
 #include "../port/src/autosave.hpp"
 #include "../port/src/frame_loop.hpp"
 #include "../port/src/options_menu.hpp"
 #include "../port/src/retry.hpp"
+#include "../port/src/settings.hpp"
 #endif
 
 DEFINE_STATIC_GLOBAL(u8, sNetDisconnectPlayersBits, 0x6F56B8);
@@ -929,6 +930,10 @@ void __stdcall ExitGameCallback(Game* pGame, s32 reason)
 MATCH_FUNC(0x4DA4D0)
 EXPORT void __stdcall InitializeGame()
 {
+#if defined(GTA2_PORT)
+    // Port: INFINITE LIVES as the game starts; a replay's header and a network game's ClearDebugFlags below override it.
+    PortSettings::ApplyInfiniteLives(sbReplayMode != 0);
+#endif
     if (sbReplayMode)
     {
         gInputRecorder.input_init_replay(gHInstance);

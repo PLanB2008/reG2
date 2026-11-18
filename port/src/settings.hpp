@@ -45,9 +45,11 @@ enum Id
     kAutosave,
     kRetry,
     kKfRespawn,
+    kInfiniteLives,
     kCount,
     // Group titles in the pages' lists: the settings after one, up to the next, are under it.
     kSavesGroup,
+    kDifficultyGroup,
     kTimeOfDayGroup,
     kLightingGroup,
     kImageGroup,
@@ -125,6 +127,11 @@ bool Retry();
 // FRENZY RESPAWN: a failed kill frenzy comes back on the map (retry.hpp).
 bool KfRespawn();
 
+// INFINITE LIVES: dying costs no life, so no GAME OVER, through the game's do_infinite_lives debug flag.
+bool InfiniteLives();
+// The flag from the setting or the registry's debug setting, from the latter alone for an attract demo.
+void ApplyInfiniteLives(bool demo);
+
 // What the setting does, or its value where that is not plain, on two lines at most under the page; NULL if
 // nothing. A setting with help has it for every value.
 const wchar_t* Help(Id id);
@@ -140,7 +147,7 @@ void ApplyRenderOptions();
 
 // The first start's styles (welcome.hpp), both drawing a frame per screen refresh. CLASSIC: its preset, original
 // lighting and controls, church saves only; ENHANCED: its preset, day-night cycle, twin stick, AUTOSAVE, RETRY JOBS,
-// FRENZY RESPAWN.
+// FRENZY RESPAWN. INFINITE LIVES off in both.
 enum Style
 {
     kClassicStyle,
