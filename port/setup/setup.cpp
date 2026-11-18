@@ -389,9 +389,8 @@ bool SetupLoop(const std::string& gameDir)
                                    std::string(FindNoCase(".", "data", &found)
                                                    ? "Some of GTA2's essential game files are missing."
                                                    : "GTA2's game files were not found.") +
-                                       "\n\nThis port does not include them: they come "
-                                   "from your own copy of GTA2, an installed game folder, the game's CD or its "
-                                   "installer. They will be copied to:\n" + gameDir,
+                                       "\n\nThis port does not include them. Give it your own copy: " + kSourceKinds +
+                                       ". The files are copied to:\n" + gameDir,
                                    {"Use an existing install...", "Install from a file...", "I don't have the game",
                                     "Quit"},
                                    0, 3);

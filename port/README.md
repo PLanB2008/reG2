@@ -126,7 +126,8 @@ errors, message boxes and the crash report) is written next to the executable wh
 writable, else in the per-user folder, and the message gives its path. A run without an error
 writes no log.
 
-Without the data there, a message box offers three choices:
+Without the data there, a message box names what the setup reads (`kSourceKinds` in `setup/install.hpp`)
+and offers three choices:
 
 - **Use an existing install:** a GTA2 folder (the one holding `data`, or `data` itself). Its
   `data` folder is copied, with `gta2_registry.ini`, `gta2gl.ini` and `player/` if the port ran there.

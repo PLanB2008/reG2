@@ -602,7 +602,7 @@ InstallResult CheckSource(const fs::path& sourcePath, Progress& progress)
     result.mAddOnly = !plan.mHasData && !cabPlan.mHasData && !plan.mFiles.empty() && CheckGameData(".").mMissing.empty();
     if (plan.mFiles.empty() && cabPlan.mFiles.empty())
     {
-        return Fail("No GTA2 data found here (looked for data/fstyle.sty, or InstallShield's data1.hdr).", progress);
+        return Fail(std::string("No GTA2 data found here. The setup reads ") + kSourceKinds + ".", progress);
     }
     std::set<std::string> files;
     for (const auto& f : plan.mFiles)
