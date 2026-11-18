@@ -697,7 +697,7 @@ bool DrawLegs(const Sprite* pSprite, STexture*, u32 flags, const Vert* pVerts, s
 {
     Ped* pPed = OnFootPed();
     const s32 anim = pPed ? pPed->mGameObject->mAnimationState : -1;
-    if (!pPed || !sMoving || pSprite != pPed->GetSprite() || pSprite->mZoom ||
+    if (!PortSettings::StrafeAnimation() || !pPed || !sMoving || pSprite != pPed->GetSprite() || pSprite->mZoom ||
         (anim != Char_Anim_state::Walking_0 && anim != Char_Anim_state::Running_1))
     {
         return false;

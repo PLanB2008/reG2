@@ -82,7 +82,7 @@ struct Item
     const wchar_t* mTitle; // its group's title above it, in English, NULL if none
 };
 
-const s32 kMaxItems = 16;
+const s32 kMaxItems = 17;
 const wchar_t* const kTitles[kNumPages] = {L"OPTIONS", L"GAME", L"GRAPHICS", L"DISPLAY", L"SOUND", L"CONTROLS", L"STATISTICS",
                                            L"MISSION TRANSCRIPT", L"LOAD GAME", L"LOAD GAME", L"QUIT GAME"};
 
@@ -262,6 +262,7 @@ s32 Items(Page page, Item* pItems)
 #if defined(GTA2_PORT_SDL)
             pItems[n++] = Item{kSetting, PortSettings::kControls, true};
             pItems[n++] = Item{kSetting, PortSettings::kAimCamera, false};
+            pItems[n++] = Item{kSetting, PortSettings::kStrafeAnimation, false};
 #endif
             // Under the TWIN STICK settings, or set apart from the bindings.
             const bool gap = n == kNumControls;

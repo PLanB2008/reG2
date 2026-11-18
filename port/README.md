@@ -77,7 +77,8 @@ animation, as the original's back key; his shots, flames and throws take on only
 as the original's forward walk does, so walking sideways or backing off leaves them where a standing throw goes). Walking off the aim, his steps shorten the
 more the move is to the side, down to none at 90 degrees, where his legs stay under him, his back rounded, and he
 bobs a little along the move; further back his walk plays backward, his legs turned along the move, the one ahead
-longer than the one behind. In a jump the move steers him toward its way, as fast as the
+longer than the one behind. STRAFE ANIMATION (on by default, experimental) draws these legs; off, he runs with the
+original's animation whichever way he walks. In a jump the move steers him toward its way, as fast as the
 original's left and right turn him in the air. The machine guns fire straight along the aim: the original bends
 their shots toward a ped up to 16 degrees off the line of fire. The electro weapons keep their lock on a target.
 Peds standing to shoot at him with a pistol or a machine gun lead him by a part of his move while their bullets
@@ -163,7 +164,7 @@ be changed later. `GTA2_WELCOME=1` shows the screen again.
 OPTIONS has five pages: GAME (language, text speed, AUTOSAVE, RETRY JOBS, FRENZY RESPAWN, blood, lighting and the
 day and night cycle), GRAPHICS, DISPLAY (full screen, frame rate, zoom, HUD), SOUND and CONTROLS.
 Their settings are grouped under small titles, and the less common ones say under the page what they
-do, or what their value does (PRESET, LIGHTING, FRAME LIMIT, CONTROLS, AIM CAMERA).
+do, or what their value does (PRESET, LIGHTING, FRAME LIMIT, CONTROLS, AIM CAMERA, STRAFE ANIMATION).
 In a game, Escape opens the same menu as a pause menu, with RESUME, RADIO (in a car with a radio: its station by
 name, Left and Right or Enter to change it, as F1 and F2 did), STATISTICS (the original pause screen's lines),
 MISSION TRANSCRIPT (the last mission messages, newest first), LOAD GAME and QUIT GAME. The hints under the pages show the keys, or once a pad is used its

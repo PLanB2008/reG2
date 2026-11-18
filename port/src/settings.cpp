@@ -66,7 +66,7 @@ namespace
 const wchar_t* const kNames[kCount] = {L"SOUND EFFECTS", L"MUSIC", L"3D SOUND", L"TEXT SPEED", L"LANGUAGE",
                                        L"FULL SCREEN", L"BRIGHTNESS", L"LIGHTING", L"EXPLODING SCORES", L"FRAME LIMIT",
                                        L"TRUE COLOUR", L"BLOOM", L"PIXEL LIGHTING", L"CAR HEADLIGHTS",
-                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS", L"FRENZY RESPAWN"};
+                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"STRAFE ANIMATION", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS", L"FRENZY RESPAWN"};
 const wchar_t* const kGroupNames[kGroupsEnd - kCount - 1] = {L"SAVES", L"TIME OF DAY", L"LIGHTING", L"IMAGE", L"SCREEN", L"VIEW"};
 
 struct Language
@@ -188,6 +188,12 @@ const Translation kTranslations[] = {
     {L"THE VIEW LEADS TOWARD THE AIM. SHIFT, LT OR R3 LOOKS FURTHER", NULL,
      {L"LA VUE AVANCE VERS LA VISEE. MAJ, LT OU R3 POUR VOIR PLUS LOIN", L"DIE ANSICHT FOLGT DEM ZIEL. SHIFT, LT ODER R3: WEITER SEHEN",
       L"LA VISTA SI SPOSTA VERSO LA MIRA. SHIFT, LT O R3: PIÙ LONTANO", L"LA VISTA SE ADELANTA HACIA LA MIRA. SHIFT, LT O R3: MÁS LEJOS"}},
+    {L"EXPERIMENTAL: THE LEGS FOLLOW YOUR MOVE, NOT YOUR AIM", NULL,
+     {L"EXPERIMENTAL : LES JAMBES SUIVENT LE DEPLACEMENT, PAS LA VISEE", L"EXPERIMENTELL: DIE BEINE FOLGEN DER BEWEGUNG, NICHT DEM ZIEL",
+      L"SPERIMENTALE: LE GAMBE SEGUONO IL MOVIMENTO, NON LA MIRA", L"EXPERIMENTAL: LAS PIERNAS SIGUEN EL MOVIMIENTO, NO LA MIRA"}},
+    {L"THE ORIGINAL'S RUN, THE LEGS FACING THE AIM", NULL,
+     {L"LA COURSE DE L'ORIGINAL, LES JAMBES VERS LA VISEE", L"DER LAUF DES ORIGINALS, DIE BEINE ZUM ZIEL",
+      L"LA CORSA DELL'ORIGINALE, LE GAMBE VERSO LA MIRA", L"LA CARRERA DEL ORIGINAL, LAS PIERNAS HACIA LA MIRA"}},
     {L"THE VIEW STAYS ON THE PLAYER", NULL,
      {L"LA VUE RESTE SUR LE JOUEUR", L"DIE ANSICHT BLEIBT BEIM SPIELER", L"LA VISTA RESTA SUL GIOCATORE",
       L"LA VISTA SE QUEDA EN EL JUGADOR"}},
@@ -315,6 +321,7 @@ const Translation kTranslations[] = {
     {L"NEEDS", NULL, {L"NECESSITE", L"BENÖTIGT", L"RICHIEDE", L"REQUIERE"}},
     {L"CONTROLS", NULL, {L"COMMANDES", L"STEUERUNG", L"COMANDI", L"CONTROLES"}},
     {L"AIM CAMERA", NULL, {L"CAMERA DE VISEE", L"ZIELKAMERA", L"CAMERA DI MIRA", L"CÁMARA DE MIRA"}},
+    {L"STRAFE ANIMATION", NULL, {L"ANIMATION DE STRAFE", L"STRAFE-ANIMATION", L"ANIMAZIONE STRAFE", L"ANIMACIÓN DE STRAFE"}},
     {L"TWIN STICK", NULL, {L"DOUBLE STICK", L"TWIN-STICK", L"DOPPIO STICK", L"DOBLE STICK"}},
     {L"DEFAULT KEYS", NULL, {L"CONTROLES PAR DEFAUT", L"STANDARDSTEUERUNG", L"COMANDI PREDEFINITI", L"CONTROLES PREDETERMINADOS"}},
     {L"KEYBOARD", NULL, {L"CLAVIER", L"TASTATUR", L"TASTIERA", L"TECLADO"}},
@@ -442,6 +449,8 @@ const char* ScreenName(Id id)
             return "port_controls";
         case kAimCamera:
             return "port_aim_camera";
+        case kStrafeAnimation:
+            return "port_strafe_animation";
         case kBlood:
             return "blood";
         case kUpdateCheck:
@@ -478,7 +487,7 @@ s32 ScreenDefault(Id id)
     {
         return 12;
     }
-    return id == kLighting || id == kExplodingScores || id == kVsync || id == kClock || id == kAimCamera || id == kBlood || id == kUpdateCheck ? 1 : 0;
+    return id == kLighting || id == kExplodingScores || id == kVsync || id == kClock || id == kAimCamera || id == kStrafeAnimation || id == kBlood || id == kUpdateCheck ? 1 : 0;
 }
 
 s32 Screen(Id id)
@@ -725,7 +734,7 @@ Id Requirement(Id id)
     {
         return kLighting;
     }
-    return id == kAimCamera ? kControls : kCount;
+    return id == kAimCamera || id == kStrafeAnimation ? kControls : kCount;
 }
 
 bool Enabled(Id id)
@@ -769,6 +778,10 @@ bool TwinStick()
 bool AimCamera()
 {
     return TwinStick() && Screen(kAimCamera) != 0;
+}
+bool StrafeAnimation()
+{
+    return TwinStick() && Screen(kStrafeAnimation) != 0;
 }
 
 bool UpdateCheck()
@@ -829,6 +842,9 @@ const wchar_t* Help(Id id)
         case kAimCamera:
             return Screen(id) ? L"THE VIEW LEADS TOWARD THE AIM. SHIFT, LT OR R3 LOOKS FURTHER"
                               : L"THE VIEW STAYS ON THE PLAYER";
+        case kStrafeAnimation:
+            return Screen(id) ? L"EXPERIMENTAL: THE LEGS FOLLOW YOUR MOVE, NOT YOUR AIM"
+                              : L"THE ORIGINAL'S RUN, THE LEGS FACING THE AIM";
         case kHeadlights:
             return L"BEAMS OF LIGHT AHEAD OF CARS AFTER DARK";
         case kLightEffects:
@@ -1187,6 +1203,7 @@ void Change(Id id, s32 delta)
         case kLightEffects:
         case kClock:
         case kAimCamera:
+        case kStrafeAnimation:
         case kShowFps:
         case kAutosave:
         case kRetry:
