@@ -13,6 +13,7 @@
 //   GTA2_EXIT_AT=<frame>                            quit at that frame
 //   GTA2_TEST_PAD=<vendor>:<product>                the virtual gamepads' USB ids in hex, for a make's
 //                                                   type and button labels ("54c:ce6" a DualSense)
+// The virtual gamepads log the rumble they get: "GTA2_INPUT: rumble <low> <high> at <frame>", 0 to 65535.
 // Frames count Vid_FlipBuffers calls, but logic steps while the game runs (port_FrameCount), so the same
 // script presses the same keys on the same game step at any frame rate.
 #include "port_platform.hpp"
@@ -41,6 +42,12 @@ struct KeyEvent
 
 SDL_Joystick* sPads[2];
 
+bool SDLCALL LogRumble(void*, Uint16 low, Uint16 high)
+{
+    SDL_Log("GTA2_INPUT: rumble %u %u at %u", low, high, port_FrameCount());
+    return true;
+}
+
 // The virtual gamepads exist before the game enumerates its DirectInput devices.
 void AttachPad(int pad)
 {
@@ -50,6 +57,7 @@ void AttachPad(int pad)
     desc.naxes = SDL_GAMEPAD_AXIS_COUNT;
     desc.nbuttons = SDL_GAMEPAD_BUTTON_COUNT;
     desc.name = pad ? "GTA2 test pad 2" : "GTA2 test pad";
+    desc.Rumble = LogRumble;
     unsigned vendor = 0;
     unsigned product = 0;
     if (const char* pIds = getenv("GTA2_TEST_PAD"))
