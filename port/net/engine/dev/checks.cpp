@@ -35,6 +35,7 @@
 #include "port/src/rand/state.hpp"
 #include "Source/rng.hpp"
 #include "Source/PedGroup.hpp"
+#include "Source/PublicTransport.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <algorithm>
@@ -255,8 +256,10 @@ bool net::engine::DebugCheckPlayerCars(const char* where)
             }
             return false;
         }
-        // Driving a car that doesn't have it as its driver (Car::ClearDriver reads the driver when it gets out)
-        if (car && ped->mPedState2 == ped_state_2::ped2_driving_10 && !ped->mEnterCarAsPassenger && car->mDriver != ped)
+        // Driving a car that doesn't have it as its driver (Car::ClearDriver reads the driver when it gets out). Not a
+        // train's: reversing one hands its driver to the new lead and leaves the ped in its carriage (Train::ReassignTrainHead)
+        if (car && ped->mPedState2 == ped_state_2::ped2_driving_10 && !ped->mEnterCarAsPassenger && car->mDriver != ped &&
+            !car->IsTrainModel())
         {
             static int sDriver;
             if (sDriver++ < 10)
@@ -626,6 +629,34 @@ void net::engine::StackLog(bool server)
                    server ? 0u : MappedId(b), (int)b->mCarInfoIdx, sb->mXy.x.ToFloat(), sb->mXy.y.ToFloat(),
                    sb->mZpos.ToFloat(), (int)b->mDespawnStatus, b->mPhysics != NULL, Who(a), Who(b));
         }
+    }
+}
+
+void net::engine::TrainLog(bool server)
+{
+    static const bool on = getenv("GTA2_NET_TRAINLOG") != NULL;
+    static uint32_t sLast;
+    const uint32_t tick = gpRng ? (uint32_t)gpRng->get_cur_rng() : 0;
+    if (!on || !gPublicTransport_181C || tick % 150 || tick == sLast)
+    {
+        return;
+    }
+    sLast = tick;
+    for (int i = 0; i < 10; i++)
+    {
+        const Train& t = gPublicTransport_181C->mTrainArray[i];
+        Car* lead = t.mCarriages[0];
+        const Car* last = t.mWagonCount < 11 ? t.mCarriages[t.mWagonCount] : NULL;
+        if (t.mAllocState != 2 || !lead || !lead->mCarSprite || !last || !last->mCarSprite)
+        {
+            continue;
+        }
+        const Sprite* s = lead->mCarSprite;
+        // Raw Fix16 values: the same text on both ends when the state is (a 32-bit x87 build rounds floats otherwise)
+        printf("net: TRAIN %s tick %u: train %d lead model %d (%d, %d, %d) rot %d, last wagon (%d, %d), state %d phase %d wait %d, %s\n",
+               server ? "server" : "client", tick, i, (int)lead->mCarInfoIdx, (int)s->mXy.x.mValue, (int)s->mXy.y.mValue,
+               (int)s->mZpos.mValue, (int)s->mRotation.rValue, (int)last->mCarSprite->mXy.x.mValue, (int)last->mCarSprite->mXy.y.mValue,
+               t.mState, t.mStopPhase, (int)t.mWaitTimer, Who(lead));
     }
 }
 

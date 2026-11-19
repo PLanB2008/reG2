@@ -1,11 +1,12 @@
 // port/net engine dev (port/docs/netcode.md, "Checks"): a server's test cheats, for the checks that need a death, a weapon, a
-// wanted level, a power-up or a car at a given tick (GTA2_NET_TEST*, run by the server's test hooks, port/net/dev).
+// wanted level, a power-up, a car or a train at a given tick (GTA2_NET_TEST*, run by the server's test hooks, port/net/dev).
 #include "../internal.hpp"
 #include "dev.hpp"
 #include "Source/Car.hpp"
 #include "Source/Game.hpp"
 #include "Source/Ped.hpp"
 #include "Source/Player.hpp"
+#include "Source/PublicTransport.hpp"
 #include "Source/Weapon.hpp"
 #include <stdlib.h>
 #include <string>
@@ -55,6 +56,28 @@ void net::engine::DebugCar(int player, int model)
         {
             car->IncrementCarStats(car_kind::recycled_1);
         }
+    }
+}
+
+void net::engine::DebugTrain(int player, int train)
+{
+    Player* p = GetPlayer(player);
+    Ped* ped = p ? p->mPlayerPed : NULL;
+    const int i = train % 10;
+    Train* t = gPublicTransport_181C && train >= 0 && train < 20 ? &gPublicTransport_181C->mTrainArray[i] : NULL;
+    if (!t || t->mAllocState != 2 || !t->mCarriages[0] || !t->mCarriages[0]->mDriver)
+    {
+        return;
+    }
+    if (train >= 10)
+    {
+        // Into reverse as a player driving it puts it there (from standing): the cab and the last wagon swap ends
+        t->mState = 2;
+        t->DecrementState();
+    }
+    else if (ped && !ped->mCar && !ped->isDead())
+    {
+        ForceIntoCar(ped, t->mCarriages[0]);
     }
 }
 

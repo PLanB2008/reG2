@@ -28,6 +28,7 @@ void net::ServerProbe::Start()
     Parse(Env().testKill, TestEvent::kKill, 2, -1, v); // <tick>:<victim>:<killer>, the game's own death
     Parse(Env().testPowerUp, TestEvent::kPowerUp, 3, 0, v); // <tick>:<player>:<power-up> (12: an instant gang)
     Parse(Env().testCar, TestEvent::kCar, 3, 0, v); // <tick>:<player>:<model> beside the player (11: a bus)
+    Parse(Env().testTrain, TestEvent::kTrain, 2, 0, v); // <tick>:<player>[:<train>] at the wheel of that train
     for (size_t i = 0; i < v.size(); i += 4)
     {
         mEvents.push_back(TestEvent{(TestEvent::Kind)v[i], (uint32_t)v[i + 1], v[i + 2], v[i + 3]});
@@ -46,7 +47,7 @@ void net::ServerProbe::Start()
 
 void net::ServerProbe::Tests(uint32_t tick, int players)
 {
-    // In the order of the switches: the kills, then the power-ups, then the cars
+    // In the order of the switches: the kills, then the power-ups, then the cars, then the trains
     for (const TestEvent& e : mEvents)
     {
         if (e.tick != tick)
@@ -67,6 +68,10 @@ void net::ServerProbe::Tests(uint32_t tick, int players)
                 printf("net: test car %d for player %d at tick %u\n", e.arg, e.player, tick);
                 engine::DebugCar(e.player, e.arg);
                 break;
+            case TestEvent::kTrain:
+                printf("net: test train %d for player %d at tick %u\n", e.arg, e.player, tick);
+                engine::DebugTrain(e.player, e.arg);
+                break;
         }
     }
     for (int i = 0; i < players; i++)
@@ -86,6 +91,7 @@ void net::ServerProbe::Captured(uint32_t tick, const Snapshot& world)
 {
     engine::GangLog(true);
     engine::StackLog(true);
+    engine::TrainLog(true);
     engine::InstallSpriteCheck();
     engine::DumpPeds(tick, true);
     engine::StartRandLog();

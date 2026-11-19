@@ -366,7 +366,8 @@ void net::Server::Transmit(const Slot& s, const BitWriter& w)
 }
 
 // The client's area: every player and the cars they sit in (wherever they are: a player far off isn't a ped without its
-// car), and the cars, peds and pickups near its own, nearest first
+// car), every train (a few, and a client's own moves on wherever it is), and the cars, peds and pickups near its own,
+// nearest first
 void net::Server::SendSnapshot(int slot, Slot& s, const Snapshot& world)
 {
     float x = 0, y = 0;
@@ -385,7 +386,7 @@ void net::Server::SendSnapshot(int slot, Slot& s, const Snapshot& world)
     for (const EntityState& e : world.entities)
     {
         const bool playersCar = std::find(playersCars.begin(), playersCars.end(), e.id) != playersCars.end();
-        if (e.type == engine::kEntityPlayer || e.type == engine::kEntityWorld || playersCar)
+        if (e.type == engine::kEntityPlayer || e.type == engine::kEntityWorld || e.type == engine::kEntityTrain || playersCar)
         {
             fixed.entities.push_back(e);
         }

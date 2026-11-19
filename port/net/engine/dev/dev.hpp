@@ -49,11 +49,14 @@ void DebugArm(int player, int weapon, int ammo); // Player::AddWeaponWithAmmo
 void DebugWanted(int player, int points); // at least that many wanted points (Ped::mWantedPoints)
 void DebugPowerUp(int player, int powerUp); // Player::CollectPowerUp (power_up_indices, e.g. 12 instant gang)
 void DebugCar(int player, int model); // a car beside the player (GTA2_NET_TESTCAR)
+// The player at the wheel of a train (GTA2_NET_TESTTRAIN), as ForceIntoCar puts it; train + 10: that train into reverse
+void DebugTrain(int player, int train);
 
 // Logs and checks (checks.cpp; the comparison and divergence checks and the dumps: compare.cpp)
 void GangLog(bool server); // GTA2_NET_GANGLOG
 void InstallSpriteCheck(); // GTA2_NET_CHECKGRID: a sprite moved off the map is reported (gPortSpriteMovedHook)
 void StackLog(bool server); // GTA2_NET_STACKLOG: two cars in one place (under 0.4 blocks apart in x and y), once per pair
+void TrainLog(bool server); // GTA2_NET_TRAINLOG: every train's place and state at every 150th tick of the game's cycle
 // GTA2_NET_CARDIFF: where this game's prediction of the local player's car differs from the snapshot's (call after
 // restoring the snapshot's tick, before applying it)
 void DebugOwnCarDiff(const Snapshot& snap);

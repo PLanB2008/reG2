@@ -60,12 +60,14 @@ enum EntityKind : uint8_t
     kEntityPed = 2,
     kEntityWorld = 3, // one, kWorldId: game-wide state (no position), in every client's snapshot
     kEntityObject = 4, // a pickup (pickups.cpp)
+    kEntityTrain = 5, // a train (trains.cpp): in every client's snapshot
 };
 const uint32_t kWorldId = 0;
 // NetIds: a player's is its slot + 1; cars, peds and pickups have theirs from these on
 const uint32_t kCarIdBase = 0x01000000; // + Car::mCarId
 const uint32_t kPedIdBase = 0x02000000; // + Ped::mId
 const uint32_t kObjIdBase = 0x03000000; // + Object::mId
+const uint32_t kTrainIdBase = 0x04000000; // + its index in PublicTransport::mTrainArray
 inline bool IsPlayerId(uint32_t id)
 {
     return id < kCarIdBase;
@@ -79,7 +81,7 @@ inline float Blocks(int32_t raw)
 {
     return raw / 16384.0f;
 }
-// Every player, car, ped and pickup
+// Every player, car, ped, pickup and train
 void Capture(Snapshot& out);
 // Puts a snapshot's players, cars, peds and pickups into this game
 void Apply(const Snapshot& snap);

@@ -128,6 +128,35 @@ enum ObjectField
     kObjModel, // Object::mModel (objects::)
     kObjIdx, // Object::mPedRefIdx (what kind, for some)
 };
+const int kTrainCarriages = 11; // Train::mCarriages: the lead and up to 10 wagons
+enum TrainField
+{
+    kTrainX, // its lead carriage's place
+    kTrainY,
+    kTrainZ,
+    kTrainRot,
+    kTrainWagons, // Train::mWagonCount
+    kTrainReversed, // the cab isn't the lead (Train::ReassignTrainHead)
+    // Train::mState (its speed and direction), mStopPhase, mWaitTimer, mIsHijacked, mPassengersFleeing,
+    // mPassengerTimer, mPassengerCount
+    kTrainState,
+    kTrainStopPhase,
+    kTrainWaitTimer,
+    kTrainHijacked,
+    kTrainFleeing,
+    kTrainPassengerTimer,
+    kTrainPassengerCount,
+    kTrainSpeed, // its lead's CarAI::mSpeed (raw)
+    // The station it heads for (index in PublicTransport::mStations + 1, 0 none), and that station's mPlatformState
+    // and mpStoppedTrain (train index + 1, 0 none)
+    kTrainStation,
+    kTrainPlatform,
+    kTrainStopped,
+    kTrainCar0, // each carriage (CarRef), lead first
+    kTrainDamage0 = kTrainCar0 + kTrainCarriages, // and its Car::mDamage
+    kTrainTimer0 = kTrainDamage0 + kTrainCarriages, // Train::mExplosionTimers
+    kTrainFieldCount = kTrainTimer0 + kTrainCarriages,
+};
 
 // Shared helpers (snapshot.cpp)
 Player* GetPlayer(int slot); // NULL past the game's players
@@ -212,6 +241,15 @@ extern int gExplosionsCarried, gWrecksReplaced; // for the log
 void CarAiFields(std::vector<FieldDesc>& out); // after the physics
 void CaptureCarAi(const Car* car, EntityState& e);
 void ApplyCarAi(Car* car, const EntityState& e);
+
+// Trains (trains.cpp)
+void CaptureTrains(Snapshot& out);
+void TrainCars(std::vector<Car*>& out); // every carriage of this game's trains (only their leads are in the car pool's list)
+// The server's state into this game's train of the same index, and its carriages by the server's car ids. False: this
+// game's train differs (nothing applied). <playerIn>: the cars players sit in, which follow their players
+bool ApplyTrain(const EntityState& e, const std::set<const Car*>& playerIn, std::vector<std::pair<uint32_t, Car*>>& carriages);
+bool IsTrainModel(int model); // a car model that is a train's carriage (Car::IsTrainModel)
+void PrintTrainLog();
 
 // Getting into and out of cars (car_entry.cpp): at once, ending as the game's own entering and leaving do; or started as
 // the enter key starts it

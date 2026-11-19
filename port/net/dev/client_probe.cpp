@@ -156,6 +156,7 @@ void net::ClientProbe::FrameEnd()
 {
     engine::GangLog(false);
     engine::StackLog(false);
+    engine::TrainLog(false);
     engine::InstallSpriteCheck();
 }
 

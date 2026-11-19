@@ -514,9 +514,9 @@ void net::FillBotView(BotView& view, const Snapshot& snap, int self, uint32_t fr
     for (size_t i = 0; i < snap.entities.size(); i++)
     {
         const EntityState& e = snap.entities[i];
-        if (e.type == engine::kEntityWorld)
+        if (e.type == engine::kEntityWorld || e.type == engine::kEntityTrain)
         {
-            continue; // no position
+            continue; // the world has no position; a train is seen as its lead, a car entity
         }
         BotView::Seen s;
         s.id = e.id;

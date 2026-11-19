@@ -86,6 +86,9 @@ void Gather(Pass& a)
     {
         a.liveCars.insert(c);
     }
+    std::vector<Car*> carriages; // a train's wagons aren't in the pool's list
+    TrainCars(carriages);
+    a.liveCars.insert(carriages.begin(), carriages.end());
     for (Ped* p = gPedPool->mPool.mpPrev; p; p = p->mpNext)
     {
         a.livePeds.insert(p);
@@ -176,6 +179,10 @@ bool TargetedHere(Car* car)
 
 void RemoveCar(const Pass& a, Car* car)
 {
+    if (car->IsTrainModel())
+    {
+        return; // a train's carriage: its train points to it, and the server's train is mapped to it (ApplyTrains)
+    }
     if ((car->mDriver && !IsSpareDriver(car->mDriver)) || a.referenced.count(car) || TargetedHere(car))
     {
         gOccupiedKept++;
@@ -208,9 +215,9 @@ Car* MapCar(Pass& a, const EntityState& e)
         gCars.erase(it);
         car = NULL;
     }
-    if (car)
+    if (car || IsTrainModel(e.f[kCarModel]))
     {
-        return car;
+        return car; // a train's carriage only by its train (ApplyTrains): one made here would have no train
     }
     for (Car* c : a.liveCars)
     {
@@ -261,7 +268,7 @@ void ApplyCar(Pass& a, const EntityState& e)
     }
     SetCarPhysics(car, e); // a player's car too: its place came with the player
     ApplyCarAi(car, e);
-    if (!SetCarState(car, e) && !a.playerIn.count(car) && !a.referenced.count(car))
+    if (!SetCarState(car, e) && !a.playerIn.count(car) && !a.referenced.count(car) && !car->IsTrainModel())
     {
         // A wreck here that isn't one on the server can't be unexploded: it goes, and the next snapshot makes the car
         // again as the server has it
@@ -389,6 +396,30 @@ void ApplyPed(Pass& a, const EntityState& e)
     }
 }
 
+// The snapshot's trains into this game's, and their carriages mapped to the server's car ids (a carriage is mapped only
+// here, so before the cars). A carriage mapped under another id before is that id's no longer
+void ApplyTrains(Pass& a, const Snapshot& snap)
+{
+    std::vector<std::pair<uint32_t, Car*>> carriages;
+    for (const EntityState& e : snap.entities)
+    {
+        if (e.type != kEntityTrain || !ApplyTrain(e, a.playerIn, carriages))
+        {
+            continue;
+        }
+        for (const auto& c : carriages)
+        {
+            for (auto it = gCars.begin(); it != gCars.end();)
+            {
+                it = it->second == c.second && it->first != c.first ? gCars.erase(it) : ++it;
+            }
+            gCars[c.first] = c.second;
+            a.mapped.insert(c.second);
+            a.seen.insert(c.first);
+        }
+    }
+}
+
 // Groups (a gang following its leader) once every ped of the snapshot is here
 void ApplyGroups(const Snapshot& snap)
 {
@@ -471,6 +502,7 @@ void net::engine::ApplyCarsAndPeds(const Snapshot& snap)
     Pass a;
     Gather(a);
     Prune(a);
+    ApplyTrains(a, snap);
     for (const EntityState& e : snap.entities)
     {
         if (e.type == kEntityCar)
@@ -488,6 +520,7 @@ void net::engine::ApplyCarsAndPeds(const Snapshot& snap)
 
 void net::engine::PrintReplicaLog()
 {
+    PrintTrainLog();
     if (gExplosionsCarried + gWrecksReplaced)
     {
         printf("net: %d explosions the server had carried out, %d wrecks of this game's own made again\n", gExplosionsCarried, gWrecksReplaced);
@@ -675,10 +708,11 @@ void net::engine::ReplicaPositions(std::vector<ReplicaPos>& out)
     });
 }
 
+// A train isn't blended: its wagons follow its lead only in the lead's own update
 void net::engine::ReplicaPoses(std::vector<Pose>& out)
 {
     ForLiveReplicas([&](uint32_t id, Car* car, Ped* ped) {
-        if (Sprite* s = car ? car->mCarSprite : !ped->mCar ? CharSprite(ped) : NULL)
+        if (Sprite* s = car ? (car->IsTrainModel() ? NULL : car->mCarSprite) : !ped->mCar ? CharSprite(ped) : NULL)
         {
             out.push_back(Pose{id, s->mXy.x.mValue, s->mXy.y.mValue, s->mZpos.mValue, s->mRotation.rValue});
         }

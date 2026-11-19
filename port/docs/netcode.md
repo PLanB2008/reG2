@@ -11,9 +11,9 @@ Client/server multiplayer for the port (`../README.md`), in the style of Quake 3
 It replaces the original's DirectPlay lockstep game. The game's own code runs unchanged: the netcode sits where
 DirectPlay sat (`NetPlay`), and the few changes to `Source/` are port-only hooks ("The game's code").
 
-What works: 1-6 players on the game's multiplayer maps, frags, points and tag games, police, traffic and ambient peds,
+What works: 1-6 players on the game's multiplayer maps, frags, points and tag games, police, traffic, trains and ambient peds,
 joining and leaving mid-game, rounds with warmup, results and votes, map rotations, chat with commands, reconnecting,
-a frontend page to join, bots (scripted and trained), recordings that replay without a server. Protocol 18.
+a frontend page to join, bots (scripted and trained), recordings that replay without a server. Protocol 19.
 
 ## Running
 
@@ -154,13 +154,14 @@ command, applies snapshots and rolls back. Between frames both poll the network 
   | players, cars, peds, objects (movement, physics, collisions, weapons) | runs | the prediction |
   | traffic and ambient ped spawning, despawning | off | only the server creates and removes entities |
   | scripts, police, ambulance, firefighters, emergency crews, generators, garages | off | they create entities; the results arrive as state |
-  | doors, cranes, crushers, trains, traffic lights | runs | predicted, corrected by snapshots (the lights' phase is in the world entity) |
+  | doors, cranes, crushers, trains, traffic lights | runs | predicted, corrected by snapshots (the lights' phase is in the world entity, each train has one of its own) |
   | particles, tile animations, lights, HUD, sound | runs | cosmetic; a resimulated tick runs without the sound service, then takes what it left (shots, impacts, voice lines, sound events, radio reports), so a restore doesn't play them again |
 
   Player peds take no damage on a client, and everything counts as seen there, so nothing is removed off screen.
 - **Replicas** (`engine/replica.cpp`): the client adopts what the map script made on both sides, makes the rest, moves
   them every snapshot and removes what the server drops, within the area the snapshot reached (a snapshot cut for size
-  leaves what lies beyond as it is). What the client's prediction did that the game can't undo (a wreck, a corpse of
+  leaves what lies beyond as it is). A train's carriages are never made or removed: the client's own trains (both ends
+  make the same ones at the map's start) take the server's state and car ids from the train entities, before the cars. What the client's prediction did that the game can't undo (a wreck, a corpse of
   its own) is removed, and the next snapshot makes the entity again as the server has it. A car carries its driver: none, the traffic driver (all
   traffic cars share CarManager's spare, which is never sent as a ped), or a ped. A car's seated passengers come as
   peds at their car and are seated as the game seats them.
@@ -188,6 +189,7 @@ the original's.
 | Car (`engine/cars.cpp`, `car_ai.cpp`) | place, its whole `CarPhysics` (but its two pointers), damage, lights, horn, colour, its driver, and its AI (`CarAI`: route, speed, the cars it chases) |
 | Ped (`engine/ped_state.cpp`) | place, and the plain values its AI runs on (objectives, targets, speeds, timers, occupation, flags, health, death cause), its references (targets, group) and its car and seat |
 | Pickup (`engine/pickups.cpp`) | model and place; roadblock barriers too (they are off the object pool's list) |
+| Train (`engine/trains.cpp`, every train in every snapshot) | its lead's place and speed, its carriages' car ids (the client's train of the same index takes them), which end leads (`Train::ReassignTrainHead`), its state, stop phase and timers, the station it heads for and that station's state, each carriage's damage and explosion timer |
 
 Health, deaths, weapons and scores are the server's. A death the server had is carried out on the client with the
 game's own `Ped::Kill`, credited to the killer, and the deaths carried out are part of the rollback set, so a
@@ -305,7 +307,7 @@ port/net/
                     netplay.cpp       the game's NetPlay/NetUi for the port: the frame hook, the network game's start
                     snapshot.cpp      a snapshot captured and applied, the game's controls, shared helpers
                     schema.cpp        every entity type's fields       world_entity.cpp  the world entity
-                    players.cpp, cars.cpp, car_ai.cpp, ped_state.cpp, pickups.cpp   the entities (members.hpp)
+                    players.cpp, cars.cpp, car_ai.cpp, ped_state.cpp, pickups.cpp, trains.cpp   the entities (members.hpp)
                     replica.cpp       a client's cars and peds          car_entry.cpp     into and out of cars
                     slots.cpp         joining and leaving               spawn.cpp         the server's spawn budget
                     client_mode.cpp   what a client doesn't run         guards.cpp        the game made safe
@@ -437,6 +439,7 @@ off by default:
 | `GTA2_NET_GANGLOG=1` | both | player 0's group every 15 ticks, by the server's ids |
 | `GTA2_NET_STACKLOG=1` | both | two cars in one place (under 0.4 blocks apart), once per pair: a car the client kept that the server dropped |
 | `GTA2_NET_PICKUPLOG=1` | client | pickups made and removed |
+| `GTA2_NET_TRAINLOG=1` | both | every train's place and state at every 150th tick of the game's cycle (the same tick on both ends) |
 | `GTA2_NET_CHECKGRID=1` | both | the collision grid checked after every move, a sprite moved off the map reported with the code that moved it, and a rollback block whose pointee moved since the set was taken (`net: CHECK` lines) |
 | `GTA2_NET_SNAPCHECK=1` | server | every entity's hash in the snapshots, checked by the clients (`net: CHECK` lines) |
 | `GTA2_NET_DUMPPEDS=<file>[:<from>:<to>]`, `GTA2_NET_RANDLOG=<file>:<from>:<to>` | both | the divergence check's dumps |
@@ -444,6 +447,7 @@ off by default:
 | `GTA2_NET_TESTKILL=<tick>:<victim>:<killer>,...` | server | a player killed by the game's own death |
 | `GTA2_NET_TESTPOWERUP=<tick>:<player>:<power-up>,...` | server | a power-up (12: an instant gang) |
 | `GTA2_NET_TESTCAR=<tick>:<player>:<model>,...` | server | a car beside the player (11: a bus) |
+| `GTA2_NET_TESTTRAIN=<tick>:<player>:<train>,...` | server | the player at the wheel of a train; train + 10: that train into reverse |
 | `GTA2_NET_TESTARM=<weapon>:<ammo>`, `GTA2_NET_TESTWANTED=<points>` | server | every player kept armed, or at least that wanted (600: a star) |
 | `GTA2_NET_SAY=<frame>:<command>;...` | client | commands sent at those frames |
 | `GTA2_SIMBENCH=...`, `GTA2_SIMBENCH_FILL=<cars>`, `GTA2_NETEVAL=...`, `GTA2_OFFLINE_MP=...` | game | the measurements below (`port/net/eval`, `engine/netplay.cpp`) |
