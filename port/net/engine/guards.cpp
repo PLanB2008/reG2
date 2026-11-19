@@ -67,6 +67,17 @@ void net::engine::GuardPeds()
             ForceOutBesideCar(ped, car);
         }
     }
+    // Any other ped driving a car with another driver or none (Ped::HandleShootingAtCar seats a scared one over a dummy_3
+    // driver; two entries predicted into one tick): getting out, it clears that seat or reads no driver (Car::ClearDriver)
+    for (Ped* p = gPedPool->mPool.mpPrev; p; p = p->mpNext)
+    {
+        Car* car = p->mCar;
+        if (car && !p->mPlayer && !p->mEnterCarAsPassenger && p->mPedState2 == ped_state_2::ped2_driving_10 && car->mDriver != p &&
+            !car->IsTrainModel() && !IsSpareDriver(p) && !InPassengerList(car, p))
+        {
+            ForceOutBesideCar(p, car);
+        }
+    }
     // A ped knocked flying (its body an object, Ped::mpObj2C) whose object is gone (the snapshot's removal, or
     // the server's pickups taking its place): Char::UpdateImmobilized read the object's sprite, freed (a crash at the end
     // of a long game). Without it, the game's own way: the ped is killed where it lies
