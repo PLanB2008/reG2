@@ -33,6 +33,14 @@ DEFINE_GLOBAL(u32, gGradientLevel, 0x6F647C);
 DEFINE_STATIC_MEMBER(gmp_block_info*, MapRenderer, spBlock, 0x6F6478);
 DEFINE_GLOBAL(gmp_map_slope, gCurrentSlope, 0x6F646C);
 DEFINE_GLOBAL_ARRAY(Vert, gTileVerts, 8, 0x6F65A8);
+#if defined(GTA2_PORT)
+// Port: a corner copied onto another for a triangular side takes its world position (gTileVerts[4..7]) too, which
+// per pixel lighting and ambient occlusion read; the original leaves the previous tile's there.
+static inline void PortCopyCornerWorld(s32 dst, s32 src)
+{
+    memcpy(&gTileVerts[dst + 4], &gTileVerts[src + 4], sizeof(Vert));
+}
+#endif
 
 DEFINE_GLOBAL(u32, gZCoordTop, 0x6F62B0); // u32: as gZCoord
 DEFINE_STATIC_MEMBER(u32, MapRenderer, sTileDrawFlags, 0x6F6560);
@@ -617,6 +625,10 @@ void MapRenderer::DrawLeftSide(u16& left_word)
                 {
                     memcpy(&gTileVerts[2], &gTileVerts[3], sizeof(Vert));
                     gTileVerts[2].v = 63.999901f;
+#if defined(GTA2_PORT)
+                    // Port: and its world position (PortCopyCornerWorld).
+                    PortCopyCornerWorld(2, 3);
+#endif
                 }
                 else
                 {
@@ -669,6 +681,10 @@ void MapRenderer::DrawLeftSide(u16& left_word)
                 {
                     memcpy(&gTileVerts[1], &gTileVerts[0], sizeof(Vert));
                     gTileVerts[1].v = 63.999901f;
+#if defined(GTA2_PORT)
+                    // Port: and its world position (PortCopyCornerWorld).
+                    PortCopyCornerWorld(1, 0);
+#endif
                 }
                 else
                 {
@@ -797,6 +813,10 @@ void MapRenderer::DrawRightSide(u16& right_word)
                 {
                     memcpy(&gTileVerts[3], &gTileVerts[2], sizeof(Vert));
                     gTileVerts[3].v = 63.999901f;
+#if defined(GTA2_PORT)
+                    // Port: and its world position (PortCopyCornerWorld).
+                    PortCopyCornerWorld(3, 2);
+#endif
                 }
                 else
                 {
@@ -855,6 +875,10 @@ void MapRenderer::DrawRightSide(u16& right_word)
                 {
                     memcpy(&gTileVerts[0], &gTileVerts[1], sizeof(Vert));
                     gTileVerts[0].v = 63.999901f;
+#if defined(GTA2_PORT)
+                    // Port: and its world position (PortCopyCornerWorld).
+                    PortCopyCornerWorld(0, 1);
+#endif
                 }
                 else
                 {
@@ -958,6 +982,10 @@ void MapRenderer::DrawTopSide(u16& top_word)
                 {
                     memcpy(&gTileVerts[2], &gTileVerts[1], sizeof(Vert));
                     gTileVerts[2].v = 63.999901f;
+#if defined(GTA2_PORT)
+                    // Port: and its world position (PortCopyCornerWorld).
+                    PortCopyCornerWorld(2, 1);
+#endif
                 }
                 else
                 {
@@ -1011,6 +1039,10 @@ void MapRenderer::DrawTopSide(u16& top_word)
                 {
                     memcpy(&gTileVerts[3], &gTileVerts[0], sizeof(Vert));
                     gTileVerts[3].v = 63.999901f;
+#if defined(GTA2_PORT)
+                    // Port: and its world position (PortCopyCornerWorld).
+                    PortCopyCornerWorld(3, 0);
+#endif
                 }
                 else
                 {
@@ -1227,6 +1259,10 @@ void MapRenderer::draw_bottom(u16& bottom_word)
                 {
                     memcpy(&gTileVerts[1], &gTileVerts[2], sizeof(Vert));
                     gTileVerts[1].v = 63.999901f;
+#if defined(GTA2_PORT)
+                    // Port: and its world position (PortCopyCornerWorld).
+                    PortCopyCornerWorld(1, 2);
+#endif
                 }
                 else
                 {
@@ -1291,6 +1327,10 @@ void MapRenderer::draw_bottom(u16& bottom_word)
                 {
                     memcpy(&gTileVerts[0], &gTileVerts[3], sizeof(Vert));
                     gTileVerts[0].v = 63.999901f;
+#if defined(GTA2_PORT)
+                    // Port: and its world position (PortCopyCornerWorld).
+                    PortCopyCornerWorld(0, 3);
+#endif
                 }
                 else
                 {
