@@ -81,6 +81,7 @@ class GLRenderer : public IRenderer
     u32 GetVertexCount() const { return mVertices; }
     const RenderOptions& Options() const { return mOptions; }
     void SetLights(const RLight* pLights, s32 count, const f32* pAmbient, f32 unlitAmbient);
+    void SetOcclusion(const u8* pCells, s32 width, s32 height, s32 depth, f32 strength);
 
   private:
     void Flush();
@@ -172,6 +173,19 @@ class GLRenderer : public IRenderer
     s32 mNumLights;
     f32 mAmbient[3];
     f32 mUnlitAmbient;
+    // Ambient occlusion (SetOcclusion): the map's blocks as a 3D texture, the occlusion baked from them for the four
+    // sides and for up (kAoBakeFS), the grid of the baked volumes, and the strength, 0 when off.
+    GLuint mOccTex;
+    GLuint mAoTex[2];
+    GLuint mAoFbo;
+    s32 mAoGrid[3];
+    f32 mAoStrength;
+    GLuint mAoBakeProgram;
+    GLint mUniBakeOccScale;
+    GLint mUniBakeZ;
+    GLint mUniAoGrid;
+    GLint mUniAo;
+    GLint mUniAoDebug;
     f32 mGamma[3];
     u32 mDrawCalls;
     u32 mUploads;

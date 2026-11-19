@@ -10,11 +10,14 @@ struct RVertex
     f32 rhw;   // 1/w, used for perspective correct interpolation
     u32 rgba;  // bytes in memory: r, g, b, a
     f32 u, v;  // normalised texture coordinates
-    // Per pixel lighting only (lit != 0): world position, colour before lighting, shade 0..1.
+    // Per pixel lighting only (lit != 0): world position (also for ao), colour before lighting, shade 0..1.
     f32 wx, wy, wz;
     u32 unlit;
     f32 shade;
     f32 lit;
+    // Ambient occlusion (SetOcclusion) at the world position, wx, wy, wz: the share of the colour it darkens,
+    // 0 for none. With per pixel lighting, any value above 0 lets the shader split the light itself.
+    f32 ao;
 };
 
 // Optional enhancements; all off is the faithful renderer.
@@ -86,6 +89,9 @@ class IRenderer
     // Lights for per pixel lighting; ambient red, green and blue in 0..255 units as gbh_SetAmbient stores it,
     // and how far it takes on the unlit colour (gbh_api.cpp's Ambient).
     virtual void SetLights(const RLight* pLights, s32 count, const f32* pAmbient, f32 unlitAmbient) = 0;
+    // Ambient occlusion: the map's blocks, width x height x depth bytes (x fastest, 255 solid) of one world
+    // unit each, and how much of the ambient light the most occluded surfaces lose (0 off; NULL cells keep the last).
+    virtual void SetOcclusion(const u8* pCells, s32 width, s32 height, s32 depth, f32 strength) = 0;
 
     // Stats exposed through gbh_GetGlobals.
     virtual u32 GetDrawCallCount() const = 0;
