@@ -135,7 +135,11 @@ void AddLight(f32 x, f32 y, f32 z, f32 radius, s32 intensity, u32 colour, f32 dx
         return;
     }
     pgbh_AddLight(&light);
-    port_LampLight(dx, dy, width);
+    // Only lamps (headlights, brake lights: beams) stop just above themselves; flames and blasts light upward too.
+    if (width > 0.0f)
+    {
+        port_LampLight(dx, dy, width);
+    }
 #else
     // The original renderer has no beams: a point light a third of the range ahead.
     light.field_4_x += dx * radius / 3;
@@ -255,9 +259,14 @@ void ExplosionLight(const Explosion& explosion)
         case explosion_type::building_315_25:
         case explosion_type::no_ring_32:
         case explosion_type::small_33:
-            AddLight(x, y, z, 6.0f, static_cast<s32>((explosion.mTimer - 25) * 255 / 60 * (0.8f + 0.2f * FlameNow(explosion.mId))),
-                     kFire);
+        {
+            // As big as the blast (Explosion::GetBlastRadius: half a block for grenades, rockets and molotov bursts, a
+            // block for a car's, two for the large ones): its light reaches further and is brighter.
+            const f32 size = 0.55f + 0.45f * explosion.GetBlastRadius().ToFloat();
+            AddLight(x, y, z, 6.0f * size,
+                     static_cast<s32>((explosion.mTimer - 25) * 255 / 60 * (0.8f + 0.2f * FlameNow(explosion.mId)) * size), kFire);
             break;
+        }
         default:
             break;
     }
