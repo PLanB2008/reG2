@@ -74,6 +74,8 @@ struct LightInternal
 };
 
 IRenderer* gRenderer;
+// The heat of the quads being drawn (port_HeatLevel): above 0, flames that go into HEAT HAZE's heat mask.
+f32 gHeatLevel;
 SGlobals gGlobals;
 PalEntry* gPals[16384];
 std::vector<ImageEntry> gImages;
@@ -768,6 +770,10 @@ void RenderVerts(u32 flags, STexture* pTexture, Vert* pVerts, s32 count, u32 bas
                 pVerts[1].diff, pVerts[2].diff, count > 3 ? pVerts[3].diff : 0);
     }
     gRenderer->DrawTriangles(tris, n, pTex, state);
+    if (gHeatLevel > 0.0f)
+    {
+        gRenderer->AddHeat(tris, n, pTex, gHeatLevel);
+    }
     gGlobals.mNumPolysDrawn += count - 2;
 }
 
@@ -1168,6 +1174,22 @@ void port_SetAmbient(f32 r, f32 g, f32 b, f32 lights)
     gAmbient[2] = b * 255.0f;
     gLightScale = lights;
     gLightsDirty = true;
+}
+
+// The heat of the sprite about to be drawn (port/src/heat_haze.cpp): above 0, flames that go into the heat mask.
+void port_HeatLevel(f32 level)
+{
+    gHeatLevel = level;
+}
+
+// HEAT HAZE (port/src/heat_haze.cpp) over the flames drawn so far.
+void port_Haze(f32 texel, f32 worldX, f32 worldY, f32 time, f32 amplitude, f32 ripple, f32 speed, f32 rise)
+{
+    if (gRenderer)
+    {
+        const RHazeParams params = {texel, worldX, worldY, time, amplitude, ripple, speed, rise};
+        gRenderer->DrawHaze(params);
+    }
 }
 
 // TWIN STICK's reticle (port/src/twin_stick.cpp): an aged bronze ring round a red lamp, shaded as the HUD's sprites

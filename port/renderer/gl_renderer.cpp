@@ -709,6 +709,7 @@ void GLRenderer::Shutdown()
     gl.glDeleteProgram(mDownProgram);
     gl.glDeleteProgram(mBlurProgram);
     gl.glDeleteProgram(mComposeProgram);
+    FreeHaze();
     mReady = false;
 }
 
@@ -792,6 +793,7 @@ void GLRenderer::CreateTargets()
         gl.glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
         gl.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, mFboTex, 0);
     }
+    mColourFormat = colourFormat;
     mTargetsTrueColour = mOptions.mTrueColour;
     mTargetsBloom = mOptions.mBloom > 0.0f;
     const GLenum one[1] = {GL_COLOR_ATTACHMENT0};
@@ -1065,6 +1067,8 @@ void GLRenderer::FreeTexture(RTexture* pTex)
 void GLRenderer::BeginScene()
 {
     mStateValid = false;
+    mHeatVerts.clear();
+    mHeatDraws.clear();
 }
 
 void GLRenderer::EndScene()
