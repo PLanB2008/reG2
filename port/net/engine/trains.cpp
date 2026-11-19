@@ -8,6 +8,8 @@
 #include "Source/Ped.hpp"
 #include "Source/Player.hpp"
 #include "Source/PublicTransport.hpp"
+#include "Source/SpriteGrid.hpp"
+#include "Source/map_0x370.hpp"
 #include "Source/explosion_type.hpp"
 #include "Source/sprite.hpp"
 #include <stdio.h>
@@ -104,6 +106,29 @@ void MatchDriver(Car* lead, int there)
     else if (there != kDriverNone && !here)
     {
         lead->SpawnDriverPed();
+    }
+}
+
+// Its wagons behind its lead, as the lead's update puts them (Car::UpdateTrainCarriagesOnTrack, without the doors and
+// timers it services): a lead moved by a snapshot isn't apart from them until its next update
+void PlaceWagons(Train* t)
+{
+    const Sprite* ls = t->mCarriages[0]->mCarSprite;
+    Fix16 x = ls->mXy.x, y = ls->mXy.y, z = ls->mZpos, speed;
+    const bool forward = gPublicTransport_181C->GetTrainSpeed(t->mCarriages[0], &speed);
+    for (int k = 1; k <= t->mWagonCount; k++)
+    {
+        s32 dir = forward ? gMap_0x370->AdvanceAlongRailwayChecked(&x, &y, &z, Fix16(2)) : gMap_0x370->AdvanceAlongRailway(&x, &y, &z, Fix16(2));
+        Car* c = t->mCarriages[k];
+        if (c->mDespawnStatus == car_despawn_status::despawning_5)
+        {
+            continue; // out of the collision grid (Car::TrainUpdate)
+        }
+        Sprite* s = c->mCarSprite;
+        gSpriteGrid_1->RemoveFromRegionBuckets(s);
+        s->set_xyz_lazy(x, y, z);
+        s->set_ang_lazy(ReturnAngleFromRoadDirection(dir));
+        gSpriteGrid_1->AddToRegionBuckets(s);
     }
 }
 
@@ -214,9 +239,10 @@ bool net::engine::ApplyTrain(const EntityState& e, std::vector<std::pair<uint32_
         }
     }
     // The lead where the server has it, a player in it or not (the snapshot's car entity has it too, but only near this
-    // client's player); its wagons follow in its next update
+    // client's player), and its wagons behind it
     Car* lead = t->mCarriages[0];
     MoveCar(lead, Raw(e.f[kTrainX]), Raw(e.f[kTrainY]), Raw(e.f[kTrainZ]), Angle(e.f[kTrainRot]));
+    PlaceWagons(t);
     if (lead->mAI)
     {
         lead->mAI->mSpeed = Fix16(e.f[kTrainSpeed], 0);

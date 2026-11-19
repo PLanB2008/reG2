@@ -161,7 +161,8 @@ command, applies snapshots and rolls back. Between frames both poll the network 
 - **Replicas** (`engine/replica.cpp`): the client adopts what the map script made on both sides, makes the rest, moves
   them every snapshot and removes what the server drops, within the area the snapshot reached (a snapshot cut for size
   leaves what lies beyond as it is). A train's carriages are never made or removed: the client's own trains (both ends
-  make the same ones at the map's start) take the server's state and car ids from the train entities, before the cars. What the client's prediction did that the game can't undo (a wreck, a corpse of
+  make the same ones at the map's start) take the server's state and car ids from the train entities, before the cars;
+  a carriage is placed by its train only, never moved to a player in it. What the client's prediction did that the game can't undo (a wreck, a corpse of
   its own) is removed, and the next snapshot makes the entity again as the server has it. A car carries its driver: none, the traffic driver (all
   traffic cars share CarManager's spare, which is never sent as a ped), or a ped. A car's seated passengers come as
   peds at their car and are seated as the game seats them.
@@ -190,7 +191,7 @@ the original's.
 | Car (`engine/cars.cpp`, `car_ai.cpp`) | place, its whole `CarPhysics` (but its two pointers), damage, lights, horn, colour, its driver, and its AI (`CarAI`: route, speed, the cars it chases) |
 | Ped (`engine/ped_state.cpp`) | place, and the plain values its AI runs on (objectives, targets, speeds, timers, occupation, flags, health, death cause), its references (targets, group) and its car and seat |
 | Pickup (`engine/pickups.cpp`) | model and place; roadblock barriers too (they are off the object pool's list) |
-| Train (`engine/trains.cpp`, every train in every snapshot) | its lead's place and speed, its carriages' car ids (the client's train of the same index takes them), which end leads (`Train::ReassignTrainHead`), its state, stop phase and timers, the station it heads for and that station's state, each carriage's damage and explosion timer |
+| Train (`engine/trains.cpp`, every train in every snapshot) | its lead's place, speed and driver (none, the traffic driver, a ped, a player), its carriages' car ids (the client's train of the same index takes them), which end leads (`Train::ReassignTrainHead`), its state, stop phase and timers, the station it heads for and that station's state, each carriage's damage and explosion timer |
 
 Health, deaths, weapons and scores are the server's. A death the server had is carried out on the client with the
 game's own `Ped::Kill`, credited to the killer, and the deaths carried out are part of the rollback set, so a
