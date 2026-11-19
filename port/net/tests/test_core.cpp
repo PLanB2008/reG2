@@ -248,6 +248,7 @@ void TestMessages()
     w.gmp = "wil-multi.gmp";
     w.sty = "wil.sty";
     w.scr = "downtown-6P.scr";
+    w.session = 0xDEADBEEF;
     w.name = "PLAYER 2";
     w.map = "downtown-6p";
     w.print.gmp = 0x80000001;
@@ -261,7 +262,7 @@ void TestMessages()
     net::Welcome got;
     CHECK(net::ReadWelcome(br, got));
     CHECK(got.slot == 2 && got.players == 6 && got.gameType == 3 && got.fragLimit == 25 && got.gmp == w.gmp &&
-          got.scr == w.scr && got.serverTick == 123456 && got.maps == w.maps && got.name == w.name &&
+          got.scr == w.scr && got.serverTick == 123456 && got.maps == w.maps && got.session == w.session && got.name == w.name &&
           got.map == w.map && got.print.gmp == w.print.gmp && got.print.sty == 7);
 
     net::Hello hello;

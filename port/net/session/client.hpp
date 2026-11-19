@@ -159,6 +159,7 @@ class Client
     bool mHelloSent = false; // joining: connected, waiting for the welcome
     long long mJoinWaitMs = 0; // joining: since when we wait (6 s each for the connection and the welcome)
     std::string mScr; // the map's script (a rejoin must find the same)
+    uint32_t mSession = 0; // the server's run (a rejoin must find the same: a restarted server has another game)
     std::unique_ptr<engine::NavMap> mNavMap; // built once the game has its map
     BotView mBotView;
     int mMarks = 0; // mark key presses (F12 or the key under Esc) (ChooseInput)

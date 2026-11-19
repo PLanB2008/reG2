@@ -35,6 +35,7 @@ void net::CorrectionStats::Print(uint32_t frame, const char* what) const
 void net::Client::Welcomed(const Welcome& welcome, engine::NetworkGame* pGame)
 {
     mSlot = welcome.slot;
+    mSession = welcome.session;
     mConfig.name = welcome.name; // a reconnect asks for it: the server keeps our slot under it
     mMaps = welcome.maps;
     mConnected = true;
@@ -936,10 +937,16 @@ void net::Client::Reconnect()
     }
 }
 
-// Back in: the same game goes on from the server's next snapshot, if the server has us as the same player on the same
-// map (a server restarted on it too: its ticks start over)
+// Back in: the same game goes on from the server's next snapshot, if it is the same server's run (a restarted one has
+// another game, whatever its map) and it has us as the same player on the same map
 void net::Client::Rejoined(const Welcome& welcome)
 {
+    if (welcome.session != mSession)
+    {
+        printf("net: frame %u, the server was restarted: its game isn't this one\n", mFrame);
+        LeaveToMenu("the server was restarted");
+        return;
+    }
     if (welcome.version != kProtocolVersion || welcome.slot != mSlot || welcome.scr != mScr)
     {
         printf("net: frame %u, the server has us back as player %d on %s, not %d on %s: start the game again to play on\n", mFrame,
@@ -952,7 +959,7 @@ void net::Client::Rejoined(const Welcome& welcome)
     mSynced = false;
     mNewSnapshot = false;
     mLatestTick = 0;
-    mServerGame = -1; // a restarted server counts its games from the start again
+    mServerGame = -1; // the server's newest, which may have started while we were away (a round's fresh game)
     mLastSnapshotMs = NowMs();
     for (Snapshot& s : mReceived)
     {

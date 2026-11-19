@@ -114,6 +114,7 @@ class Server
     std::vector<RoundPlayer> mRoundPlayers; // as of the last frame, for commands between frames
     std::map<std::string, uint32_t> mBanned; // kicked names, until this tick
     size_t mMap = 0; // in mConfig.voteMaps
+    uint32_t mSession = 0; // this run's (the welcome's)
     uint32_t mCarInfo = 0; // data/nyc.gci's CRC-32
     MapPrint mPrint; // the map being played's files
     int mGeneration = 0; // engine::GameGeneration's, of the game running

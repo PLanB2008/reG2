@@ -5,6 +5,7 @@
 #include "env.hpp"
 #include <algorithm>
 #include <math.h>
+#include <random>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -97,6 +98,7 @@ bool net::Server::Start(const ServerConfig& config, std::string* error)
     mRounds.Start(mConfig.rules, mapNames, mConfig.currentMap);
     engine::CurrentRound() = mRounds.State();
     mProbe.Start();
+    mSession = std::random_device{}() | 1; // never 0: a welcome's session is always set
     mCarInfo = engine::DataFileCrc("nyc.gci");
     mPrint.gmp = engine::DataFileCrc(mConfig.game.gmp);
     mPrint.sty = engine::DataFileCrc(mConfig.game.sty);
@@ -208,6 +210,7 @@ void net::Server::OnHello(uint32_t peer, BitReader& r)
             welcome.timeLimitMin = (uint16_t)mConfig.game.timeLimitMin;
             welcome.tickMs = (uint16_t)mConfig.game.tickMs;
             welcome.police = (uint8_t)mConfig.game.police;
+            welcome.session = mSession;
             welcome.name = name;
             welcome.map = mMap < mConfig.voteMaps.size() ? mConfig.voteMaps[mMap].name : "";
             welcome.gmp = mConfig.game.gmp;
