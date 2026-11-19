@@ -413,6 +413,8 @@ f32 Cap(f32 v)
 
 // A light is gone this far above its ceiling (also in the shader's LightSum).
 const f32 kCeilingFade = 0.4f;
+// The ceiling of a light for the smoke only (port_AddSmokeLight): far below anything, so the world gets none of it.
+const f32 kSmokeOnly = -1e6f;
 
 f32 BelowCeiling(const LightInternal& light, f32 z)
 {
@@ -470,8 +472,9 @@ f32 AoShare(f32 ambient, f32 total)
     return total > 1.0f ? (ambient + kAoOfLights * (total - ambient)) / total : 1.0f;
 }
 
-// numNear: the primitive's NearLights. pAoShare, when given: AoShare of the result.
-u32 LightVertex(const Vert& vert, u8 shade, u32 colour, u32 numNear, f32* pAoShare = NULL)
+// numNear: the primitive's NearLights. pAoShare, when given: AoShare of the result. smoke: a particle (FLAG_TINTED),
+// which floats above the lights' ceilings and gets the smoke's own lights.
+u32 LightVertex(const Vert& vert, u8 shade, u32 colour, u32 numNear, f32* pAoShare = NULL, bool smoke = false)
 {
     f32 lr = 0.0f, lg = 0.0f, lb = 0.0f;
     f32 sr = 0.0f, sg = 0.0f, sb = 0.0f;
@@ -495,7 +498,7 @@ u32 LightVertex(const Vert& vert, u8 shade, u32 colour, u32 numNear, f32* pAoSha
         if (att > 0.0f)
         {
             const bool spot = light.mBeam > 0.0f;
-            const f32 k = light.mBrightness * (spot ? Beam(light, dx, dy) : att) * BelowCeiling(light, vert.z);
+            const f32 k = light.mBrightness * (spot ? Beam(light, dx, dy) : att) * (smoke ? 1.0f : BelowCeiling(light, vert.z));
             (spot ? sr : lr) += light.mR * k;
             (spot ? sg : lg) += light.mG * k;
             (spot ? sb : lb) += light.mB * k;
@@ -544,6 +547,9 @@ const u32 FLAG_INTERNAL_BLIT = 0x80000000u;
 // The port's sprite shadow (port/src/shadows.cpp): a quad with world positions in pVerts[4..7] and its blur
 // radius in the red channel (texels * 32), drawn soft when the option is on.
 const u32 FLAG_SOFT_SHADOW = 0x40000000u;
+// The port's particles (port_DrawParticles), lit as the world's sprites but in their own colour: the vertex colour
+// is a tint that the light, ambient included, multiplies, where the game's sprites take theirs from the texture.
+const u32 FLAG_TINTED = 0x10000000u;
 
 // Grows a sprite quad (corners in the order of increasing u, then v) by its blur radius plus a texel.
 void ExpandShadow(Vert* pVerts)
@@ -574,7 +580,8 @@ void ExpandShadow(Vert* pVerts)
     }
 }
 
-void RenderVerts(u32 flags, STexture* pTexture, Vert* pVerts, s32 count, u32 baseColour)
+// pOwn: a texture of the port's own instead of pTexture, its UVs normalised.
+void RenderVerts(u32 flags, STexture* pTexture, Vert* pVerts, s32 count, u32 baseColour, RTexture* pOwn = NULL)
 {
     if (gTraceScene && gSceneCount == gTraceScene)
     {
@@ -607,10 +614,14 @@ void RenderVerts(u32 flags, STexture* pTexture, Vert* pVerts, s32 count, u32 bas
         flags |= FLAG_NO_FILTER;
     }
 
-    RTexture* pTex = pTexture ? Resolve(pTexture, (flags & (FLAG_BLEND_ADD | FLAG_BLEND_ALPHA | FLAG_COLOUR_KEY)) ? kAlpha : kOpaque) : 0;
+    RTexture* pTex = pOwn;
+    if (!pTex && pTexture)
+    {
+        pTex = Resolve(pTexture, (flags & (FLAG_BLEND_ADD | FLAG_BLEND_ALPHA | FLAG_COLOUR_KEY)) ? kAlpha : kOpaque);
+    }
     const f32 texW = pTexture && pTexture->field_E_width ? (f32)pTexture->field_E_width : 1.0f;
     const f32 texH = pTexture && pTexture->field_10_height ? (f32)pTexture->field_10_height : 1.0f;
-    const bool image = pTexture && Data(pTexture) && Data(pTexture)->mImage;
+    const bool image = pOwn || (pTexture && Data(pTexture) && Data(pTexture)->mImage);
     const f32 slotScale = image ? 1.0f : 1.0f / (f32)SlotSize((s32)texW, (s32)texH);
     const f32 scaleU = image ? 1.0f / texW : slotScale;
     const f32 scaleV = image ? 1.0f / texH : slotScale;
@@ -654,7 +665,8 @@ void RenderVerts(u32 flags, STexture* pTexture, Vert* pVerts, s32 count, u32 bas
         }
     }
     const bool fullAmbient = gAmbient[0] == 255.0f && gAmbient[1] == 255.0f && gAmbient[2] == 255.0f;
-    const bool lit = (flags & FLAG_LIGHTING) && !fullAmbient;
+    // Particles take the lights even at full ambient, where the smoke's own are the only ones (port_AddSmokeLight).
+    const bool lit = (flags & FLAG_LIGHTING) && (!fullAmbient || ((flags & FLAG_TINTED) && gNumLights));
     const bool shadowLit = softShadow && !fullAmbient;
     const bool perPixel = (lit || shadowLit) && gRenderer->Options().mPerPixelLighting;
     // Ambient occlusion needs world positions: those of FLAG_LIGHTING draws, and the game's tiles and sprites at NOON.
@@ -668,7 +680,20 @@ void RenderVerts(u32 flags, STexture* pTexture, Vert* pVerts, s32 count, u32 bas
         for (s32 i = 0; i < count; i++)
         {
             unlit[i] = pVerts[i].diff;
-            pVerts[i].diff = LightVertex(pVerts[i + 4], shade, pVerts[i].diff, numNear, occluded ? &aoShare[i] : NULL);
+            if (flags & FLAG_TINTED)
+            {
+                const u32 light = LightVertex(pVerts[i + 4], shade, 0xFFFFFFu, numNear, occluded ? &aoShare[i] : NULL, true);
+                u32 tinted = unlit[i] & 0xFF000000u;
+                for (s32 k = 0; k < 24; k += 8)
+                {
+                    tinted |= (((unlit[i] >> k) & 0xFF) * ((light >> k) & 0xFF) / 255) << k;
+                }
+                pVerts[i].diff = tinted;
+            }
+            else
+            {
+                pVerts[i].diff = LightVertex(pVerts[i + 4], shade, pVerts[i].diff, numNear, occluded ? &aoShare[i] : NULL);
+            }
         }
     }
     else if (shadowLit)
@@ -732,7 +757,7 @@ void RenderVerts(u32 flags, STexture* pTexture, Vert* pVerts, s32 count, u32 bas
         {
             rv[i].unlit = ArgbToRgba(unlit[i]);
             rv[i].shade = shade / 255.0f;
-            rv[i].lit = 1.0f;
+            rv[i].lit = (flags & FLAG_TINTED) ? 2.0f : 1.0f;
         }
         else
         {
@@ -1182,6 +1207,34 @@ void port_HeatLevel(f32 level)
     gHeatLevel = level;
 }
 
+// FIRE SMOKE's lights (port/src/lights.cpp's SmokeLights), for the particles only: kept at their brightness
+// whatever the DAY-NIGHT CYCLE's fade of the lights, and with a ceiling no world surface is under.
+void port_AddSmokeLight(SLight* pLight)
+{
+    gbh_AddLight(pLight);
+    if (gLightAdded)
+    {
+        LightInternal& l = gLights[gNumLights - 1];
+        l.mBrightness = (pLight->field_0 & 0xFF) / 255.0f;
+        l.mCeiling = kSmokeOnly;
+    }
+}
+
+// The last frame's smoke lights out of the list (the game resets its own only when it has LIGHTING).
+void port_ClearSmokeLights()
+{
+    u32 kept = 0;
+    for (u32 i = 0; i < gNumLights; i++)
+    {
+        if (gLights[i].mCeiling != kSmokeOnly)
+        {
+            gLights[kept++] = gLights[i];
+        }
+    }
+    gLightsDirty = gLightsDirty || kept != gNumLights;
+    gNumLights = kept;
+}
+
 // HEAT HAZE (port/src/heat_haze.cpp) over the flames drawn so far.
 void port_Haze(f32 texel, f32 worldX, f32 worldY, f32 time, f32 amplitude, f32 ripple, f32 speed, f32 rise)
 {
@@ -1298,6 +1351,61 @@ void port_FreePictures()
         }
     }
     memset(gPictures, 0, sizeof(gPictures));
+}
+
+namespace
+{
+// The port's particle textures (port/src/fire_smoke.cpp), by slot.
+const s32 kNumParticleTextures = 2;
+RTexture* gParticleTextures[kNumParticleTextures];
+u32 gParticleVersions[kNumParticleTextures];
+IRenderer* gParticleTexturesOwner;
+} // namespace
+
+// Quads of a particle texture uploaded from pRgba (RGBA8, top row first) the first time and again when its version
+// changes: per quad, four corners of
+// x, y (screen), u, v and the world position x, y, z in blocks; a colour (ARGB) each. Alpha blended in that colour,
+// lit as the world's sprites are (FLAG_TINTED), or additive and unlit.
+void port_DrawParticles(s32 slot, s32 width, s32 height, const u32* pRgba, u32 version, const f32* pCorners, const u32* pColours,
+                        s32 count, bool additive)
+{
+    if (!gRenderer || slot < 0 || slot >= kNumParticleTextures)
+    {
+        return;
+    }
+    if (gParticleTexturesOwner != gRenderer)
+    {
+        memset(gParticleTextures, 0, sizeof(gParticleTextures));
+        gParticleTexturesOwner = gRenderer;
+    }
+    if (!gParticleTextures[slot] || gParticleVersions[slot] != version)
+    {
+        if (!gParticleTextures[slot])
+        {
+            gParticleTextures[slot] = gRenderer->CreateTexture();
+        }
+        gRenderer->UploadTexture(gParticleTextures[slot], width, height, pRgba, RMIP_ALPHA);
+        gParticleVersions[slot] = version;
+    }
+    const u32 flags = FLAG_VERTEX_DIFFUSE | (additive ? FLAG_BLEND_ADD : FLAG_BLEND_ALPHA | FLAG_LIGHTING | FLAG_TINTED);
+    for (s32 q = 0; q < count; q++)
+    {
+        Vert v[8] = {};
+        for (s32 i = 0; i < 4; i++)
+        {
+            const f32* c = &pCorners[(q * 4 + i) * 7];
+            v[i].x = c[0];
+            v[i].y = c[1];
+            v[i].z = 1.0f;
+            v[i].diff = pColours[q];
+            v[i].u = c[2];
+            v[i].v = c[3];
+            v[i + 4].x = c[4];
+            v[i + 4].y = c[5];
+            v[i + 4].z = c[6];
+        }
+        RenderVerts(flags, NULL, v, 4, 255, gParticleTextures[slot]);
+    }
 }
 
 GBH_EXPORT void GTA2_CC gbh_DrawQuad(s32 flags, STexture* pTexture, Vert* pVerts, s32 baseColour)

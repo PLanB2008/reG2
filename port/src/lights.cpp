@@ -23,6 +23,7 @@
 
 #if defined(GTA2_PORT_SDL)
 void port_LampLight(f32 dx, f32 dy, f32 width);
+void port_AddSmokeLight(SLight* pLight);
 #endif
 
 namespace PortLights
@@ -41,6 +42,8 @@ const u32 kElectric = 0xFF5080FF;
 const u32 kExhaust = 0xFFFFD8A0;
 u8 sPixels[256 * 256];
 f32 sMinX, sMinY, sMaxX, sMaxY;
+// SmokeLights: AddLight's lights go to the smoke only, their intensity times this; 0 for the world's.
+f32 sSmokeScale;
 
 // Lamp centres in sprite pixels by delta, as LampPosition finds them; the delta's data identifies it.
 struct LampCentre
@@ -115,6 +118,10 @@ void AddLight(f32 x, f32 y, f32 z, f32 radius, s32 intensity, u32 colour, f32 dx
     {
         return;
     }
+    if (sSmokeScale > 0.0f)
+    {
+        intensity = static_cast<s32>(intensity * sSmokeScale);
+    }
     SLight light;
     light.field_0 = 0x10000 | static_cast<u32>(radius * 32) << 8 | (intensity > 255 ? 255 : intensity);
     light.field_4_x = x;
@@ -122,6 +129,11 @@ void AddLight(f32 x, f32 y, f32 z, f32 radius, s32 intensity, u32 colour, f32 dx
     light.field_C_z = z;
     light.field_10_colour = colour;
 #if defined(GTA2_PORT_SDL)
+    if (sSmokeScale > 0.0f)
+    {
+        port_AddSmokeLight(&light);
+        return;
+    }
     pgbh_AddLight(&light);
     port_LampLight(dx, dy, width);
 #else
@@ -251,6 +263,32 @@ void ExplosionLight(const Explosion& explosion)
     }
 }
 } // namespace
+
+void SmokeLights(f32 scale)
+{
+    if (scale <= 0.0f || !PortSettings::LightEffects())
+    {
+        return;
+    }
+    // Every fire and blast in the map: there are few, and the smoke can be seen far from them.
+    sMinX = sMinY = -8.0f, sMaxX = sMaxY = 264.0f;
+    sSmokeScale = scale;
+    for (s32 i = 0; gExplosionPool_7A8 && i < 40; i++)
+    {
+        if (gExplosionPool_7A8->mbUsed[i])
+        {
+            ExplosionLight(gExplosionPool_7A8->mExplosions[i]);
+        }
+    }
+    for (s32 i = 0; gExplosionPool_3D4 && i < 20; i++)
+    {
+        if (gExplosionPool_3D4->mbUsed[i])
+        {
+            ExplosionLight(gExplosionPool_3D4->mExplosions[i]);
+        }
+    }
+    sSmokeScale = 0.0f;
+}
 
 void Submit(s32 min_x, s32 min_y, s32 max_x, s32 max_y)
 {

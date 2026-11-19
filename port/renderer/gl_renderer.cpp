@@ -139,7 +139,8 @@ const char* kSceneFS =
     "layout(location = 0) out vec4 oColor;\n"
     "layout(location = 1) out vec4 oBloom;\n"
     "layout(location = 2) out vec4 oShadow;\n"
-    "vec3 LightSum()\n"
+    // smoke 1: a particle (FLAG_TINTED in gbh_api.cpp), above the lights' ceilings.
+    "vec3 LightSum(float smoke)\n"
     "{\n"
     "    vec3 acc = vec3(0.0);\n"
     "    vec3 spots = vec3(0.0);\n"
@@ -154,7 +155,7 @@ const char* kSceneFS =
     "            float dist = sqrt(d2);\n"
     "            float att = (r - dist) / max(r, 1e-6);\n"
     // As BelowCeiling in gbh_api.cpp.
-    "            float below = 1.0 - smoothstep(uLightCol[i].w, uLightCol[i].w + 0.4, vWorld.z);\n"
+    "            float below = max(1.0 - smoothstep(uLightCol[i].w, uLightCol[i].w + 0.4, vWorld.z), smoke);\n"
     "            vec4 s = uLightDir[i];\n"
     // As Beam in gbh_api.cpp.
     "            float along = dot(d.xy, s.xy);\n"
@@ -225,7 +226,7 @@ const char* kSceneFS =
     "        float a = SoftAlpha(uv, vCol.r * 255.0 / 32.0) * vCol.a;\n"
     "        if (uPerPixel != 0 && vLit > 0.5)\n"
     "        {\n"
-    "            vec3 l = min(255.0 * LightSum() + uAmbient, vec3(255.0));\n"
+    "            vec3 l = min(255.0 * LightSum(0.0) + uAmbient, vec3(255.0));\n"
     "            a *= 0.5 + 0.5 * min((uAmbient.r + uAmbient.g + uAmbient.b) / max(l.r + l.g + l.b, 1.0), 1.0);\n"
     "        }\n"
     "        oColor = vec4(0.0);\n"
@@ -239,8 +240,10 @@ const char* kSceneFS =
     "    float ao = uAo > 0.0 && vAo > 0.0 ? Occlusion(worldDx, worldDy) : 1.0;\n"
     "    if (uPerPixel != 0 && vLit > 0.5)\n"
     "    {\n"
-    // Ambient occlusion takes the ambient light and a quarter of the lights' (kAoOfLights in gbh_api.cpp).
-    "        c = vec4(min((vShade * vUnlit.rgb * 255.0 * LightSum() * mix(1.0, ao, 0.25) + uAmbient * ao * (1.0 - uUnlitAmbient * (1.0 - vUnlit.rgb))) / 255.0, vec3(1.0)), vUnlit.a);\n"
+    // Ambient occlusion takes the ambient light and a quarter of the lights' (kAoOfLights in gbh_api.cpp). A tinted
+    // particle (lit 2, FLAG_TINTED) has its colour multiplied by the ambient light too, takes twice the lights (they
+    // light it through, not only its surface) and may be lit up to 3 times its colour (overbright, as Quake 3's).
+    "        c = vec4(min((vShade * vUnlit.rgb * 255.0 * LightSum(vLit > 1.5 ? 1.0 : 0.0) * (vLit > 1.5 ? 2.0 : 1.0) * mix(1.0, ao, 0.25) + uAmbient * ao * (1.0 - (vLit > 1.5 ? 1.0 : uUnlitAmbient) * (1.0 - vUnlit.rgb))) / 255.0, vec3(vLit > 1.5 ? 3.0 : 1.0)), vUnlit.a);\n"
     "    }\n"
     "    else\n"
     "    {\n"
