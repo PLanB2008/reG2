@@ -139,6 +139,11 @@ void net::engine::PutInGame(int slot, bool freshScore)
     p->set_in_use(1);
     ped->RespawnPed(zone); // a free spot in the zone, health, a moment of invulnerability
     SnapCamera(p);
+    // As Player::InitializePlayerState: else the aux camera of a death the slot left in stays on, following the old ped
+    // (a pedestrian, or another ped once freed), and the traffic spawner reads that ped's car
+    p->mAuxGameCamera.UpdateFollowPedCamera(ped);
+    p->mAuxGameCamera.CommitPendingTarget();
+    p->mAuxCamActive = false;
 }
 
 // For a slot that joins and every slot of a new game, not only at a round's start: else the server's players have
