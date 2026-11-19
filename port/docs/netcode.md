@@ -469,7 +469,7 @@ off by default:
 | `GTA2_NET_STACKLOG=1` | both | two cars in one place (under 0.4 blocks apart), once per pair: a car the client kept that the server dropped |
 | `GTA2_NET_PICKUPLOG=1` | client | pickups made and removed |
 | `GTA2_NET_TRAINLOG=1` | both | every train's place and state at every 150th tick of the game's cycle (the same tick on both ends) |
-| `GTA2_NET_CHECKGRID=1` | both | the collision grid checked after every move, a sprite moved off the map reported with the code that moved it, and a rollback block whose pointee moved since the set was taken (`net: CHECK` lines) |
+| `GTA2_NET_CHECKGRID=1` | both | the collision grid checked after every move, a sprite moved off the map reported with the code that moved it, a rollback block whose pointee moved since the set was taken, and on a client a ped driving a car that has another driver or leaving it through another car, after every tick, restore and apply (`net: CHECK` lines) |
 | `GTA2_NET_SNAPCHECK=1` | server | every entity's hash in the snapshots, checked by the clients (`net: CHECK` lines) |
 | `GTA2_NET_DUMPPEDS=<file>[:<from>:<to>]`, `GTA2_NET_RANDLOG=<file>:<from>:<to>` | both | the divergence check's dumps |
 | `GTA2_NET_NAVDUMP=<file.pgm>` | client bot | the bots' map as a picture |

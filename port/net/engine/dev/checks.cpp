@@ -275,6 +275,84 @@ bool net::engine::DebugCheckPlayerCars(const char* where)
     return true;
 }
 
+namespace
+{
+uint32_t PedNetId(const Ped* p)
+{
+    for (auto& q : ReplicaPeds())
+    {
+        if (q.second == p)
+        {
+            return q.first;
+        }
+    }
+    return 0;
+}
+
+// What is wrong between a ped and the car it drives (NULL: nothing). Ped::ExitCarStateMachine clears the driver of
+// mTargetToEnter, not of mCar, and Car::ClearDriver reads that driver
+const char* DriverWrong(const Ped* p)
+{
+    const Car* car = p->mCar;
+    if (!car || p->mEnterCarAsPassenger || p->mPedState2 != ped_state_2::ped2_driving_10 || car->IsTrainModel() || IsSpareDriver(p))
+    {
+        return NULL;
+    }
+    if (car->mDriver != p)
+    {
+        return "drives a car whose driver is another";
+    }
+    if (p->mInternalObjective == objectives_enum::leave_car_36 && p->mTargetToEnter != car)
+    {
+        return "leaves its car through another car";
+    }
+    return NULL;
+}
+} // namespace
+
+void net::engine::DebugCheckDrivers(const char* where, uint32_t snapTick)
+{
+    static std::set<const Ped*> sWrong; // as the last check found them: each is reported when it goes wrong
+    static int sReported;
+    if (!Debug().checkGrid || !gPedPool)
+    {
+        return;
+    }
+    std::set<const Ped*> now;
+    for (Ped* p = gPedPool->mPool.mpPrev; p; p = p->mpNext)
+    {
+        const char* wrong = DriverWrong(p);
+        if (!wrong)
+        {
+            continue;
+        }
+        now.insert(p);
+        if (sWrong.count(p) || sReported >= 30)
+        {
+            continue;
+        }
+        sReported++;
+        const Car* car = p->mCar;
+        const Car* target = p->mTargetToEnter;
+        const Ped* d = car->mDriver;
+        printf("net: CHECK frame %u tick %u %s (snapshot %u): ped %u (id %d, player %d, type %d/%d) %s: states %d/%d objective %d/%d, "
+               "car %u (id %d) driver %p (ped %u, spare %d), target to enter %u (id %d) driver %p\n",
+               gDebugFrame, (uint32_t)gpRng->get_cur_rng(), where, snapTick, PedNetId(p), (int)p->mId,
+               p->mPlayer ? (int)p->mPlayer->mPlayerIdx : -1, (int)p->mPedType, (int)p->mOccupation, wrong, (int)p->mPedState1,
+               (int)p->mPedState2, (int)p->mObjective, (int)p->mInternalObjective, MappedId(car), (int)car->mCarId, (const void*)d,
+               d ? PedNetId(d) : 0u, (int)IsSpareDriver(d), target ? MappedId(target) : 0u, target ? (int)target->mCarId : -1,
+               target ? (const void*)target->mDriver : NULL);
+        if (d && !IsSpareDriver(d))
+        {
+            printf("net: CHECK   its driver: ped %u (id %d, player %d, type %d/%d) states %d/%d objective %d/%d, in it %d, char %p\n",
+                   PedNetId(d), (int)d->mId, d->mPlayer ? (int)d->mPlayer->mPlayerIdx : -1, (int)d->mPedType, (int)d->mOccupation,
+                   (int)d->mPedState1, (int)d->mPedState2, (int)d->mObjective, (int)d->mInternalObjective, (int)(d->mCar == car),
+                   (const void*)d->mGameObject);
+        }
+    }
+    sWrong.swap(now);
+}
+
 // Whether a car or ped is on its pool's list, allocating nothing (malloc can hang after a heap corruption); a bounded
 // walk, as the list may be what broke
 static bool LiveCar(const Car* car)

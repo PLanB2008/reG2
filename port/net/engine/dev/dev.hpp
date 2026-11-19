@@ -78,6 +78,8 @@ void DebugAnimLog(uint32_t frame); // GTA2_NET_ANIMLOG: the other players' input
 void DebugSelfLog(uint32_t frame); // GTA2_NET_SELFLOG: the local player around a death (position, states, the death fields)
 std::string DebugPlayerCar(int player, const Snapshot& snap); // for the logs: its car states here and in the snapshot
 bool DebugCheckPlayerCars(const char* where); // every in-game player's car is a live car; prints the first time not
+// GTA2_NET_CHECKGRID: every ped driving a car is its driver and leaves it through it; each one wrong printed when it goes wrong
+void DebugCheckDrivers(const char* where, uint32_t snapTick);
 void DebugOnCrash(); // from the crash handler (port/compat/src/main.cpp): the local player's ped, car and camera
 void DebugSetFrame(uint32_t frame); // the client's frame, for the debug checks' messages
 // GTA2_NET_MARKER: a square drawn where the newest snapshot has the local player (raw Fix16), over the frame

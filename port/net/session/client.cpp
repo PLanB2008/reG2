@@ -382,6 +382,7 @@ void net::Client::Reconcile(const Snapshot& snap)
     if (!saved || !saved->valid || saved->tick != s)
     {
         engine::Apply(snap); // too old (or too new) to reconcile: take it as it is
+        mProbe.AfterPlainApply(snap);
         engine::ApplyScores(snap);
         return;
     }

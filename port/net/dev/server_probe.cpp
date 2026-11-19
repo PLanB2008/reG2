@@ -92,6 +92,7 @@ void net::ServerProbe::Tests(uint32_t tick, int players)
 void net::ServerProbe::Captured(uint32_t tick, const Snapshot& world)
 {
     engine::GangLog(true);
+    engine::DebugCheckDrivers("after the tick", tick);
     engine::StackLog(true);
     engine::TrainLog(true);
     engine::InstallSpriteCheck();

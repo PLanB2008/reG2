@@ -31,6 +31,7 @@ void net::ClientProbe::Frame(uint32_t frame, const std::vector<uint32_t>& remote
 void net::ClientProbe::AfterTick()
 {
     engine::DebugCheckPlayerCars("after the frame's tick");
+    engine::DebugCheckDrivers("after the frame's tick", mLastSnap);
 }
 
 void net::ClientProbe::Input(uint32_t frame, uint32_t local)
@@ -68,6 +69,7 @@ void net::ClientProbe::Marker(const EntityState& self)
 void net::ClientProbe::AfterRestore(const Snapshot& snap)
 {
     engine::DebugCheckPlayerCars("after the restore");
+    engine::DebugCheckDrivers("after the restore", snap.tick);
     engine::DebugOwnCarDiff(snap);
     if (Env().compare)
     {
@@ -78,6 +80,8 @@ void net::ClientProbe::AfterRestore(const Snapshot& snap)
 bool net::ClientProbe::AfterApply(const Snapshot& snap, uint32_t ourTick)
 {
     engine::DebugCheckPlayerCars("after the apply");
+    mLastSnap = snap.tick;
+    engine::DebugCheckDrivers("after the apply", snap.tick);
     const uint32_t s = snap.tick;
     if (!Env().divergeTick || s < Env().divergeTick)
     {
@@ -91,9 +95,16 @@ bool net::ClientProbe::AfterApply(const Snapshot& snap, uint32_t ourTick)
     return true;
 }
 
+void net::ClientProbe::AfterPlainApply(const Snapshot& snap)
+{
+    mLastSnap = snap.tick;
+    engine::DebugCheckDrivers("after an apply without a restore", snap.tick);
+}
+
 void net::ClientProbe::AfterResim()
 {
     engine::DebugCheckPlayerCars("after a resimulated tick");
+    engine::DebugCheckDrivers("after a resimulated tick", mLastSnap);
 }
 
 void net::ClientProbe::CompareAlone(const Snapshot& snap, engine::SavedWorld* saved, engine::SavedWorld& now)
