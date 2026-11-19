@@ -296,6 +296,9 @@ void PedStateFields(std::vector<FieldDesc>& out);
 void PedStateRefFields(std::vector<int>* peds, std::vector<int>* cars); // the ped entity's fields that are references (net ids)
 void CapturePedState(const Ped* p, EntityState& e);
 bool ApplyPedState(Ped* p, const EntityState& e);
+// Its type and occupation as the server's. A driver made here (PedManager::SpawnDriver) is otherwise the game's dummy
+// driver, which a carjack or a shot at its car replaces by a ped of its own while it sits on in the car
+void SetPedKind(Ped* p, const EntityState& e);
 void ApplyPedGroups(const std::vector<std::pair<Ped*, const EntityState*>>& peds); // once the snapshot's peds are here
 
 // Pickups (pickups.cpp): the server's in a snapshot, and a client's made to match

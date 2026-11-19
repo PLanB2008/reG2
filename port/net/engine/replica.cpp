@@ -306,6 +306,7 @@ Ped* MapPed(Pass& a, const EntityState& e, Car* serverCar)
         {
             serverCar->SetDriver(NULL);
             ped = gPedManager->SpawnDriver(serverCar);
+            SetPedKind(ped, e);
         }
     }
     if (!ped && !serverCar)
