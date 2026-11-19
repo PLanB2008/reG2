@@ -181,6 +181,8 @@ OPTIONS has five pages: GAME (language, text speed, AUTOSAVE, RETRY JOBS, FRENZY
 day and night cycle), GRAPHICS, DISPLAY (full screen, frame rate, zoom, HUD), SOUND and CONTROLS.
 On GRAPHICS, AMBIENT OCCLUSION (`gl_ambient_occlusion`, on in ENHANCED) softly shades inner corners and the foot of
 walls, worked out from the map's blocks, in every LIGHTING mode.
+FIRE EFFECTS (`gl_fire_effects`, on in ENHANCED) adds heat haze over the flames and a plume of smoke, drawn from the
+game's own smoke frames and lit by the fires, with a few embers, over burning cars, wrecks and fires.
 Their settings are grouped under small titles, and the less common ones say under the page what they
 do, or what their value does (PRESET, LIGHTING, FRAME LIMIT, CONTROLS, AIM CAMERA, STRAFE ANIMATION).
 In a game, Escape opens the same menu as a pause menu, with RESUME, RADIO (in a car with a radio: its station by
@@ -424,6 +426,7 @@ the AppImage in a clean Debian, Ubuntu or Arch Linux container with the librarie
 | `GTA2_WELCOME=1` | the first start's CHOOSE YOUR STYLE screen shown again |
 | `GTA2_CURSOR_BMP=<file>` | the mouse cursor's image written to that BMP |
 | `GTA2_AO_DEBUG=1` | AMBIENT OCCLUSION alone, in grey, on the surfaces it applies to |
+| `GTA2_HAZE_DEBUG=1` | FIRE EFFECTS' heat haze: its heat shown as a colour ramp |
 | `GTA2GL_CAPTURE=<dir>,<frame>,<a>-<b>,...` | write those frames as BMP (the first frame drawn at each); `GTA2GL_CAPTURE_FLIPS=1` counts presented frames instead |
 | `GTA2_LOOP_STATS=1` | logic steps and frames per second on stderr, every 5 seconds |
 | `GTA2_LOOP_TRACE=<file>` | the player's and the camera's position after each step (`S`) and as drawn (`D`) |

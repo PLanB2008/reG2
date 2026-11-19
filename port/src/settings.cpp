@@ -52,8 +52,8 @@ const Id kGameSettings[] = {kLanguage, kTextSpeed, kExplodingScores, kBlood,
 const s32 kNumGameSettings = sizeof(kGameSettings) / sizeof(kGameSettings[0]);
 #if defined(GTA2_PORT_SDL)
 const Id kGraphicsSettings[] = {kPreset,
-                                kLightingGroup, kPerPixelLighting, kShadows, kAmbientOcclusion, kHeadlights, kLightEffects,
-                                kBloom, kImageGroup, kTrueColour, kTextureFilter, kAntiAliasing};
+                                kLightingGroup, kPerPixelLighting, kShadows, kAmbientOcclusion, kFireEffects, kHeadlights,
+                                kLightEffects, kBloom, kImageGroup, kTrueColour, kTextureFilter, kAntiAliasing};
 const Id kDisplaySettings[] = {kScreenGroup, kFullScreen, kDisplayMode, kVsync, kFrameLimit, kShowFps,
                                kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea};
 #else
@@ -70,7 +70,7 @@ namespace
 const wchar_t* const kNames[kCount] = {L"SOUND EFFECTS", L"MUSIC", L"3D SOUND", L"TEXT SPEED", L"LANGUAGE",
                                        L"FULL SCREEN", L"BRIGHTNESS", L"LIGHTING", L"EXPLODING SCORES", L"FRAME LIMIT",
                                        L"TRUE COLOUR", L"BLOOM", L"PIXEL LIGHTING", L"CAR HEADLIGHTS",
-                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"STRAFE ANIMATION", L"VIBRATION", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS", L"FRENZY RESPAWN", L"INFINITE LIVES", L"AMBIENT OCCLUSION"};
+                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"STRAFE ANIMATION", L"VIBRATION", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS", L"FRENZY RESPAWN", L"INFINITE LIVES", L"AMBIENT OCCLUSION", L"FIRE EFFECTS"};
 const wchar_t* const kGroupNames[kGroupsEnd - kCount - 1] = {L"SAVES", L"DIFFICULTY", L"TIME OF DAY", L"LIGHTING", L"IMAGE", L"SCREEN", L"VIEW"};
 
 struct Language
@@ -211,6 +211,9 @@ const Translation kTranslations[] = {
     {L"LIGHT FROM FIRES, EXPLOSIONS, GUNFIRE AND BRAKE LIGHTS", NULL,
      {L"LUMIERE DES FEUX, EXPLOSIONS, TIRS ET FEUX STOP", L"LICHT VON FEUER, EXPLOSIONEN, SCHÜSSEN UND BREMSLICHTERN",
       L"LUCE DI FUOCHI, ESPLOSIONI, SPARI E LUCI DEI FRENI", L"LUZ DE FUEGOS, EXPLOSIONES, DISPAROS Y LUCES DE FRENO"}},
+    {L"HEAT HAZE, SMOKE AND EMBERS AROUND FIRES", NULL,
+     {L"AIR CHAUD, FUMEE ET BRAISES AUTOUR DES FEUX", L"HITZEFLIMMERN, RAUCH UND GLUT UM FEUER",
+      L"ARIA CALDA, FUMO E BRACI INTORNO AI FUOCHI", L"AIRE CALIENTE, HUMO Y BRASAS EN LOS FUEGOS"}},
     {L"SOFT SHADE IN CORNERS AND AT THE FOOT OF WALLS", NULL,
      {L"OMBRE DOUCE DANS LES COINS ET AU PIED DES MURS", L"WEICHER SCHATTEN IN ECKEN UND AM FUSS DER WÄNDE",
       L"OMBRA MORBIDA NEGLI ANGOLI E AI PIEDI DEI MURI", L"SOMBRA SUAVE EN LAS ESQUINAS Y AL PIE DE LOS MUROS"}},
@@ -304,6 +307,7 @@ const Translation kTranslations[] = {
     {L"ANTI-ALIASING", NULL, {L"ANTICRENELAGE", L"KANTENGLÄTTUNG", L"ANTI-ALIASING", L"ANTIALIASING"}},
     {L"SHADOWS", NULL, {L"OMBRES", L"SCHATTEN", L"OMBRE", L"SOMBRAS"}},
     {L"AMBIENT OCCLUSION", NULL, {L"OCCLUSION AMBIANTE", L"UMGEBUNGSVERDECKUNG", L"OCCLUSIONE AMBIENTALE", L"OCLUSIÓN AMBIENTAL"}},
+    {L"FIRE EFFECTS", NULL, {L"EFFETS DE FEU", L"FEUEREFFEKTE", L"EFFETTI DEL FUOCO", L"EFECTOS DE FUEGO"}},
     {L"SOFT", NULL, {L"DOUCES", L"WEICH", L"MORBIDE", L"SUAVES"}},
     {L"PRESET", NULL, {L"PRESET", L"VOREINSTELLUNG", L"PRESET", L"PREAJUSTE"}},
     {L"CLASSIC", NULL, {L"CLASSIQUE", L"KLASSISCH", L"CLASSICO", L"CLÁSICO"}},
@@ -486,6 +490,8 @@ const char* ScreenName(Id id)
             return "port_infinite_lives";
         case kAmbientOcclusion:
             return "gl_ambient_occlusion";
+        case kFireEffects:
+            return "gl_fire_effects";
         default:
             return "car_headlights";
     }
@@ -500,7 +506,7 @@ s32 ScreenDefault(Id id)
 {
 #if defined(GTA2_PORT_SDL)
     // Without a saved value: on where the other GRAPHICS settings are ENHANCED's, so a setup made before it stays ENHANCED.
-    if (id == kAmbientOcclusion)
+    if (id == kAmbientOcclusion || id == kFireEffects)
     {
         return OtherPresetValuesEnhanced() ? 1 : 0;
     }
@@ -635,7 +641,8 @@ struct PresetValue
 };
 const PresetValue kPresetValues[] = {{kTrueColour, {0, 1}},   {kBloom, {0, 3}},        {kPerPixelLighting, {0, 1}},
                                      {kTextureFilter, {0, 2}}, {kAntiAliasing, {0, 4}}, {kShadows, {0, 1}},
-                                     {kHeadlights, {0, 1}},    {kLightEffects, {0, 1}}, {kAmbientOcclusion, {0, 1}}};
+                                     {kHeadlights, {0, 1}},    {kLightEffects, {0, 1}}, {kAmbientOcclusion, {0, 1}},
+                                     {kFireEffects, {0, 1}}};
 const s32 kNumPresetValues = sizeof(kPresetValues) / sizeof(kPresetValues[0]);
 
 // As the menu shows them: anti-aliasing at what the renderer can do, the others as their lines read them.
@@ -663,7 +670,7 @@ bool OtherPresetValuesEnhanced()
 {
     for (s32 i = 0; i < kNumPresetValues; i++)
     {
-        if (kPresetValues[i].mId != kAmbientOcclusion && PresetSetting(kPresetValues[i].mId) != PresetTarget(kPresetValues[i], kEnhanced))
+        if (kPresetValues[i].mId != kAmbientOcclusion && kPresetValues[i].mId != kFireEffects && PresetSetting(kPresetValues[i].mId) != PresetTarget(kPresetValues[i], kEnhanced))
         {
             return false;
         }
@@ -917,6 +924,8 @@ const wchar_t* Help(Id id)
             return L"LIGHT FROM FIRES, EXPLOSIONS, GUNFIRE AND BRAKE LIGHTS";
         case kAmbientOcclusion:
             return L"SOFT SHADE IN CORNERS AND AT THE FOOT OF WALLS";
+        case kFireEffects:
+            return L"HEAT HAZE, SMOKE AND EMBERS AROUND FIRES";
 #if defined(GTA2_PORT_SDL)
         case kPreset:
         {
@@ -974,6 +983,11 @@ bool LightEffects()
 bool AmbientOcclusion()
 {
     return Screen(kAmbientOcclusion) != 0;
+}
+
+bool FireEffects()
+{
+    return Screen(kFireEffects) != 0;
 }
 
 // The original's max_frame_rate is not read: off, it ran the game as fast as the machine.
@@ -1286,6 +1300,7 @@ void Change(Id id, s32 delta)
         case kRetry:
         case kKfRespawn:
         case kAmbientOcclusion:
+        case kFireEffects:
             gRegistry.Set_Screen_Setting(ScreenName(id), Screen(id) ? 0 : 1);
             break;
         case kInfiniteLives:

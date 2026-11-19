@@ -9,6 +9,7 @@
 #include "explosion_type.hpp"
 #include "frame_loop.hpp"
 #include "lights.hpp"
+#include "settings.hpp"
 #include "sprite.hpp"
 #include "view.hpp"
 #include <math.h>
@@ -657,9 +658,12 @@ void DrawLayer(s32 layer)
 {
     static bool sEmberTexture;
     static bool sSmoke;
-    if (!gGame_0x40 || gGame_0x40->mNumPlayers != 1 || layer < 1 || layer > 7)
+    if (!PortSettings::FireEffects() || !gGame_0x40 || gGame_0x40->mNumPlayers != 1 || layer < 1 || layer > 7)
     {
         Clear();
+#if defined(GTA2_PORT_SDL)
+        port_ClearSmokeLights();
+#endif
         return;
     }
     // The first layer of the frame's map draw brings everything up to date.
