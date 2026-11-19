@@ -36,6 +36,28 @@ where **Network game** joins a server (below). The command line (`port/net/cmdli
 | Client | `--connect host[:port]`, `--name`, `--bot [brain]` (simple, carhop, rammer, soldier, hunter, `nn:<file>`), `--replay <file>` |
 | Either end | `--lag ms`, `--jitter ms`, `--loss %`: a link conditioner on this end's sends |
 
+## Hosting a game
+
+Hosting is running a server; the host plays as a client of it like everyone else. Both ends need the same reG2 build
+(version and commit: the 32 and 64-bit builds of one commit play together, whatever the system) and the same game data:
+a join is turned away otherwise, with what differs on the network page (and printed with `--connect`).
+
+1. **The host** starts a server: `./reg2 --server --map downtown-6p` (`--players`, `--maps` and the rest above). It has no
+   window and prints its log; on Windows, where nothing shows it, add `--window` (closing the window ends it) or end it
+   in the Task Manager. The menu can't start one yet. Then it joins it like the others, at `127.0.0.1`.
+2. **Its network**: the server listens on **UDP 27920** (`--port` for another). Over the internet the host's router
+   forwards that port to the host's machine (port forwarding, in the router's settings: UDP, 27920, to the machine's
+   LAN address), and its firewall lets it in: Windows asks the first time the server starts (allow it on private and,
+   for players from the internet, public networks), Linux firewalls need a rule (`ufw allow 27920/udp`). The address to
+   give the others is the router's public address (what a "what is my IP" page shows); no NAT traversal or UPnP yet.
+3. **The others** join with the network page (start menu, **Network game**: the address, a name, **Join game**) or
+   `./reg2 --connect <address>`, with `:<port>` after the address for another port.
+
+On a LAN nobody forwards anything: the others join at the host's LAN address (`ip addr`, `ipconfig`: 192.168.x.y), the
+host's firewall still letting UDP 27920 in. A player whose name is taken, empty or longer than 15 characters plays under
+one the server gives ("PLAYER 2"). A server that is stopped and started again starts a new game: its players go back to
+the network page and join again.
+
 ## Playing
 
 **Joining from the frontend.** The start menu has **Network game** (`port/net/menu.cpp`, frontend page 13): an address
@@ -242,10 +264,11 @@ A little-endian bitstream (`core/bitstream.cpp`), never a copy of a struct: clie
 
 | Message | Channel | |
 |---|---|---|
-| `kMsgHello`, `kMsgWelcome`, `kMsgReject` | reliable | the join: the protocol version and name; the slot, the game's settings and map, the maps a vote chooses from |
+| `kMsgHello`, `kMsgWelcome`, `kMsgReject` | reliable | the join: the protocol version, the build, the name, `nyc.gci`'s CRC-32; the server's session, the slot and name, the game's settings, the map with its files' CRC-32s, the maps a vote chooses from |
+| `kMsgLeave` | reliable | why a client leaves (its copy of the map differs) |
 | `kMsgCommands` | unreliable | the last few commands (tick and input bits, each delta-coded against the one before) and the newest snapshot the client has |
 | `kMsgSnapshot`, `kMsgSnapshotPart` | unreliable | server tick, the baseline it is made against, entities with field masks and changed fields (`core/snapshot.cpp`) |
-| `kMsgMapChange` | reliable | the next map, after a round |
+| `kMsgMapChange` | reliable | the next map, after a round, with its files' CRC-32s |
 | `kMsgPing`, `kMsgPong` | unreliable | the client's clock, sent back at once |
 | `kMsgCommand`, `kMsgNotice` | reliable | a player's command; a line to show (a vote, a player ready) |
 
@@ -499,7 +522,7 @@ own (`single`) and rollback in scenes with explosions (`explode`).
   literal 6s, a `u8` bitmask, the results screen, colours, the scripts' six `PLAYER_PED`s). A port-only cap with a
   runtime count covers most; spawn points beyond the scripts' from the restart zones.
 - **Modes** beyond the game's frags, points and tag (team deathmatch, CTF) as a mode module, reusing the game's assets.
-- **Hardening**: the data files' hashes and the protocol version checked at the join, rate limits, fuzzed input.
+- **Hardening**: rate limits, fuzzed input.
 - **Tick rates above 30 Hz** would need every per-tick constant and timer scaled (a project of its own, port-only).
 - **Whole-map simulation**: a server could keep everything everywhere, with a cleanup policy as a server setting
   (none, wrecks only, the game's own). Every cleanup and spawn decision goes through `Game::IsSpriteInPlayerBounds`
@@ -515,8 +538,7 @@ anyone's tools read.
 1. **Hosting from the menu**: a "Host game" page that starts a server in the background and joins it; the LAN and
    public address to share; UPnP / NAT-PMP to open the port, and a reachability test; an optional password;
    `server.ini` for a server's settings.
-2. **The data check**: the client's protocol version and a hash of `data/` at the join, a mismatch turned away with a
-   clear message.
+2. **The data check** (done: the build, `nyc.gci` and the map's files at the join and at a map change, "Hosting a game").
 3. **The master**: a heartbeat from `--public` servers over their game socket (so the master sees the address after
    NAT), verified before listing; the web app's list with join links (`gta2://host:port`).
 4. **In the game**: an info query every server answers outside ENet (name, map, players, version: real pings), LAN
