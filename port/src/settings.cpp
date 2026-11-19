@@ -7,9 +7,12 @@
 #include "Globals.hpp"
 #include "Hud.hpp"
 #include "TextTable.hpp"
+#include "debug.hpp"
 #include "map_0x370.hpp"
 #include "registry.hpp"
 #include "root_sound.hpp"
+#include "saves.hpp"
+#include "winmain.hpp"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -34,34 +37,41 @@ void port_SetFullscreenModeIndex(int index);
 
 namespace PortSettings
 {
+// No DAY-NIGHT CYCLE without SDL: its settings would stay greyed.
+const Id kGameSettings[] = {kLanguage, kTextSpeed, kExplodingScores, kBlood,
 #if defined(GTA2_UPDATE_CHECK)
-const Id kGeneral[] = {kSfxVolume, kMusicVolume, k3dSound, kTextSpeed, kLanguage, kUpdateCheck};
-#else
-const Id kGeneral[] = {kSfxVolume, kMusicVolume, k3dSound, kTextSpeed, kLanguage};
+                            kUpdateCheck,
 #endif
-const s32 kNumGeneral = sizeof(kGeneral) / sizeof(kGeneral[0]);
+                            kSavesGroup, kAutosave,
+                            kDifficultyGroup, kRetry, kKfRespawn, kInfiniteLives,
+                            kTimeOfDayGroup, kLighting,
 #if defined(GTA2_PORT_SDL)
-const Id kScreen[] = {kDisplay, kDisplayMode, kVsync, kFrameLimit, kShowFps, kBrightness, kLighting, kDayLength, kStartTime, kClock, kExplodingScores, kBlood};
-#else
-const Id kScreen[] = {kDisplay, kFrameLimit, kShowFps, kBrightness, kLighting, kExplodingScores, kBlood};
+                            kDayLength, kStartTime, kClock,
 #endif
-const s32 kNumScreen = sizeof(kScreen) / sizeof(kScreen[0]);
+};
+const s32 kNumGameSettings = sizeof(kGameSettings) / sizeof(kGameSettings[0]);
 #if defined(GTA2_PORT_SDL)
-const Id kGraphics[] = {kPreset,        kTrueColour, kBloom,      kPerPixelLighting, kTextureFilter,
-                        kAntiAliasing, kShadows,    kHeadlights, kLightEffects};
+const Id kGraphicsSettings[] = {kPreset,
+                                kLightingGroup, kPerPixelLighting, kShadows, kHeadlights, kLightEffects, kBloom,
+                                kImageGroup, kTrueColour, kTextureFilter, kAntiAliasing};
+const Id kDisplaySettings[] = {kScreenGroup, kFullScreen, kDisplayMode, kVsync, kFrameLimit, kShowFps,
+                               kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea};
 #else
-const Id kGraphics[] = {kHeadlights, kLightEffects};
+const Id kGraphicsSettings[] = {kHeadlights, kLightEffects};
+const Id kDisplaySettings[] = {kScreenGroup, kFullScreen, kFrameLimit, kShowFps, kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea};
 #endif
-const s32 kNumGraphics = sizeof(kGraphics) / sizeof(kGraphics[0]);
-const Id kView[] = {kZoom, kHudScale, kSafeArea};
-const s32 kNumView = sizeof(kView) / sizeof(kView[0]);
+const s32 kNumGraphicsSettings = sizeof(kGraphicsSettings) / sizeof(kGraphicsSettings[0]);
+const s32 kNumDisplaySettings = sizeof(kDisplaySettings) / sizeof(kDisplaySettings[0]);
+const Id kSoundSettings[] = {kSfxVolume, kMusicVolume, k3dSound};
+const s32 kNumSoundSettings = sizeof(kSoundSettings) / sizeof(kSoundSettings[0]);
 
 namespace
 {
 const wchar_t* const kNames[kCount] = {L"SOUND EFFECTS", L"MUSIC", L"3D SOUND", L"TEXT SPEED", L"LANGUAGE",
-                                       L"DISPLAY", L"BRIGHTNESS", L"LIGHTING", L"EXPLODING SCORES", L"FRAME LIMIT",
+                                       L"FULL SCREEN", L"BRIGHTNESS", L"LIGHTING", L"EXPLODING SCORES", L"FRAME LIMIT",
                                        L"TRUE COLOUR", L"BLOOM", L"PIXEL LIGHTING", L"CAR HEADLIGHTS",
-                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS"};
+                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"STRAFE ANIMATION", L"VIBRATION", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS", L"FRENZY RESPAWN", L"INFINITE LIVES"};
+const wchar_t* const kGroupNames[kGroupsEnd - kCount - 1] = {L"SAVES", L"DIFFICULTY", L"TIME OF DAY", L"LIGHTING", L"IMAGE", L"SCREEN", L"VIEW"};
 
 struct Language
 {
@@ -90,7 +100,7 @@ struct Translation
 const Translation kTranslations[] = {
     {L"OPTIONS", "options", {}},
     {L"BACK", "back", {}},
-    {L"CANCEL", "psxcanc", {}},
+    {L"CANCEL", NULL, {L"ANNULER", L"ABBRECHEN", L"ANNULLA", L"CANCELAR"}},
     {L"ESC", "esc_i", {}},
     {L"UP", "up_i", {}},
     {L"DOWN", "down_i", {}},
@@ -101,8 +111,10 @@ const Translation kTranslations[] = {
     {L"SLOW", "psxslow", {}},
     {L"RESUME", "psxret", {}},
     {L"QUIT GAME", "psxquit", {}},
+    {L"KEY %d", NULL, {L"TOUCHE %d", L"TASTE %d", L"TASTO %d", L"TECLA %d"}},
     {L"ENTER", NULL, {L"ENTREE", L"EINGABE", L"INVIO", L"INTRO"}},
     {L"SELECT", NULL, {L"CHOISIR", L"WÄHLEN", L"SCEGLI", L"ELEGIR"}},
+    {L"STYLE", NULL, {L"STYLE", L"STIL", L"STILE", L"ESTILO"}},
     {L"VERY FAST", NULL, {L"TRES RAPIDE", L"SEHR SCHNELL", L"MOLTO VELOCE", L"MUY RÁPIDA"}},
     {L"VERY SLOW", NULL, {L"TRES LENTE", L"SEHR LANGSAM", L"MOLTO LENTA", L"MUY LENTA"}},
     {L"SOUND EFFECTS", NULL, {L"EFFETS SONORES", L"SOUNDEFFEKTE", L"EFFETTI SONORI", L"EFECTOS SONOROS"}},
@@ -111,8 +123,7 @@ const Translation kTranslations[] = {
     {L"TEXT SPEED", NULL, {L"VITESSE TEXTE", L"TEXTTEMPO", L"VELOCITÀ TESTO", L"VELOCIDAD TEXTO"}},
     {L"LANGUAGE", NULL, {L"LANGUE", L"SPRACHE", L"LINGUA", L"IDIOMA"}},
     {L"DISPLAY", NULL, {L"AFFICHAGE", L"ANZEIGE", L"SCHERMO", L"PANTALLA"}},
-    {L"FULL SCREEN", NULL, {L"PLEIN ECRAN", L"VOLLBILD", L"INTERO", L"COMPLETA"}},
-    {L"WINDOW", NULL, {L"FENETRE", L"FENSTER", L"FINESTRA", L"VENTANA"}},
+    {L"FULL SCREEN", NULL, {L"PLEIN ECRAN", L"VOLLBILD", L"SCHERMO INTERO", L"PANTALLA COMPLETA"}},
     {L"BRIGHTNESS", NULL, {L"VALEUR GAMMA", L"GAMMA-WERT", L"VALORE GAMMA", L"VALOR GAMMA"}},
     {L"LIGHTING", NULL, {L"ECLAIRAGE", L"LICHT", L"ILLUMINAZIONE", L"LUCES"}},
     {L"DUSK", NULL, {L"CREPUSCULE", L"DÄMMERUNG", L"CREPUSCOLO", L"ATARDECER"}},
@@ -124,6 +135,150 @@ const Translation kTranslations[] = {
     {L"EXPLODING SCORES", NULL, {L"SCORES EXPLOSIFS", L"PUNKTE-EXPLOSION", L"PUNTI ESPLOSIVI", L"PUNTOS EXPLOSIVOS"}},
     {L"BLOOD", NULL, {L"SANG", L"BLUT", L"SANGUE", L"SANGRE"}},
     {L"CHECK FOR UPDATES", NULL, {L"MISES A JOUR", L"UPDATES SUCHEN", L"AGGIORNAMENTI", L"ACTUALIZACIONES"}},
+    {L"AUTOSAVE", NULL, {L"SAUVEGARDE AUTO", L"AUTOSPEICHERN", L"SALVATAGGIO AUTO", L"GUARDADO AUTO"}},
+    {L"AFTER EACH JOB OR FRENZY, AND WITH SAVE AND QUIT", NULL,
+     {L"APRES CHAQUE MISSION OU FRENESIE, ET AVEC SAUVER ET QUITTER", L"NACH AUFTRAG ODER AMOKLAUF, UND MIT SPEICHERN UND BEENDEN",
+      L"DOPO OGNI MISSIONE O FRENESIA, E CON SALVA ED ESCI", L"TRAS CADA MISIÓN O FRENESÍ, Y CON GUARDAR Y SALIR"}},
+    {L"SAVE AND QUIT", NULL, {L"SAUVER ET QUITTER", L"SPEICHERN UND BEENDEN", L"SALVA ED ESCI", L"GUARDAR Y SALIR"}},
+    {L"QUIT", NULL, {L"QUITTER", L"BEENDEN", L"ESCI", L"SALIR"}},
+    {L"NOT DURING A JOB OR FRENZY", NULL,
+     {L"PAS PENDANT UNE MISSION OU FRENESIE", L"NICHT WÄHREND AUFTRAG ODER AMOKLAUF", L"NON DURANTE MISSIONI O FRENESIE",
+      L"NO DURANTE MISIONES O FRENESÍES"}},
+    {L"NOT NOW", NULL, {L"PAS MAINTENANT", L"NICHT JETZT", L"NON ORA", L"AHORA NO"}},
+    {L"NOT HERE", NULL, {L"PAS ICI", L"NICHT HIER", L"NON QUI", L"AQUÍ NO"}},
+    {L"YOUR %ls AUTOSAVE WILL BE REPLACED", NULL,
+     {L"VOTRE SAUVEGARDE AUTO DE %ls SERA REMPLACEE", L"DEIN AUTOSPEICHERSTAND VON %ls WIRD ERSETZT",
+      L"IL TUO SALVATAGGIO AUTO DI %ls SARÀ SOSTITUITO", L"TU GUARDADO AUTO DE %ls SERÁ REEMPLAZADO"}},
+    {L"SAVES", NULL, {L"SAUVEGARDES", L"SPEICHERN", L"SALVATAGGI", L"GUARDADO"}},
+    {L"DIFFICULTY", NULL, {L"DIFFICULTE", L"SCHWIERIGKEIT", L"DIFFICOLTÀ", L"DIFICULTAD"}},
+    {L"TIME OF DAY", NULL, {L"HEURE DU JOUR", L"TAGESZEIT", L"ORA DEL GIORNO", L"HORA DEL DÍA"}},
+    {L"IMAGE", NULL, {L"IMAGE", L"BILD", L"IMMAGINE", L"IMAGEN"}},
+    {L"SCREEN", NULL, {L"ECRAN", L"BILDSCHIRM", L"SCHERMO", L"PANTALLA"}},
+    {L"VIEW", NULL, {L"VUE", L"ANSICHT", L"VISTA", L"VISTA"}},
+    {L"POINTS BURST OUT WHERE THEY ARE SCORED", NULL,
+     {L"LES POINTS EXPLOSENT LA OU ILS SONT MARQUES", L"PUNKTE ZERPLATZEN DORT, WO SIE ERZIELT WERDEN",
+      L"I PUNTI ESPLODONO DOVE VENGONO FATTI", L"LOS PUNTOS ESTALLAN DONDE SE CONSIGUEN"}},
+    {L"SOUNDS PLACED AROUND YOU, WITH THE ECHO OF THE PLACE", NULL,
+     {L"SONS PLACES AUTOUR DE VOUS, AVEC L'ECHO DU LIEU", L"KLÄNGE RUND UM DICH, MIT DEM HALL DES ORTES",
+      L"SUONI DISPOSTI INTORNO A TE, CON L'ECO DEL LUOGO", L"SONIDOS A TU ALREDEDOR, CON EL ECO DEL LUGAR"}},
+    {L"BROAD DAYLIGHT, WITHOUT LIGHTS", NULL,
+     {L"PLEIN JOUR, SANS LUMIERES", L"HELLER TAG, OHNE LICHTER", L"PIENO GIORNO, SENZA LUCI", L"PLENO DÍA, SIN LUCES"}},
+    {L"THE ORIGINAL'S EVENING LIGHT, STREET LIGHTS ON", NULL,
+     {L"LA LUMIERE DU SOIR DE L'ORIGINAL, LAMPADAIRES ALLUMES", L"DAS ABENDLICHT DES ORIGINALS, MIT STRASSENLATERNEN",
+      L"LA LUCE SERALE DELL'ORIGINALE, LAMPIONI ACCESI", L"LA LUZ DE TARDE DEL ORIGINAL, FAROLAS ENCENDIDAS"}},
+    {L"DAY, DUSK, NIGHT AND DAWN GO BY AS YOU PLAY", NULL,
+     {L"JOUR, CREPUSCULE, NUIT ET AUBE DEFILENT EN JOUANT", L"TAG, DÄMMERUNG, NACHT UND MORGEN ZIEHEN VORBEI",
+      L"GIORNO, CREPUSCOLO, NOTTE E ALBA SCORRONO GIOCANDO", L"DÍA, ATARDECER, NOCHE Y ALBA PASAN MIENTRAS JUEGAS"}},
+    {L"REAL MINUTES FOR A WHOLE DAY AND NIGHT", NULL,
+     {L"MINUTES REELLES POUR UN JOUR ET UNE NUIT", L"ECHTE MINUTEN FÜR EINEN TAG UND EINE NACHT",
+      L"MINUTI REALI PER UN GIORNO E UNA NOTTE", L"MINUTOS REALES PARA UN DÍA Y UNA NOCHE"}},
+    {L"THE HOUR A LEVEL STARTS AT", NULL,
+     {L"L'HEURE A LAQUELLE UN NIVEAU COMMENCE", L"DIE UHRZEIT, ZU DER EIN LEVEL BEGINNT", L"L'ORA IN CUI INIZIA UN LIVELLO",
+      L"LA HORA A LA QUE EMPIEZA UN NIVEL"}},
+    {L"THE ORIGINAL'S PACE: A FRAME FOR EACH GAME STEP", NULL,
+     {L"LE RYTHME DE L'ORIGINAL : UNE IMAGE PAR PAS DE JEU", L"DAS TEMPO DES ORIGINALS: EIN BILD PRO SPIELSCHRITT",
+      L"IL RITMO DELL'ORIGINALE: UN FOTOGRAMMA PER PASSO DI GIOCO", L"EL RITMO DEL ORIGINAL: UNA IMAGEN POR PASO DE JUEGO"}},
+    {L"FRAMES BETWEEN THE GAME'S 30 STEPS A SECOND, INTERPOLATED", NULL,
+     {L"IMAGES INTERPOLEES ENTRE LES 30 PAS PAR SECONDE DU JEU", L"INTERPOLIERTE BILDER ZWISCHEN DEN 30 SCHRITTEN PRO SEKUNDE",
+      L"FOTOGRAMMI INTERPOLATI TRA I 30 PASSI AL SECONDO DEL GIOCO", L"IMÁGENES INTERPOLADAS ENTRE LOS 30 PASOS POR SEGUNDO DEL JUEGO"}},
+    {L"THE HUD'S DISTANCE FROM THE SCREEN'S EDGES, IN PERCENT", NULL,
+     {L"MARGE DU HUD AUX BORDS DE L'ECRAN, EN POUR CENT", L"ABSTAND DES HUD ZUM BILDSCHIRMRAND, IN PROZENT",
+      L"DISTANZA DELL'HUD DAI BORDI DELLO SCHERMO, IN PERCENTUALE", L"MARGEN DEL HUD CON LOS BORDES DE LA PANTALLA, EN PORCENTAJE"}},
+    {L"ON FOOT: WALK, AND AIM WITH THE MOUSE OR RIGHT STICK", NULL,
+     {L"A PIED : MARCHEZ, ET VISEZ A LA SOURIS OU AU STICK DROIT", L"ZU FUSS: GEHEN, UND MIT MAUS ODER RECHTEM STICK ZIELEN",
+      L"A PIEDI: CAMMINA E MIRA CON IL MOUSE O LO STICK DESTRO", L"A PIE: CAMINA Y APUNTA CON EL RATÓN O EL STICK DERECHO"}},
+    {L"ON FOOT: THE ORIGINAL'S TANK CONTROLS", NULL,
+     {L"A PIED : LES COMMANDES TANK DE L'ORIGINAL", L"ZU FUSS: DIE PANZERSTEUERUNG DES ORIGINALS",
+      L"A PIEDI: I COMANDI A CARRO ARMATO DELL'ORIGINALE", L"A PIE: LOS CONTROLES TIPO TANQUE DEL ORIGINAL"}},
+    {L"THE VIEW LEADS TOWARD THE AIM. SHIFT, LT OR R3 LOOKS FURTHER", NULL,
+     {L"LA VUE AVANCE VERS LA VISEE. MAJ, LT OU R3 POUR VOIR PLUS LOIN", L"DIE ANSICHT FOLGT DEM ZIEL. SHIFT, LT ODER R3: WEITER SEHEN",
+      L"LA VISTA SI SPOSTA VERSO LA MIRA. SHIFT, LT O R3: PIÙ LONTANO", L"LA VISTA SE ADELANTA HACIA LA MIRA. SHIFT, LT O R3: MÁS LEJOS"}},
+    {L"EXPERIMENTAL: THE LEGS FOLLOW YOUR MOVE, NOT YOUR AIM", NULL,
+     {L"EXPERIMENTAL : LES JAMBES SUIVENT LE DEPLACEMENT, PAS LA VISEE", L"EXPERIMENTELL: DIE BEINE FOLGEN DER BEWEGUNG, NICHT DEM ZIEL",
+      L"SPERIMENTALE: LE GAMBE SEGUONO IL MOVIMENTO, NON LA MIRA", L"EXPERIMENTAL: LAS PIERNAS SIGUEN EL MOVIMIENTO, NO LA MIRA"}},
+    {L"THE ORIGINAL'S RUN, THE LEGS FACING THE AIM", NULL,
+     {L"LA COURSE DE L'ORIGINAL, LES JAMBES VERS LA VISEE", L"DER LAUF DES ORIGINALS, DIE BEINE ZUM ZIEL",
+      L"LA CORSA DELL'ORIGINALE, LE GAMBE VERSO LA MIRA", L"LA CARRERA DEL ORIGINAL, LAS PIERNAS HACIA LA MIRA"}},
+    {L"THE VIEW STAYS ON THE PLAYER", NULL,
+     {L"LA VUE RESTE SUR LE JOUEUR", L"DIE ANSICHT BLEIBT BEIM SPIELER", L"LA VISTA RESTA SUL GIOCATORE",
+      L"LA VISTA SE QUEDA EN EL JUGADOR"}},
+    {L"THE PAD SHAKES WHEN YOU ARE HIT, IN EXPLOSIONS AND IN CRASHES", NULL,
+     {L"LA MANETTE VIBRE AUX COUPS RECUS, EXPLOSIONS ET ACCIDENTS", L"DAS GAMEPAD VIBRIERT BEI TREFFERN, EXPLOSIONEN UND UNFÄLLEN",
+      L"IL GAMEPAD VIBRA SE SEI COLPITO, IN ESPLOSIONI E SCONTRI", L"EL MANDO VIBRA AL RECIBIR GOLPES, EN EXPLOSIONES Y CHOQUES"}},
+    {L"BEAMS OF LIGHT AHEAD OF CARS AFTER DARK", NULL,
+     {L"FAISCEAUX DEVANT LES VOITURES A LA NUIT TOMBEE", L"LICHTKEGEL VOR DEN AUTOS, WENN ES DUNKEL IST",
+      L"FASCI DI LUCE DAVANTI ALLE AUTO CON IL BUIO", L"HACES DE LUZ DELANTE DE LOS COCHES AL ANOCHECER"}},
+    {L"LIGHT FROM FIRES, EXPLOSIONS, GUNFIRE AND BRAKE LIGHTS", NULL,
+     {L"LUMIERE DES FEUX, EXPLOSIONS, TIRS ET FEUX STOP", L"LICHT VON FEUER, EXPLOSIONEN, SCHÜSSEN UND BREMSLICHTERN",
+      L"LUCE DI FUOCHI, ESPLOSIONI, SPARI E LUCI DEI FRENI", L"LUZ DE FUEGOS, EXPLOSIONES, DISPAROS Y LUCES DE FRENO"}},
+    {L"THE ORIGINAL'S LOOK: EVERY OPTION BELOW OFF", NULL,
+     {L"L'ASPECT DE L'ORIGINAL : TOUTES LES OPTIONS CI-DESSOUS COUPEES", L"DER LOOK DES ORIGINALS: ALLE OPTIONEN DARUNTER AUS",
+      L"L'ASPETTO DELL'ORIGINALE: TUTTE LE OPZIONI SOTTO SPENTE", L"EL ASPECTO DEL ORIGINAL: TODAS LAS OPCIONES DE ABAJO DESACTIVADAS"}},
+    {L"NEW LIGHTS, SOFT SHADOWS, FULL COLOURS, SMOOTHER EDGES", NULL,
+     {L"NOUVELLES LUMIERES, OMBRES DOUCES, COULEURS PLEINES, BORDS LISSES", L"NEUE LICHTER, WEICHE SCHATTEN, VOLLE FARBEN, GLATTE KANTEN",
+      L"NUOVE LUCI, OMBRE MORBIDE, COLORI PIENI, BORDI PIÙ LISCI", L"LUCES NUEVAS, SOMBRAS SUAVES, COLOR PLENO, BORDES MÁS LISOS"}},
+    {L"YOUR OWN MIX OF THE OPTIONS BELOW", NULL,
+     {L"VOTRE PROPRE CHOIX D'OPTIONS CI-DESSOUS", L"DEINE EIGENE MISCHUNG DER OPTIONEN DARUNTER", L"UN TUO MIX DELLE OPZIONI QUI SOTTO",
+      L"TU PROPIA MEZCLA DE LAS OPCIONES DE ABAJO"}},
+    {L"LIGHTS WORKED OUT FOR EACH PIXEL, NOT AT TILE CORNERS", NULL,
+     {L"LUMIERES CALCULEES PAR PIXEL, PAS AUX COINS DES TUILES", L"LICHT PRO PIXEL BERECHNET, NICHT AN DEN KACHELECKEN",
+      L"LUCI CALCOLATE PER PIXEL, NON AGLI ANGOLI DELLE TESSERE", L"LUCES CALCULADAS POR PÍXEL, NO EN LAS ESQUINAS DE LAS BALDOSAS"}},
+    {L"A GLOW AROUND FIRES, EXPLOSIONS AND LIGHTS", NULL,
+     {L"UN HALO AUTOUR DES FEUX, EXPLOSIONS ET LUMIERES", L"EIN LEUCHTEN UM FEUER, EXPLOSIONEN UND LICHTER",
+      L"UN BAGLIORE INTORNO A FUOCHI, ESPLOSIONI E LUCI", L"UN BRILLO ALREDEDOR DE FUEGOS, EXPLOSIONES Y LUCES"}},
+    {L"FULL COLOURS INSTEAD OF THE ORIGINAL'S 16-BIT TEXTURES", NULL,
+     {L"COULEURS PLEINES AU LIEU DES TEXTURES 16 BITS DE L'ORIGINAL", L"VOLLE FARBEN STATT DER 16-BIT-TEXTUREN DES ORIGINALS",
+      L"COLORI PIENI INVECE DELLE TEXTURE A 16 BIT DELL'ORIGINALE", L"COLOR COMPLETO EN VEZ DE LAS TEXTURAS DE 16 BITS DEL ORIGINAL"}},
+    {L"FULL SCREEN IN THIS RESOLUTION AND REFRESH RATE", NULL,
+     {L"PLEIN ECRAN DANS CETTE RESOLUTION ET CETTE FREQUENCE", L"VOLLBILD IN DIESER AUFLÖSUNG UND BILDWIEDERHOLRATE",
+      L"SCHERMO INTERO IN QUESTA RISOLUZIONE E FREQUENZA", L"PANTALLA COMPLETA CON ESTA RESOLUCIÓN Y FRECUENCIA"}},
+    {L"FULL SCREEN AT THE DESKTOP'S RESOLUTION", NULL,
+     {L"PLEIN ECRAN DANS LA RESOLUTION DU BUREAU", L"VOLLBILD IN DER AUFLÖSUNG DES DESKTOPS", L"SCHERMO INTERO ALLA RISOLUZIONE DEL DESKTOP",
+      L"PANTALLA COMPLETA CON LA RESOLUCIÓN DEL ESCRITORIO"}},
+    {L"CONTINUE", NULL, {L"CONTINUER", L"WEITER", L"CONTINUA", L"CONTINUAR"}},
+    {L"PROGRESS SINCE YOUR LAST SAVE WILL BE LOST", NULL,
+     {L"LA PROGRESSION DEPUIS VOTRE DERNIERE SAUVEGARDE SERA PERDUE", L"DER FORTSCHRITT SEIT DEM LETZTEN SPEICHERN GEHT VERLOREN",
+      L"I PROGRESSI DALL'ULTIMO SALVATAGGIO ANDRANNO PERSI", L"SE PERDERÁ EL PROGRESO DESDE TU ÚLTIMO GUARDADO"}},
+    {L"SAVING", NULL, {L"SAUVEGARDE", L"SPEICHERN", L"SALVATAGGIO", L"GUARDANDO"}},
+    {L"SAVE FAILED", NULL, {L"ECHEC DE LA SAUVEGARDE", L"SPEICHERN FEHLGESCHLAGEN", L"SALVATAGGIO FALLITO", L"ERROR AL GUARDAR"}},
+    {L"RETRY JOBS", NULL, {L"REESSAYER MISSIONS", L"AUFTRÄGE WIEDERHOLEN", L"RIPROVA MISSIONI", L"REINTENTAR MISIONES"}},
+    {L"RETRY A FAILED JOB OR FRENZY FROM THE PAUSE MENU", NULL,
+     {L"REESSAYER UNE MISSION OU FRENESIE RATEE DEPUIS LE MENU PAUSE", L"NACH EINEM FEHLSCHLAG IM PAUSENMENÜ WIEDERHOLEN",
+      L"RIPROVA UNA MISSIONE O FRENESIA FALLITA DAL MENU DI PAUSA", L"REINTENTA UNA MISIÓN O FRENESÍ FALLIDO DESDE EL MENÚ DE PAUSA"}},
+    {L"FRENZY RESPAWN", NULL, {L"RETOUR DES FRENESIES", L"AMOKLÄUFE ZURÜCK", L"RITORNO FRENESIE", L"REGRESO DE FRENESÍES"}},
+    {L"A FAILED KILL FRENZY COMES BACK ON THE MAP", NULL,
+     {L"UNE FRENESIE RATEE REVIENT SUR LA CARTE", L"EIN GESCHEITERTER AMOKLAUF KEHRT AUF DIE KARTE ZURÜCK",
+      L"UNA FRENESIA FALLITA TORNA SULLA MAPPA", L"UN FRENESÍ FALLIDO VUELVE AL MAPA"}},
+    {L"INFINITE LIVES", NULL, {L"VIES INFINIES", L"UNENDLICHE LEBEN", L"VITE INFINITE", L"VIDAS INFINITAS"}},
+    {L"YOU NEVER RUN OUT OF LIVES: NO GAME OVER", NULL,
+     {L"VOUS NE MANQUEZ JAMAIS DE VIES : PAS DE FIN DE PARTIE", L"DIR GEHEN NIE DIE LEBEN AUS: KEIN SPIELENDE",
+      L"NON RESTI MAI SENZA VITE: NIENTE FINE PARTITA", L"NUNCA TE QUEDAS SIN VIDAS: NO HAY FIN DE LA PARTIDA"}},
+    {L"%ls: RETRY", NULL, {L"%ls : REESSAYER", L"%ls: WIEDERHOLEN", L"%ls: RIPROVA", L"%ls: REINTENTAR"}},
+    {L"RETRY", NULL, {L"REESSAYER", L"WIEDERHOLEN", L"RIPROVA", L"REINTENTAR"}},
+    {L"RETRY: %ls", NULL, {L"REESSAYER : %ls", L"WIEDERHOLEN: %ls", L"RIPROVA: %ls", L"REINTENTAR: %ls"}},
+    {L"RETRY JOB", NULL, {L"REESSAYER LA MISSION", L"AUFTRAG WIEDERHOLEN", L"RIPROVA MISSIONE", L"REINTENTAR MISIÓN"}},
+    {L"RETRY FRENZY", NULL, {L"REESSAYER LA FRENESIE", L"AMOKLAUF WIEDERHOLEN", L"RIPROVA FRENESIA", L"REINTENTAR FRENESÍ"}},
+    {L"RESTART: %ls", NULL, {L"RECOMMENCER : %ls", L"NEU STARTEN: %ls", L"RICOMINCIA: %ls", L"REINICIAR: %ls"}},
+    {L"RESTART JOB", NULL, {L"RECOMMENCER LA MISSION", L"AUFTRAG NEU STARTEN", L"RICOMINCIA MISSIONE", L"REINICIAR MISIÓN"}},
+    {L"RESTART FRENZY", NULL, {L"RECOMMENCER LA FRENESIE", L"AMOKLAUF NEU STARTEN", L"RICOMINCIA FRENESIA", L"REINICIAR FRENESÍ"}},
+    {L"BEFORE LAST JOB", NULL, {L"AVANT LA MISSION", L"VOR DEM AUFTRAG", L"PRIMA DELLA MISSIONE", L"ANTES DE LA MISIÓN"}},
+    {L"BEFORE LAST FRENZY", NULL, {L"AVANT LA FRENESIE", L"VOR DEM AMOKLAUF", L"PRIMA DELLA FRENESIA", L"ANTES DEL FRENESÍ"}},
+    {L"JUST NOW", NULL, {L"A L'INSTANT", L"GERADE EBEN", L"ORA", L"AHORA"}},
+    {L"%d MIN AGO", NULL, {L"IL Y A %d MIN", L"VOR %d MIN", L"%d MIN FA", L"HACE %d MIN"}},
+    {L"LOAD GAME", NULL, {L"CHARGER UNE PARTIE", L"SPIEL LADEN", L"CARICA PARTITA", L"CARGAR PARTIDA"}},
+    {L"MONEY", NULL, {L"ARGENT", L"GELD", L"SOLDI", L"DINERO"}},
+    {L"JOBS", NULL, {L"MISSIONS", L"AUFTRÄGE", L"MISSIONI", L"MISIONES"}},
+    {L"DATE", NULL, {L"DATE", L"DATUM", L"DATA", L"FECHA"}},
+    {L"CITY", NULL, {L"VILLE", L"STADT", L"CITTÀ", L"CIUDAD"}},
+    {L"NO SAVE", NULL, {L"AUCUNE SAUVEGARDE", L"KEIN SPIELSTAND", L"NESSUN SALVATAGGIO", L"NINGUNA PARTIDA"}},
+    {L"BEFORE: %ls", NULL, {L"AVANT : %ls", L"VOR: %ls", L"PRIMA DI: %ls", L"ANTES DE: %ls"}},
+    {L"CHURCH", NULL, {L"EGLISE", L"KIRCHE", L"CHIESA", L"IGLESIA"}},
+    {L"DOWNTOWN", NULL, {L"CENTRE-VILLE", L"INNENSTADT", L"CENTRO", L"CENTRO"}},
+    {L"RESIDENTIAL", NULL, {L"RESIDENTIEL", L"WOHNVIERTEL", L"RESIDENZIALE", L"RESIDENCIAL"}},
+    {L"INDUSTRIAL", NULL, {L"INDUSTRIEL", L"INDUSTRIEGEBIET", L"INDUSTRIALE", L"INDUSTRIAL"}},
+    {L"TODAY", NULL, {L"AUJOURD'HUI", L"HEUTE", L"OGGI", L"HOY"}},
+    {L"YESTERDAY", NULL, {L"HIER", L"GESTERN", L"IERI", L"AYER"}},
+    {L"%d DAYS AGO", NULL, {L"IL Y A %d JOURS", L"VOR %d TAGEN", L"%d GIORNI FA", L"HACE %d DÍAS"}},
     {L"FRAME LIMIT", NULL, {L"LIMITE IMAGES", L"BILDRATENLIMIT", L"LIMITE FOTOGRAMMI", L"LÍMITE IMÁGENES"}},
     {L"VSYNC", NULL, {L"VSYNC", L"VSYNC", L"VSYNC", L"VSYNC"}},
     {L"SHOW FPS", NULL, {L"AFFICHER FPS", L"FPS ANZEIGEN", L"MOSTRA FPS", L"MOSTRAR FPS"}},
@@ -133,6 +288,7 @@ const Translation kTranslations[] = {
     {L"SAFE AREA", NULL, {L"MARGE ECRAN", L"BILDRAND", L"MARGINE SCHERMO", L"MARGEN PANTALLA"}},
     {L"DISPLAY MODE", NULL, {L"MODE VIDEO", L"BILDSCHIRMMODUS", L"MODALITÀ VIDEO", L"MODO DE VÍDEO"}},
     {L"DESKTOP", NULL, {L"BUREAU", L"DESKTOP", L"DESKTOP", L"ESCRITORIO"}},
+    {L"BLOOM", NULL, {L"FLOU LUMINEUX", L"BLOOM", L"BLOOM", L"RESPLANDOR"}},
     {L"TRUE COLOUR", NULL, {L"VRAIES COULEURS", L"ECHTFARBEN", L"COLORI REALI", L"COLOR REAL"}},
     {L"PIXEL LIGHTING", NULL, {L"ECLAIRAGE PIXEL", L"PIXEL-LICHT", L"LUCE PER PIXEL", L"LUZ POR PÍXEL"}},
     {L"CAR HEADLIGHTS", NULL, {L"PHARES", L"SCHEINWERFER", L"FARI", L"FAROS"}},
@@ -149,14 +305,36 @@ const Translation kTranslations[] = {
     {L"CLASSIC", NULL, {L"CLASSIQUE", L"KLASSISCH", L"CLASSICO", L"CLÁSICO"}},
     {L"ENHANCED", NULL, {L"AMELIORE", L"VERBESSERT", L"MIGLIORATO", L"MEJORADO"}},
     {L"CUSTOM", NULL, {L"PERSO", L"EIGENE", L"PERSONAL.", L"PERSONAL"}},
+    {L"CHOOSE YOUR STYLE", NULL, {L"CHOISISSEZ VOTRE STYLE", L"WÄHLE DEINEN STIL", L"SCEGLI IL TUO STILE", L"ELIGE TU ESTILO"}},
+    {L"THE GAME AS IT WAS IN 1999", NULL,
+     {L"LE JEU TEL QU'IL ETAIT EN 1999", L"DAS SPIEL WIE IM JAHR 1999", L"IL GIOCO COM'ERA NEL 1999", L"EL JUEGO TAL COMO ERA EN 1999"}},
+    {L"REFINED LIGHTS AND SHADOWS", NULL,
+     {L"LUMIERES ET OMBRES AFFINEES", L"VERFEINERTE LICHTER UND SCHATTEN", L"LUCI E OMBRE RAFFINATE", L"LUCES Y SOMBRAS REFINADAS"}},
+    {L"DAY AND NIGHT CYCLE", NULL, {L"CYCLE JOUR ET NUIT", L"WECHSEL VON TAG UND NACHT", L"CICLO GIORNO E NOTTE", L"CICLO DE DÍA Y NOCHE"}},
+    {L"TWIN STICK CONTROLS", NULL,
+     {L"COMMANDES DOUBLE STICK", L"TWIN STICK STEUERUNG", L"COMANDI DOPPIO STICK", L"CONTROLES DE DOBLE STICK"}},
+    {L"AUTOSAVE AND JOB RETRY", NULL,
+     {L"SAUVEGARDE AUTO ET REESSAI", L"AUTOSPEICHERN UND NEUVERSUCH", L"SALVATAGGIO AUTO E RIPROVA", L"GUARDADO AUTO Y REINTENTOS"}},
+    {L"ALWAYS INCLUDED", NULL, {L"TOUJOURS INCLUS", L"IMMER DABEI", L"SEMPRE INCLUSI", L"SIEMPRE INCLUIDO"}},
+    {L"WIDESCREEN", NULL, {L"ECRAN LARGE", L"BREITBILD", L"SCHERMO LARGO", L"PANTALLA ANCHA"}},
+    {L"HD RESOLUTIONS", NULL, {L"RESOLUTIONS HD", L"HD AUFLÖSUNGEN", L"RISOLUZIONI HD", L"RESOLUCIONES HD"}},
+    {L"SMOOTH 60+ FPS", NULL, {L"60+ FPS FLUIDES", L"FLÜSSIGE 60+ FPS", L"60+ FPS FLUIDI", L"60+ FPS FLUIDOS"}},
+    {L"YOU CAN CHANGE THIS AND MUCH MORE IN OPTIONS", NULL,
+     {L"VOUS POUVEZ CHANGER CELA ET BIEN PLUS DANS LES OPTIONS", L"DIES UND VIELES MEHR KANNST DU IN DEN OPTIONEN ÄNDERN",
+      L"PUOI CAMBIARLO, E MOLTO ALTRO, NELLE OPZIONI", L"PUEDES CAMBIAR ESTO Y MUCHO MÁS EN OPCIONES"}},
     {L"ON", NULL, {L"OUI", L"AN", L"SÌ", L"SÍ"}},
     {L"OFF", NULL, {L"NON", L"AUS", L"NO", L"NO"}},
-    {L"SCREEN", NULL, {L"ECRAN", L"BILDSCHIRM", L"SCHERMO", L"PANTALLA"}},
+    {L"GAME", NULL, {L"JEU", L"SPIEL", L"GIOCO", L"JUEGO"}},
     {L"GRAPHICS", NULL, {L"GRAPHISMES", L"GRAFIK", L"GRAFICA", L"GRÁFICOS"}},
-    {L"VIEW", NULL, {L"VUE", L"ANSICHT", L"VISTA", L"VISTA"}},
+    {L"SOUND", NULL, {L"SON", L"SOUND", L"AUDIO", L"SONIDO"}},
+    {L"STATISTICS", NULL, {L"STATISTIQUES", L"STATISTIKEN", L"STATISTICHE", L"ESTADÍSTICAS"}},
+    {L"MISSION TRANSCRIPT", NULL, {L"MESSAGES DE MISSION", L"AUFTRAGSNACHRICHTEN", L"MESSAGGI DI MISSIONE", L"MENSAJES DE MISIÓN"}},
+    {L"NO MESSAGES YET", NULL, {L"AUCUN MESSAGE", L"NOCH KEINE NACHRICHTEN", L"NESSUN MESSAGGIO", L"AÚN NO HAY MENSAJES"}},
     {L"NEEDS", NULL, {L"NECESSITE", L"BENÖTIGT", L"RICHIEDE", L"REQUIERE"}},
     {L"CONTROLS", NULL, {L"COMMANDES", L"STEUERUNG", L"COMANDI", L"CONTROLES"}},
     {L"AIM CAMERA", NULL, {L"CAMERA DE VISEE", L"ZIELKAMERA", L"CAMERA DI MIRA", L"CÁMARA DE MIRA"}},
+    {L"STRAFE ANIMATION", NULL, {L"ANIMATION DE STRAFE", L"STRAFE-ANIMATION", L"ANIMAZIONE STRAFE", L"ANIMACIÓN DE STRAFE"}},
+    {L"VIBRATION", NULL, {L"VIBRATIONS", L"VIBRATION", L"VIBRAZIONE", L"VIBRACIÓN"}},
     {L"TWIN STICK", NULL, {L"DOUBLE STICK", L"TWIN-STICK", L"DOPPIO STICK", L"DOBLE STICK"}},
     {L"DEFAULT KEYS", NULL, {L"CONTROLES PAR DEFAUT", L"STANDARDSTEUERUNG", L"COMANDI PREDEFINITI", L"CONTROLES PREDETERMINADOS"}},
     {L"KEYBOARD", NULL, {L"CLAVIER", L"TASTATUR", L"TASTIERA", L"TECLADO"}},
@@ -181,7 +359,7 @@ const Translation kTranslations[] = {
 const s32 kNumTranslations = sizeof(kTranslations) / sizeof(kTranslations[0]);
 
 // The texts in the game's font codes, for sCacheLang.
-wchar_t sCache[kNumTranslations][32];
+wchar_t sCache[kNumTranslations][96];
 char sCacheLang;
 
 s32 TranslationLanguage(char code)
@@ -284,12 +462,24 @@ const char* ScreenName(Id id)
             return "port_controls";
         case kAimCamera:
             return "port_aim_camera";
+        case kStrafeAnimation:
+            return "port_strafe_animation";
+        case kVibration:
+            return "port_vibration";
         case kBlood:
             return "blood";
         case kUpdateCheck:
             return "update_check";
         case kShowFps:
             return "port_show_fps";
+        case kAutosave:
+            return "port_autosave";
+        case kRetry:
+            return "port_retry";
+        case kKfRespawn:
+            return "port_kf_respawn";
+        case kInfiniteLives:
+            return "port_infinite_lives";
         default:
             return "car_headlights";
     }
@@ -314,7 +504,11 @@ s32 ScreenDefault(Id id)
     {
         return 12;
     }
-    return id == kLighting || id == kExplodingScores || id == kVsync || id == kClock || id == kAimCamera || id == kBlood || id == kUpdateCheck ? 1 : 0;
+    if (id == kVibration)
+    {
+        return 1;
+    }
+    return id == kLighting || id == kExplodingScores || id == kVsync || id == kClock || id == kAimCamera || id == kStrafeAnimation || id == kBlood || id == kUpdateCheck ? 1 : 0;
 }
 
 s32 Screen(Id id)
@@ -509,8 +703,8 @@ const wchar_t* Translate(const wchar_t* pEnglish)
         for (s32 i = 0; i < kNumTranslations; i++)
         {
             const wchar_t* pText = kTranslations[i].mText[lang];
-            wcsncpy(sCache[i], pText ? pText : kTranslations[i].mEnglish, 31);
-            sCache[i][31] = 0;
+            wcsncpy(sCache[i], pText ? pText : kTranslations[i].mEnglish, 95);
+            sCache[i][95] = 0;
             gText_0x14->RemapExtendedChars(sCache[i]);
         }
     }
@@ -529,9 +723,14 @@ const wchar_t* Translate(const wchar_t* pEnglish)
     return pEnglish;
 }
 
+bool IsGroup(Id id)
+{
+    return id > kCount;
+}
+
 const wchar_t* Name(Id id)
 {
-    return kNames[id];
+    return IsGroup(id) ? kGroupNames[id - kCount - 1] : kNames[id];
 }
 
 f32 HudScale()
@@ -556,7 +755,7 @@ Id Requirement(Id id)
     {
         return kLighting;
     }
-    return id == kAimCamera ? kControls : kCount;
+    return id == kAimCamera || id == kStrafeAnimation ? kControls : kCount;
 }
 
 bool Enabled(Id id)
@@ -601,6 +800,14 @@ bool AimCamera()
 {
     return TwinStick() && Screen(kAimCamera) != 0;
 }
+bool StrafeAnimation()
+{
+    return TwinStick() && Screen(kStrafeAnimation) != 0;
+}
+bool Vibration()
+{
+    return Screen(kVibration) != 0;
+}
 
 bool UpdateCheck()
 {
@@ -610,6 +817,100 @@ bool UpdateCheck()
 bool ShowFps()
 {
     return Screen(kShowFps) != 0;
+}
+
+bool Autosave()
+{
+    return Screen(kAutosave) != 0;
+}
+
+bool Retry()
+{
+    return Screen(kRetry) != 0;
+}
+
+bool KfRespawn()
+{
+    return Screen(kKfRespawn) != 0;
+}
+
+bool InfiniteLives()
+{
+    return Screen(kInfiniteLives) != 0;
+}
+
+void ApplyInfiniteLives(bool demo)
+{
+    gDo_infinite_lives = (InfiniteLives() && !demo) || gRegistry.Debug_Setting_Exists("do_infinite_lives");
+}
+
+const wchar_t* Help(Id id)
+{
+    switch (id)
+    {
+        case kAutosave:
+            return L"AFTER EACH JOB OR FRENZY, AND WITH SAVE AND QUIT";
+        case kRetry:
+            return L"RETRY A FAILED JOB OR FRENZY FROM THE PAUSE MENU";
+        case kExplodingScores:
+            return L"POINTS BURST OUT WHERE THEY ARE SCORED";
+        case k3dSound:
+            return L"SOUNDS PLACED AROUND YOU, WITH THE ECHO OF THE PLACE";
+        case kLighting:
+        {
+            static const wchar_t* const kHelp[] = {L"BROAD DAYLIGHT, WITHOUT LIGHTS", L"THE ORIGINAL'S EVENING LIGHT, STREET LIGHTS ON",
+                                                   L"DAY, DUSK, NIGHT AND DAWN GO BY AS YOU PLAY"};
+            return kHelp[Clamp(Screen(id), 0, kNumLightings - 1)];
+        }
+        case kDayLength:
+            return L"REAL MINUTES FOR A WHOLE DAY AND NIGHT";
+        case kStartTime:
+            return L"THE HOUR A LEVEL STARTS AT";
+        case kFrameLimit:
+            return MaxFps() == 30 ? L"THE ORIGINAL'S PACE: A FRAME FOR EACH GAME STEP"
+                                  : L"FRAMES BETWEEN THE GAME'S 30 STEPS A SECOND, INTERPOLATED";
+        case kSafeArea:
+            return L"THE HUD'S DISTANCE FROM THE SCREEN'S EDGES, IN PERCENT";
+        case kControls:
+            return TwinStick() ? L"ON FOOT: WALK, AND AIM WITH THE MOUSE OR RIGHT STICK"
+                               : L"ON FOOT: THE ORIGINAL'S TANK CONTROLS";
+        case kAimCamera:
+            return Screen(id) ? L"THE VIEW LEADS TOWARD THE AIM. SHIFT, LT OR R3 LOOKS FURTHER"
+                              : L"THE VIEW STAYS ON THE PLAYER";
+        case kStrafeAnimation:
+            return Screen(id) ? L"EXPERIMENTAL: THE LEGS FOLLOW YOUR MOVE, NOT YOUR AIM"
+                              : L"THE ORIGINAL'S RUN, THE LEGS FACING THE AIM";
+        case kVibration:
+            return L"THE PAD SHAKES WHEN YOU ARE HIT, IN EXPLOSIONS AND IN CRASHES";
+        case kHeadlights:
+            return L"BEAMS OF LIGHT AHEAD OF CARS AFTER DARK";
+        case kLightEffects:
+            return L"LIGHT FROM FIRES, EXPLOSIONS, GUNFIRE AND BRAKE LIGHTS";
+#if defined(GTA2_PORT_SDL)
+        case kPreset:
+        {
+            static const wchar_t* const kHelp[] = {L"THE ORIGINAL'S LOOK: EVERY OPTION BELOW OFF",
+                                                   L"NEW LIGHTS, SOFT SHADOWS, FULL COLOURS, SMOOTHER EDGES",
+                                                   L"YOUR OWN MIX OF THE OPTIONS BELOW"};
+            return kHelp[CurrentPreset()];
+        }
+        case kPerPixelLighting:
+            return L"LIGHTS WORKED OUT FOR EACH PIXEL, NOT AT TILE CORNERS";
+        case kBloom:
+            return L"A GLOW AROUND FIRES, EXPLOSIONS AND LIGHTS";
+        case kTrueColour:
+            return L"FULL COLOURS INSTEAD OF THE ORIGINAL'S 16-BIT TEXTURES";
+        case kDisplayMode:
+            return port_FullscreenModeIndex() ? L"FULL SCREEN IN THIS RESOLUTION AND REFRESH RATE"
+                                              : L"FULL SCREEN AT THE DESKTOP'S RESOLUTION";
+#endif
+        case kKfRespawn:
+            return L"A FAILED KILL FRENZY COMES BACK ON THE MAP";
+        case kInfiniteLives:
+            return L"YOU NEVER RUN OUT OF LIVES: NO GAME OVER";
+        default:
+            return NULL;
+    }
 }
 // The menus ask every frame, and an open costs milliseconds on the 3DS's SD card: looked up once per code.
 bool LanguageInstalled(char code)
@@ -711,6 +1012,33 @@ void ApplyRenderOptions()
 #endif
 }
 
+void ApplyStyle(Style style)
+{
+    const bool enhanced = style == kEnhancedStyle;
+#if defined(GTA2_PORT_SDL)
+    for (s32 i = 0; i < kNumPresetValues; i++)
+    {
+        gRegistry.Set_Screen_Setting(ScreenName(kPresetValues[i].mId), PresetTarget(kPresetValues[i], enhanced ? kEnhanced : kClassic));
+    }
+    ApplyRenderOptions();
+    // The original's dusk, or the day-night cycle as its settings are.
+    gRegistry.Set_Screen_Setting(ScreenName(kLighting), enhanced ? 2 : 1);
+    sTwinStick = enhanced;
+    gRegistry.Set_Screen_Setting(ScreenName(kControls), sTwinStick);
+    gRegistry.Set_Screen_Setting(ScreenName(kAutosave), enhanced);
+    gRegistry.Set_Screen_Setting(ScreenName(kRetry), enhanced);
+    gRegistry.Set_Screen_Setting(ScreenName(kKfRespawn), enhanced);
+    gRegistry.Set_Screen_Setting(ScreenName(kInfiniteLives), 0);
+    // Unlimited with vsync: a frame each refresh of the screen.
+    gRegistry.Set_Screen_Setting(ScreenName(kFrameLimit), 0);
+    gRegistry.Set_Screen_Setting(ScreenName(kVsync), 1);
+    port_ApplyVsync();
+    PortFrameLoop::ApplySettings();
+#else
+    (void)enhanced;
+#endif
+}
+
 void Value(Id id, wchar_t* pOut)
 {
     pOut[0] = 0;
@@ -729,8 +1057,8 @@ void Value(Id id, wchar_t* pOut)
         case kLanguage:
             wcscpy(pOut, kLanguages[LanguageIndex()].mName);
             break;
-        case kDisplay:
-            wcscpy(pOut, Translate(gRegistry.Get_Screen_Setting("start_mode", 1) ? L"FULL SCREEN" : L"WINDOW"));
+        case kFullScreen:
+            wcscpy(pOut, Translate(gRegistry.Get_Screen_Setting("start_mode", 1) ? L"ON" : L"OFF"));
             break;
         case kBrightness:
             swprintf(pOut, L"%d", gRegistry.Get_Screen_Setting("gamma", 10));
@@ -891,7 +1219,7 @@ void Change(Id id, s32 delta)
             }
             break;
         }
-        case kDisplay:
+        case kFullScreen:
             // As Alt+Enter: start_mode 1 is full screen, 0 a window.
             if (IsWindowedModeAvailable())
             {
@@ -915,8 +1243,21 @@ void Change(Id id, s32 delta)
         case kLightEffects:
         case kClock:
         case kAimCamera:
+        case kStrafeAnimation:
+        case kVibration:
         case kShowFps:
+        case kAutosave:
+        case kRetry:
+        case kKfRespawn:
             gRegistry.Set_Screen_Setting(ScreenName(id), Screen(id) ? 0 : 1);
+            break;
+        case kInfiniteLives:
+            gRegistry.Set_Screen_Setting(ScreenName(id), Screen(id) ? 0 : 1);
+            // In a game at once; a network game keeps its cleared debug flags, a replay those it was recorded with.
+            if (port_GameRunning() && !IsNetworkGame() && !PortSaves::Replaying())
+            {
+                ApplyInfiniteLives(false);
+            }
             break;
         case kFrameLimit:
         {

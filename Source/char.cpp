@@ -8,6 +8,7 @@
 #include "voice_line.hpp"
 #include "char.hpp"
 #if defined(GTA2_PORT)
+// Port: TWIN STICK walking.
 #include "../port/src/twin_stick.hpp"
 #endif
 #include "CarAI.hpp"
@@ -620,6 +621,8 @@ void Char::Update(Fix16 distance_to_target)
             mVelocityVector.SetFromPolar(mVelocity, mRotation);
         }
 #if defined(GTA2_PORT)
+        // Port: TWIN STICK, the velocity along the walk's own way, so shots fired while backing off keep the original's
+        // reach.
         PortTwinStick::WalkVelocity(this);
 #endif
     }
@@ -3358,6 +3361,7 @@ void Char::UpdateWalking()
     Ang16 side_angle(0);
     Ang16 new_rotation(0);
 #if defined(GTA2_PORT)
+    // Port: TWIN STICK, the step goes along the move and ends facing the aim.
     if (PortTwinStick::Walk(this, &new_rotation))
     {
         bNoNewRotation = 0;

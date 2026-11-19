@@ -5,6 +5,7 @@
 #include "Player.hpp"
 #include <memory.h>
 #if defined(GTA2_PORT)
+// Port: frames drawn between logic steps (FRAME LIMIT above 30 ORIGINAL).
 #include "../port/src/frame_loop.hpp"
 #endif
 
@@ -257,7 +258,8 @@ void ExplodingScore::DrawNumbers()
     Fix16 y_delta;
     Camera* pCamera = &gGame_0x40->mLocalPlayer->mViewCamera;
 #if defined(GTA2_PORT)
-    // The pull towards the screen's centre advances once per logic step, however often the score is drawn.
+    // Port: FRAME LIMIT above 30 draws between logic steps; the pull towards the screen's centre advances once per
+    // step, however often the score is drawn.
     PortFrameLoop::StepLocked<Fix16> keep(mX, mY);
 #endif
     pCamera->ProjectWorldToScreen_4B90E0(mX, mY, mZ, &screen_x, &screen_y);

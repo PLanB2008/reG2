@@ -55,6 +55,12 @@
 #include "TextTable.hpp"
 #include "ped_death_cause.hpp"
 #include "ped_graphic_type.hpp"
+#if defined(GTA2_PORT)
+// Port: RETRY JOBS, the autosave at the area's end and the autosave's spawn.
+#include "../port/src/autosave.hpp"
+#include "../port/src/retry.hpp"
+#include "../port/src/saves.hpp"
+#endif
 // Back to force inline
 #define INLINE_MODE __forceinline
 
@@ -423,6 +429,17 @@ void ScriptThread::Handle_PLAYER_PED(SCR_PLAYER_PED* pCmd)
         Ped* pPed;
         if (gScriptManager->IsLoadedFromSave())
         {
+#if defined(GTA2_PORT)
+            // Port: a church save puts the player one block south, out of the church; an autosave where he was, since a
+            // block south can be off a roof edge or inside a building.
+            const SavedPlayerStats& saved = gGameSave.mPlayerAndWorldStats;
+            const bool exact = PortSaves::ExactSpawn();
+            pPed = gPedManager->SpawnPedAt(exact ? saved.mX : kFpHalf_6F75F0 + saved.mX.GetFloorValue(),
+                                           exact ? saved.mY : kFpOneAndHalf + saved.mY.GetFloorValue(),
+                                           saved.mZ,
+                                           saved.mPlayerPedRemap,
+                                           exact ? saved.mRotation : kAngZero_6F804C);
+#else
             Fix16 saved_y = kFpOneAndHalf + gGameSave.mPlayerAndWorldStats.mY.GetFloorValue();
             Fix16 saved_x = kFpHalf_6F75F0 + gGameSave.mPlayerAndWorldStats.mX.GetFloorValue();
 
@@ -431,6 +448,7 @@ void ScriptThread::Handle_PLAYER_PED(SCR_PLAYER_PED* pCmd)
                                            gGameSave.mPlayerAndWorldStats.mZ,
                                            gGameSave.mPlayerAndWorldStats.mPlayerPedRemap,
                                            kAngZero_6F804C);
+#endif
         }
         else
         {
@@ -5682,6 +5700,15 @@ void ScriptThread::Handle_PUT_CAR_ON_TRAILER()
     SCR_POINTER* pDstCarPointer = static_cast<SCR_POINTER*>(gScriptManager->GetBasePointer(pCmd->mTrailerCarIdx));
 
     Car* pDstCar = pDstCarPointer->mCar;
+#if defined(GTA2_PORT)
+    // Port: loading a save made after a trailer kill frenzy started deletes the frenzy car (DisableBasicKfsFromSave),
+    // and the original crashes here on the NULL car. gtamp.com 11.44 C1.
+    if (pDstCar == NULL || pCarPointer->mCar == NULL)
+    {
+        ScriptThread::Next(gBasePtr);
+        return;
+    }
+#endif
     if (pDstCar->mDespawnStatus != car_despawn_status::despawned_6)
     {
         if (pDstCar->IsTrailerCab())
@@ -5757,6 +5784,10 @@ void ScriptThread::Handle_FINISH_LEVEL()
     {
         bonus_type = 2;
     }
+#if defined(GTA2_PORT)
+    // Port: AUTOSAVE, the city as the player leaves it through the exit arrow, saved before the level ends at once.
+    PortAutosave::AreaFinished();
+#endif
     if (bonus_type)
     {
         gGame_0x40->ExitGame(0, GameExitType::AreaCompleted_4, bonus_type);
@@ -6089,14 +6120,31 @@ void ScriptThread::Handle_WARP_CHAR() // WARP_FROM_CAR_TO_POINT
 
     if (pPed != NULL)
     {
-        pPed->StartPedWalking(pCmd->mPos.x, pCmd->mPos.y, pCmd->mPos.z);
+#if defined(GTA2_PORT)
+        // Port: a ped on foot already has its Char and no car to leave; the original allocates a second Char and
+        // crashes in ClearDriver on the NULL car. gtamp.com 11.40 C2.
+        if (pCar == NULL)
+        {
+            pPed->mGameObject->Teleport(pCmd->mPos.x, pCmd->mPos.y, pCmd->mPos.z);
+        }
+        else
+#endif
+        {
+            pPed->StartPedWalking(pCmd->mPos.x, pCmd->mPos.y, pCmd->mPos.z);
+        }
 
         Ang16 rotation = kDegreesToAng16 * pCmd->mRotation;
         rotation.Normalize();
 
         pPointer->mChar->SetRotation(rotation);
-        pCar->ClearDriver();
-        pCar->mDriver = NULL;
+#if defined(GTA2_PORT)
+        // Port: no car to leave for a ped on foot, see above.
+        if (pCar != NULL)
+#endif
+        {
+            pCar->ClearDriver();
+            pCar->mDriver = NULL;
+        }
         gGame_0x40->mLocalPlayer->DisableInputs();
         gGame_0x40->mLocalPlayer->mGameCamera.UpdateFollowPedCamera(pPointer->mChar);
 
@@ -6632,6 +6680,10 @@ void ScriptThread::Handle_START_BASIC_KF() // START_BASIC_KF_TEMPLATE
     }
     else
     {
+#if defined(GTA2_PORT)
+        // Port: RETRY JOBS, the checkpoint written as a kill frenzy starts, before anything marks it started.
+        PortRetry::BeforeStart(PortSaves::kBeforeFrenzy);
+#endif
         gScriptManager->SetKillFrenzyActive(true);
         ScriptThread::DisableThread(pCmd->mTriggername);
         gHud_2B00->mMessage.ShowMessage(gText_0x14->Find("kfstart"), hud_message_priority::important_3); // KILL FRENZY!
@@ -6748,6 +6800,15 @@ void ScriptThread::Handle_DO_BASIC_KF()
                 gHud_2B00->mMessage.ShowMessage(gText_0x14->Find("kffail"), hud_message_priority::important_3);
                 ++*gScriptManager->mSecretsFailed;
                 gRoot_sound.PlayVoice(voice_line::frenzyfail_18);
+#if defined(GTA2_PORT)
+                // Port: FRENZY RESPAWN, a failed frenzy comes back on the map, as a failed job's phone stays. Its thread
+                // ends as at its RETURN, before Downtown's tank frenzies lock their tank.
+                if (PortRetry::FrenzyFailed(gBasePtr->mCmdThis))
+                {
+                    ScriptThread::EndCmd();
+                    return;
+                }
+#endif
             }
             ScriptThread::Next(gBasePtr);
         }
@@ -7664,8 +7725,17 @@ ScriptThread* ScriptThread::SpawnThread(u16 start_cmd)
 MATCH_FUNC(0x5119a0)
 void ScriptThread::launch_mission(SCR_CMD_HEADER* pCmd, const char_type* pMissionName)
 {
+#if defined(GTA2_PORT)
+    // Port: RETRY JOBS, the checkpoint written as a job is launched, before anything marks it started.
+    PortRetry::BeforeStart(PortSaves::kBeforeJob, pCmd);
+#endif
     u16 cmd_next;
+#if defined(GTA2_PORT)
+    // Port: RETRY JOBS, the checkpoint gets the job's title and the gang that gave it, from its script.
+    PortRetry::JobLoaded(pCmd, gScriptManager->LoadMissionScript(pMissionName, &cmd_next));
+#else
     gScriptManager->LoadMissionScript(pMissionName, &cmd_next);
+#endif
     strcpy(mStr, pMissionName);
     ScriptThread::Gosub(pCmd, cmd_next);
 }

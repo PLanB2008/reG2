@@ -1,5 +1,7 @@
 #include "Player.hpp"
 #if defined(GTA2_PORT)
+// Port: the autosave's restore and TWIN STICK.
+#include "../port/src/saves.hpp"
 #include "../port/src/twin_stick.hpp"
 #endif
 #include "car_shop_type.hpp"
@@ -967,16 +969,21 @@ void Player::Hud_Controls(u16 action)
                     this->mDbgZoomOut = true;
                 }
                 break;
+#if !defined(GTA2_PORT)
+            // Port: the pause menu's RADIO line changes the station, with its name shown.
             case DIK_F1:
                 gRoot_sound.CycleRadioStation(0);
                 break;
             case DIK_F2:
                 gRoot_sound.CycleRadioStation(1);
                 break;
+#endif
 
             // ordered above
 
             // ordered below
+#if !defined(GTA2_PORT)
+            // Port: F3 and F4 changed the saved music volume unseen; the SOUND options set it.
             case DIK_F3:
                 if (gRoot_sound.GetCDVol() - 10 > 0)
                 {
@@ -1001,21 +1008,28 @@ void Player::Hud_Controls(u16 action)
                 gRoot_sound.SetCDVol(vol);
                 gRegistry.Set_Sound_Setting("CDVol", gRoot_sound.GetCDVol());
                 break;
+#endif
+#if !defined(GTA2_PORT)
+            // Port: F6 paused the game without a menu, a duplicate of Escape's pause menu.
             case DIK_F6:
                 gGame_0x40->TogglePause();
                 break;
+#endif
             case DIK_F7:
                 if (this->IsUser())
                 {
                     gHud_2B00->mBrief.ShowBrief();
                 }
                 break;
+#if !defined(GTA2_PORT)
+            // Port: F8 opened the GTA2 Manager, which closes the game; the port has its own options.
             case DIK_F8:
                 if (this->IsUser())
                 {
                     Start_GTA2Manager();
                 }
                 break;
+#endif
             case DIK_F9:
                 if (this->IsUser())
                 {
@@ -1616,6 +1630,7 @@ void Player::DoPedControlInputs(Ped* pPed)
         }
     }
 #if defined(GTA2_PORT)
+    // Port: TWIN STICK controls on foot, after the original's.
     PortTwinStick::PedControls(this, pPed);
 #endif
 }
@@ -1699,6 +1714,14 @@ void Player::RespawnPlayer()
     }
 }
 
+#if defined(GTA2_PORT)
+// Port: with do_infinite_lives (INFINITE LIVES) a main stage's last life is kept too: dying on it is no GAME OVER.
+static bool LastLifeKept()
+{
+    return gDo_infinite_lives && gGameSession.IsBonusStage() != 1;
+}
+#endif
+
 MATCH_FUNC(0x567130)
 void Player::Wasted()
 {
@@ -1737,7 +1760,11 @@ void Player::Wasted()
     {
         if (IsUser())
         {
+#if defined(GTA2_PORT)
+            if (mLives.get_value() > 1 || bStartNetworkGame || LastLifeKept())
+#else
             if (mLives.get_value() > 1 || bStartNetworkGame)
+#endif
             {
                 gHud_2B00->mMessage.ShowMessage( //  It's really ugly, it's probably inlined
                     gText_0x14->Find(GetDeathText()),
@@ -1757,7 +1784,11 @@ void Player::Wasted()
         }
         mWastedOrBusted = true;
         mDeathCountdown = 70;
+#if defined(GTA2_PORT)
+        if (mLives.get_value() > 1 || LastLifeKept())
+#else
         if (mLives.get_value() > 1)
+#endif
         {
             mAuxPed = gPedManager->ClonePed(mPlayerPed);
             mAuxPed->mSelectedWeapon = NULL;
@@ -2803,6 +2834,10 @@ void Player::UpdateGameFromSave(SavedPlayerStats* pSave)
 
     Player::RestorePowerUpsFromSave(pSave);
     Player::RestoreCarsFromSave();
+#if defined(GTA2_PORT)
+    // Port: an autosave or a retry checkpoint puts the player back in the car he drove.
+    PortSaves::AfterRestore(this);
+#endif
 }
 
 MATCH_FUNC(0x56A490)

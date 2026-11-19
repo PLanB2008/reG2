@@ -70,6 +70,12 @@
 #include "sprite.hpp"
 #include "TextTable.hpp"
 #include "winmain.hpp"
+#if defined(GTA2_PORT)
+// Port: save checks (PortSaves::IsValid).
+#include "../port/src/saves.hpp"
+// Port: VIBRATION for explosions (ShakeCamerasAtPos).
+#include "../port/src/rumble.hpp"
+#endif
 
 // A service only the server runs draws its own random numbers in a network game (port/src/rand/owner.hpp)
 #if defined(GTA2_PORT)
@@ -176,7 +182,12 @@ void Game::LoadGameFiles()
     char_type* script_name = gGameSession.GetScriptName();
     gScriptManager->Load(script_name);
 
+#if defined(GTA2_PORT)
+    // Port: a save that fails PortSaves::IsValid (cut short, or not of this script) is skipped as missing.
+    if (strlen(gGameSession.GetSaveName()) != 0 && PortSaves::IsValid(gGameSession.GetSaveName()))
+#else
     if (strlen(gGameSession.GetSaveName()) != 0)
+#endif
     {
         char_type* debug_str = gGameSession.GetSaveName();
         gScriptManager->LoadSave(debug_str);
@@ -705,6 +716,10 @@ Player* Game::GetFirstPlayerWithoutPed()
 MATCH_FUNC(0x4B9790)
 void Game::ShakeCamerasAtPos(Fix16 amount, Fix16 x, Fix16 y)
 {
+#if defined(GTA2_PORT)
+    // Port: VIBRATION, the explosions that shake the cameras shake the pad, more the nearer they are to the player.
+    PortRumble::Explosion(x, y);
+#endif
     Camera* pCam = IteratePlayerCamera();
     while (pCam)
     {
@@ -1304,6 +1319,11 @@ Game::~Game()
     {
         GTA2_DELETE_AND_NULL(mPlayers[i]);
     }
+#if defined(GTA2_PORT)
+    // Port: unset as before a session's first game. It pointed into a player deleted here, and AIM CAMERA reads it in
+    // the next game's first logic step, before Game::Draw sets it again.
+    gViewCamera = NULL;
+#endif
 
     GTA2_DELETE_AND_NULL(gpRng);
     GTA2_DELETE_AND_NULL(gText_0x14);

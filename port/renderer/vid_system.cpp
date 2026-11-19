@@ -360,6 +360,28 @@ void VidSystem::Flip(bool scanSurface)
     }
 }
 
+void VidSystem::ShowImage(const u8* pRgba, s32 width, s32 height)
+{
+    if (!mContext)
+    {
+        return;
+    }
+    mFrame++;
+    int w = 0, h = 0;
+    mContext->GetDrawableSize(&w, &h);
+    mRenderer.PresentImage(pRgba, width, height, w, h);
+    const u32 captureFrame = mCaptureFlips ? mFrame : mTestFrame;
+    if (captureFrame != mCapturedFrame && mCapture.WantFrame(captureFrame))
+    {
+        mCapturedFrame = captureFrame;
+        std::vector<u8> rgba;
+        mRenderer.ReadPresented(rgba, w, h);
+        FrameCapture::WriteBmp(mCapture.PathFor(captureFrame), &rgba[0], w, h, false);
+    }
+    mContext->SwapBuffers();
+    mRenderer.ThrottleFrames();
+}
+
 void VidSystem::Represent()
 {
     if (!mContext)

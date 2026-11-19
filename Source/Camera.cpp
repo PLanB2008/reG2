@@ -10,6 +10,7 @@
 #include "Police.hpp"
 #include "sprite.hpp"
 #if defined(GTA2_PORT)
+// Port: TWIN STICK's AIM CAMERA (UpdateFollowPedCamera).
 #include "../port/src/twin_stick.hpp"
 #endif
 
@@ -128,6 +129,7 @@ bool Camera::IsSpriteInView(Sprite* pSprite, s32 wide_view)
     Fix16 half_width;
     half_width = mCurPos.mZ - pSprite->mZpos + kFpEight_676840;
 #if defined(GTA2_PORT)
+    // Port: CAMERA ZOOM setting, applied as in UpdateBoundaries so that this test matches the drawn view.
     half_width = half_width / (PortCameraZoom(mCurPos.mZoom) * kTwo_676820);
 #else
     half_width = half_width / (mCurPos.mZoom * kTwo_676820);
@@ -378,8 +380,8 @@ MATCH_FUNC(0x435B90)
 void Camera::UpdateBoundaries()
 {
 #if defined(GTA2_PORT)
-    // The original's view is 4:3 and as wide as the screen. On wider screens it keeps the 4:3 view's
-    // height and shows more on the sides: the scale is that of a 4:3 screen of the same height.
+    // Port: widescreen. The original's 4:3 view spans the screen's width; a wider screen keeps the 4:3 view's height
+    // and shows more on the sides, at the scale of a 4:3 screen of that height. CAMERA ZOOM scales it.
     const s32 width_4_3 = mScreenPxHeight * 4 / 3 < mScreenPxWidth ? mScreenPxHeight * 4 / 3 : mScreenPxWidth;
     const Fix16 zoom = PortCameraZoom(mCurPos.mZoom);
     mScreenScale.x = Fix16(width_4_3) * zoom;
@@ -416,6 +418,7 @@ void Camera::UpdateBoundaries()
     }
 
 #if defined(GTA2_PORT)
+    // Port: widescreen, the view's half height from the 4:3 width above, not three quarters of the screen's width.
     v = v_4_3 * Fix16(mScreenPxHeight) / Fix16(width_4_3);
 #else
     v *= kFpThreeQuarters_6768E0;
@@ -605,6 +608,8 @@ void Camera::SetScreenSize(u32 width, u32 height)
     mScreenScale.y = Fix16(-1);
 
 #if defined(GTA2_PORT)
+    // Port: widescreen HUD, the 640x480 layout scaled to fit the screen's height (with HUD SCALE and SAFE AREA):
+    // scaled to the width, it goes below the bottom of a 16:9 screen.
     mUiScale = PortHudUiScale(width, height);
 #else
     mUiScale = Fix16(width) / 640;
@@ -677,6 +682,7 @@ void Camera::UpdateFollowPedCamera(Ped* pPed)
         }
         Camera::ApplyPanOffset(pPed, xpos, ypos, zposToUse);
 #if defined(GTA2_PORT)
+        // Port: TWIN STICK's AIM CAMERA moves the camera's target toward the aim on foot.
         PortTwinStick::AimCamera(this, pPed, xpos, ypos);
 #endif
         SetPendingTarget(xpos, ypos, zposToUse, zoom);

@@ -7285,6 +7285,11 @@ void sound_obj::InitMusicAndCopRadio()
             mRadioEmitters[i].mPosMs = 0;
         }
         mbWasInRadioCar = 0;
+#if defined(GTA2_PORT)
+        // Port: a game that ends in a car leaves this at 1, and the next game's first tick writes through
+        // ProcessType3_CopRadioAndMusic's sLastPlayerCar into the freed car pool (ASan heap-use-after-free).
+        mbInRadioCar = 0;
+#endif
         mActiveEmitterIdx[1] = 1;
         mActiveEmitterIdx[0] = 1;
         mRadioStationChangeMode = 0;

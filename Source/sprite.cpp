@@ -29,6 +29,7 @@
 #include "winmain.hpp" // for gLighting
 #include "block_face.hpp"
 #if defined(GTA2_PORT)
+// Port: SHADOWS SOFT, the day and night cycle and TWIN STICK's strafe legs.
 #include "../port/src/shadows.hpp"
 #include "../port/src/day_night.hpp"
 #include "../port/src/twin_stick.hpp"
@@ -1161,6 +1162,7 @@ void Sprite::Draw()
         }
         car_flags = pCar->mDamagedAreas.GetRaw();
 #if defined(GTA2_PORT)
+        // Port: the DAY-NIGHT CYCLE, by day cars keep their lights in their sprite, as at NOON.
         if (PortDayNight::Lit())
 #else
         if (gLighting)
@@ -1216,6 +1218,7 @@ void Sprite::Draw()
 
     if (Sprite::CastsShadow()
 #if defined(GTA2_PORT)
+        // Port: SHADOWS SOFT casts the shadow on the ground under the sprite instead of offsetting it.
         && !PortShadows::Draw(this, pTexture)
 #endif
     )
@@ -1229,7 +1232,8 @@ void Sprite::Draw()
         memcpy(&pShadowVerts[3], &gSpriteVerts[3], sizeof(Vert));
 
 #if defined(GTA2_PORT)
-        // A screen offset in the original: the zoom setting scales it with the view.
+        // Port: the original's offset is 5 layout pixels; here at the screen's scale without HUD SCALE, and CAMERA
+        // ZOOM scales it with the view.
         f32 shadow_offset = (PortCameraZoom(PortScreenUiScale()) * 5).ToFloat();
 #else
         f32 shadow_offset = (gViewCamera->mUiScale * 5).ToFloat();
@@ -1250,17 +1254,20 @@ void Sprite::Draw()
         pShadowVerts[3].y += shadow_offset;
 
 #if defined(GTA2_PORT)
+        // Port: TWIN STICK, the shadow of the player's walk with the legs toward the move.
         if (!PortTwinStick::DrawLegs(this, pTexture, 8576, pShadowVerts, 4))
 #endif
         pgbh_DrawQuad(8576, pTexture, pShadowVerts, 255);
     }
 
 #if defined(GTA2_PORT)
+    // Port: TWIN STICK strafe legs, the player's walk drawn with the legs toward the move and the torso at the aim.
     if (!PortTwinStick::DrawLegs(this, pTexture, Sprite::ComputeDrawFlags(), gSpriteVerts, 8))
 #endif
     pgbh_DrawQuad(Sprite::ComputeDrawFlags(), pTexture, gSpriteVerts, 255);
 
 #if defined(GTA2_PORT)
+    // Port: the DAY-NIGHT CYCLE, no car lights by day.
     if (pCar && PortDayNight::Lit())
 #else
     if (pCar && gLighting)

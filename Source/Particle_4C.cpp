@@ -19,6 +19,8 @@ EXTERN_GLOBAL(Fix16, kFP16Zero_6FD49C);
 #include "Object_3C.hpp"
 #include "CarPhysics.hpp"
 #if defined(GTA2_PORT)
+// Port: TWIN STICK shot leads.
+#include "../port/src/twin_stick.hpp"
 #include "../port/src/rand/particle.hpp" // particles on a stream of their own in a network game (port/docs/netcode.md)
 #endif
 
@@ -1055,7 +1057,12 @@ bool Particle_4C::UpdateSkidOrScrapeSpark_state_40_41()
             offset.y = kFpPoint4;
         }
         offset.RotateByAngle(mpSprite->mRotation);
+#if defined(GTA2_PORT)
+        // Port: TWIN STICK, only the walk toward the aim leads (ShotLead): the flash stays at the gun.
+        offset = offset.Add(PortTwinStick::ShotLead(pChar));
+#else
         offset = offset.Add(pChar->mVelocityVector);
+#endif
 
         mpOwnSprite->set_id_lazy(gObjectDefinitions->mDef112BaseSpriteIdx + mSubState + 197);
         mpOwnSprite->mFlags = 0xA2;
@@ -1445,6 +1452,14 @@ bool Particle_4C::UpdateCollisionBurst_state_31_34()
             {
                 return true;
             }
+#if defined(GTA2_PORT)
+            // Port: a ped who gets into a car while firing the flamethrower leaves this Char behind, and the original
+            // crashes reading his NULL mGameObject below. gtamp.com report X1, not fixed in 11.44.
+            if (pChar->mpPed->mGameObject != pChar)
+            {
+                return true;
+            }
+#endif
             if (!pChar->mpPed->mBf21C.bAttacking)
             {
                 mBf4.bDriverAttacking = false;

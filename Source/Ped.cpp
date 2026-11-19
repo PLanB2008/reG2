@@ -1,6 +1,9 @@
 #include "Ped.hpp"
 #if defined(GTA2_PORT)
+// Port: TWIN STICK's free aim (ComputeAimAngle) and the shooters' lead (UpdateFacingAngle).
 #include "../port/src/twin_stick.hpp"
+// Port: VIBRATION for the player's hits (TakeDamage).
+#include "../port/src/rumble.hpp"
 #endif
 #include "ped_move_target_type.hpp"
 #include "ped_attack_target_type.hpp"
@@ -1542,6 +1545,7 @@ Ang16 Ped::ComputeAimAngle()
     if (PedTypeIs(ped_type::player_2))
     {
 #if defined(GTA2_PORT)
+        // Port: TWIN STICK, the machine guns fire where the player faces, without the original's lock on a nearby ped.
         if (PortTwinStick::FreeAim(this))
         {
             mTargetFacingAngle = mFacingAngle;
@@ -1670,6 +1674,10 @@ void Ped::TakeDamage(s16 damage)
 {
     if (mInvulnerability <= 0)
     {
+#if defined(GTA2_PORT)
+        // Port: VIBRATION, the pad shakes as the player loses health on foot.
+        PortRumble::Hit(this, damage);
+#endif
         mHealth -= damage;
         if (mHealth <= 0)
         {
@@ -3676,6 +3684,11 @@ void Ped::UpdateFacingAngle()
             if (this->mPedState2 == ped_state_2::attacking_standing_11)
             {
                 this->mTargetFacingAngle = Fix16::atan2_fixed(this->mMoveTargetY - this->mCam.y, this->mMoveTargetX - this->mCam.x);
+#if defined(GTA2_PORT)
+                // Port: TWIN STICK lets the player strafe sideways while he shoots, and bullets aimed where he is then
+                // miss him nearly always; the shooters lead him part of the way (port/src/twin_stick.cpp).
+                PortTwinStick::LeadAim(this);
+#endif
             }
             break;
         }

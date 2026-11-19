@@ -167,7 +167,12 @@ void Debug::Init()
     bDo_release_replay = gRegistry.Debug_Setting_Exists("do_release_replay");
     bDo_blood = gRegistry.Debug_Setting_Exists("do_blood");
     bDo_3d_sound = gRegistry.Sound_Setting_Exists("do_3d_sound");
+#if defined(GTA2_PORT)
+    // Port: the French-only edition's mode is off (start code from the manual, no police bonuses), whatever the data.
+    bIsFrench = false;
+#else
     bIsFrench = HaveOnlyFrenchGxt();
+#endif
     bShow_player_names = gRegistry.Get_Network_Setting("show_player_names", 1) != 0;
 }
 

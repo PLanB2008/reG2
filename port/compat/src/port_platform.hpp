@@ -19,6 +19,8 @@ void port_LogExit(int code);
 void port_InstallCrashHandler();
 
 SDL_Window* port_GetSDLWindow(HWND h);
+// Alt+Enter pressed or repeated: it switches full screen, and is no key press for the game or the menus.
+bool port_IsAltEnter(const SDL_Event& e);
 void port_SetFullscreen(HWND h, bool fullscreen);
 SDL_Window* port_MainSDLWindow();
 
@@ -61,6 +63,12 @@ enum
 };
 void port_OpenGamepad();
 bool port_PadMode(); // the gamepad gave the last input
+SDL_Gamepad* port_ActivePad(); // the last pad to give an input, NULL without one
+// Shakes the active pad, low and high its two motors from 0 to 1, unless a stronger shake plays; port_UpdatePad stops
+// it once port_RumbleAllowed is false (rumble.cpp: a pause, a menu, VIBRATION off).
+void port_Rumble(float low, float high, int ms);
+void port_StopRumble();
+bool port_RumbleAllowed();
 bool port_MouseMode(); // the mouse gave the last input
 int port_GetPadBinding(int control);
 void port_SetPadBinding(int control, int code);
@@ -101,6 +109,15 @@ void port_MousePos(float* pX, float* pY);
 
 // The size of the frame the game draws (video_port.cpp).
 void port_FrameSize(int* pW, int* pH);
+float port_PixelScale();
+// A movie frame (bink.cpp): RGBA rows presented alone, letterboxed; it counts as a test frame.
+void port_ShowMovieFrame(const unsigned char* pRgba, int width, int height);
+
+// Movie sound (miles.cpp): 16-bit PCM queued as it is decoded, mixed with the game's at the master volume.
+// Open is false without a sound driver.
+bool port_MovieSoundOpen(int rate, int channels);
+void port_MovieSoundQueue(const void* pPcm, int bytes);
+void port_MovieSoundClose();
 
 // Keyboard events for the game (dinput.cpp).
 DWORD port_DikFromScancode(SDL_Scancode sc);
@@ -110,7 +127,9 @@ void port_PushKey(DWORD dik, bool down);
 bool port_GameRunning();
 bool port_QuitMessageShown(); // or the pause menu
 bool port_FrontendActive();
+bool port_FrontendTyping(); // a player name or password: the letters type it
 bool port_MenuUsesMouse(); // the frontend or the pause menu
+bool port_DebugKeys(); // the game's do_debug_keys debug setting
 // TWIN STICK and the local player with the controls on: 1 on foot, 2 in a vehicle, else 0.
 int port_TwinStick();
 // TWIN STICK aims: on foot, or in a vehicle with a roof gun.

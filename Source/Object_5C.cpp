@@ -3649,6 +3649,11 @@ Object* Object_5C::CreateExplosion(Fix16 x, Fix16 y, Fix16 z, Ang16 rot, s32 kin
 MATCH_FUNC(0x52A500)
 void Object_5C::SaveObjects(SavedObjectData* pData)
 {
+#if defined(GTA2_PORT)
+    // Port: saves. The entries after the last pickup are cleared, else they keep those of an earlier save and a
+    // load brings them back.
+    memset(pData, 0, offsetof(SavedObjectData, mObj5CBUnCollectedTokens));
+#endif
     u16 saved_count = 0;
     Object* pObj = gObject_2C_Pool->mPool;
     for (u16 i = 0; i < 3825; pObj++, i++)

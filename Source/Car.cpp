@@ -1,6 +1,9 @@
 #include "Car.hpp"
 #if defined(GTA2_PORT)
+// Port: TWIN STICK aims the roof gun (HandleUserInput).
 #include "../port/src/twin_stick.hpp"
+// Port: VIBRATION for the player's crashes (ApplyImpactDamage).
+#include "../port/src/rumble.hpp"
 #endif
 #include "car_shop_event.hpp"
 #include "car_thread_trigger.hpp"
@@ -268,6 +271,7 @@ char_type CarThreadTriggers::AddThreadTrigger(const s32& type, const s32& param,
             pIter->mType = type;
             pIter->mAction = param;
 #if defined(GTA2_PORT_64BIT)
+            // Port: 64-bit, the script thread pointer at full width (port/docs/64bit.md).
             pIter->mpScriptCmd = reinterpret_cast<intptr_t>(pScriptThread);
 #else
             pIter->mpScriptCmd = reinterpret_cast<s32>(pScriptThread);
@@ -1885,6 +1889,10 @@ bool Car::IsEnterable() const
 MATCH_FUNC(0x43D5D0)
 EXPORT s16 Car::ApplyImpactDamage(Fix16 damage)
 {
+#if defined(GTA2_PORT)
+    // Port: VIBRATION, the pad shakes as the player's car crashes, as hard as the collision's damage.
+    PortRumble::Crash(this, damage);
+#endif
     if ((mCarInfoIdx == car_model_enum::TAXI || mCarInfoIdx == car_model_enum::STYPECAB) && damage > kFpTwo_6777D4)
     {
         // Big taxi crash, time for the passengers to do a runner
@@ -4519,7 +4527,18 @@ void Car::FireCarBomb(char_type instant_bomb)
 {
     if (instant_bomb)
     {
+#if defined(GTA2_PORT)
+        // Port: a bomb fired from a truck cab goes off in its trailer, which has no driver, and the original crashes
+        // on the NULL mDriver. The bomber is the cab's driver. gtamp.com report X2, not fixed in 11.44.
+        Ped* pBomber = mDriver;
+        if (pBomber == NULL && IsTrailerCar())
+        {
+            pBomber = mpTrailer->mTruckCab->mDriver;
+        }
+        s32 ped_id = pBomber ? gPedRefTable_7F8->GetPedId(pBomber->get_ped_ref_idx()) : 0;
+#else
         s32 ped_id = gPedRefTable_7F8->GetPedId(mDriver->get_ped_ref_idx());
+#endif
         if (ped_id)
         {
             this->mExploderPedId = ped_id;
@@ -4962,6 +4981,7 @@ void Car::HandleUserInput(char_type forward_gas_on,
         bRotated = Car::HandleRoofTurretRotation(left_on);
     }
 #if defined(GTA2_PORT)
+    // Port: TWIN STICK turns the fire truck's, tank's or gun jeep's roof gun toward the aim while SPECIAL does not.
     else
     {
         PortTwinStick::AimTurret(this);

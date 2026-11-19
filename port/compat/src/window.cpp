@@ -68,6 +68,7 @@ void Translate(const SDL_Event& e)
     switch (e.type)
     {
         case SDL_EVENT_QUIT:
+        case SDL_EVENT_TERMINATING:
         case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
             Post(h, WM_CLOSE, 0, 0);
             break;
@@ -100,7 +101,7 @@ void Translate(const SDL_Event& e)
             break;
         case SDL_EVENT_KEY_DOWN:
             // Alt+Enter: the game's full screen toggle, a WM_SYSKEYDOWN with the context bit.
-            if (e.key.key == SDLK_RETURN && (e.key.mod & SDL_KMOD_ALT) && !e.key.repeat)
+            if (port_IsAltEnter(e) && !e.key.repeat)
             {
                 Post(h, WM_SYSKEYDOWN, VK_RETURN, 1 << 29);
             }
@@ -110,6 +111,11 @@ void Translate(const SDL_Event& e)
     }
 }
 } // namespace
+
+bool port_IsAltEnter(const SDL_Event& e)
+{
+    return e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_RETURN && (e.key.mod & SDL_KMOD_ALT);
+}
 
 SDL_Window* port_GetSDLWindow(HWND h)
 {

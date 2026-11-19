@@ -1,11 +1,16 @@
 #include "options_menu.hpp"
 #include "Function.hpp"
+#include "GameSession.hpp"
 #include "Draw.hpp"
 #include "Globals.hpp"
+#include "PlyDat.hpp"
 #include "SoundObject.hpp"
+#include "TextTable.hpp"
 #include "menu.hpp"
 #include "reg2_version.h"
+#include "retry.hpp"
 #include "settings.hpp"
+#include "welcome.hpp"
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
@@ -29,6 +34,29 @@ namespace
 {
 const u16 kMenuPage = 12;
 bool sShown;
+// The page and option the list of saves goes back to, and the save chosen in it.
+u16 sSavesReturnPage;
+u16 sSavesReturnOption;
+Frontend* sListing;
+char_type sResumeFile[64];
+// The frontend's levels, for the pause menu's LOAD GAME, when the frontend is gone.
+MainBlockStrings sLevels[PortSaves::kNumCities][4];
+u8 sNumCities;
+
+// The delete player dialog's type for a new game that replaces an autosave, past the original's 1, and its
+// choices, CANCEL first.
+const u8 kReplaceDialog = 2;
+const u16 kContinueY = 210;
+const u16 kCancelY = 230;
+// YOUR <CITY> AUTOSAVE WILL BE REPLACED on the screen's right half under the logo, then CONTINUE and CANCEL.
+const s32 kQuestionLeft = 300;
+const s32 kQuestionTop = 160;
+const s32 kQuestionWidth = 320;
+const s32 kChoiceStep = 20;
+// Before the original pages took the input, put back if the new game is not confirmed; and the boot's screen.
+GameSession sSessionBefore;
+char_type sScreenBefore;
+char_type sBootScreen;
 
 s32 Wrap(s32 i, s32 n)
 {
@@ -146,6 +174,14 @@ bool Inside(f32 x, f32 y, f32 left, f32 top, f32 right, f32 bottom)
     return x >= left && x < right && y >= top && y < bottom;
 }
 
+// Whether the pointer is on a line of text drawn at left, top in font: 20 high, the pages' line step, centred on the
+// font's line, where its letters sit, so the gap between two lines is split halfway.
+bool OnText(f32 x, f32 y, f32 left, f32 top, f32 width, u16 font)
+{
+    const f32 middle = top + GetLineSpacingFromFontType(font) / 2.0f;
+    return Inside(x, y, left - 4.0f, middle - 10.0f, left + width + 4.0f, middle + 10.0f);
+}
+
 // The original pages with the mouse, as their keys: pointing at an option selects it, a click enters
 // it, the right button goes back, the wheel and the arrows beside an option change it.
 void OriginalPageMouse(Frontend* pFrontend)
@@ -196,7 +232,7 @@ void OriginalPageMouse(Frontend* pFrontend)
         const u16 font = i == pPage->mCurrentOptionIdx ? pFrontend->mSelectedFont
                                                         : (item.mFontType != 0xFFFF ? item.mFontType : pFrontend->mNormalFont);
         const f32 width = static_cast<f32>(Frontend::GetMaxTextWidth(pText, font));
-        if (Inside(x, y, item.mXPos - 4.0f, item.mYPos - 2.0f, item.mXPos + width + 4.0f, item.mYPos + 18.0f))
+        if (OnText(x, y, item.mXPos, item.mYPos, width, font))
         {
             option = i;
         }
@@ -220,6 +256,19 @@ void OriginalPageMouse(Frontend* pFrontend)
     }
 }
 #endif
+// gFrontend is not set yet while the frontend sets its pages up.
+bool IsListingLevel(const PortSaves::Header& header)
+{
+    return IsLevel(sListing, header);
+}
+
+void Boot(Frontend* pFrontend, const char_type* pFileName)
+{
+    snprintf(sResumeFile, sizeof(sResumeFile), "%s", pFileName);
+    pFrontend->LoadMapFilenamesFromSvg();
+    pFrontend->mMenuScreen = RedBar_16;
+    pFrontend->mState = FrontendState::Booting_Map_2;
+}
 } // namespace
 
 void Setup(Frontend* pFrontend)
@@ -247,6 +296,23 @@ void Setup(Frontend* pFrontend)
 
     // The start menu's "Options" opened GTA2 Manager.
     pFrontend->mMenuPagesArray[MENUPAGE_START_MENU].mOptionsArray[1].mMenuPageTarget = kMenuPage;
+
+    // RESUME SAVED STATUS named as the page it opens; the Japanese text stays, the port has no translation for it.
+    const struct
+    {
+        s32 mPage;
+        s32 mOption;
+    } kLoadGame[] = {{MENUPAGE_PLAY, 1}, {MENUPAGE_RESULTS_PLAYER_QUIT, 0}, {MENUPAGE_DEAD, 0}, {MENUPAGE_AREA_COMPLETE, 1}};
+    for (s32 i = 0; i < 4 && !gText_0x14->LangIsJapanese(); i++)
+    {
+        MenuItem& option = pFrontend->mMenuPagesArray[kLoadGame[i].mPage].mOptionsArray[kLoadGame[i].mOption];
+        wcsncpy(option.mOptionNameStr, PortSettings::Translate(L"LOAD GAME"), 50);
+        option.mOptionNameStr[49] = 0;
+        if (kLoadGame[i].mPage != MENUPAGE_PLAY)
+        {
+            option.mXPos = pFrontend->GetCenteredXPos(option.mOptionNameStr, option.mFontType, 320);
+        }
+    }
     if (gPortFrontendSetup)
     {
         gPortFrontendSetup(pFrontend); // the network game's page (port/net/menu.cpp)
@@ -255,6 +321,10 @@ void Setup(Frontend* pFrontend)
 
 bool Update(Frontend* pFrontend)
 {
+    if (PortWelcome::Update(pFrontend))
+    {
+        return true;
+    }
     if (pFrontend->mCurrentPageIdx != kMenuPage)
     {
         if (sShown)
@@ -265,6 +335,8 @@ bool Update(Frontend* pFrontend)
 #if defined(GTA2_PORT_SDL)
         OriginalPageMouse(pFrontend);
 #endif
+        sSessionBefore = gGameSession;
+        sScreenBefore = pFrontend->mMenuScreen;
         // The network game's page, and its line in the start menu, after the mouse: a click is its Enter, the right
         // button its Escape (port/net/menu.cpp)
         return gPortFrontendInput && gPortFrontendInput(pFrontend);
@@ -275,8 +347,34 @@ bool Update(Frontend* pFrontend)
         sShown = true;
     }
     pFrontend->mMenuScreen = RedBar_16;
-    const PortMenu::Result result = HandleInput(pFrontend);
-    if (result == PortMenu::kClosed)
+    PortMenu::Result result = HandleInput(pFrontend);
+    // LOAD GAME's cities: also Page Up and Page Down (the pad's LB and RB), Q and E.
+    static bool sPrevPageKeys[4];
+    const u8 pageKeys[4] = {DIK_PRIOR, DIK_NEXT, DIK_Q, DIK_E};
+    for (s32 i = 0; i < 4; i++)
+    {
+        const bool down = (pFrontend->mKeys[pageKeys[i]] & 0x80) != 0;
+        if (down && !sPrevPageKeys[i] && result == PortMenu::kNothing && PortMenu::OnSaves())
+        {
+            result = PortMenu::HandleInput(i % 2 ? PortMenu::kRight : PortMenu::kLeft);
+        }
+        sPrevPageKeys[i] = down;
+    }
+    if (result == PortMenu::kLoadSave)
+    {
+        PortMenu::Close();
+        sShown = false;
+        Boot(pFrontend, PortMenu::SelectedSave().mFileName);
+        snd1.mObjectType = PortMenu::kEntered;
+        return true;
+    }
+    if (result == PortMenu::kClosed && PortMenu::OnSaves())
+    {
+        pFrontend->ChangeMenuPage(sSavesReturnPage);
+        pFrontend->mMenuPagesArray[sSavesReturnPage].mCurrentOptionIdx = sSavesReturnOption;
+        snd1.mObjectType = PortMenu::kWentBack;
+    }
+    else if (result == PortMenu::kClosed)
     {
         pFrontend->ChangeMenuPage(MENUPAGE_START_MENU);
         snd1.mObjectType = PortMenu::kWentBack;
@@ -286,6 +384,110 @@ bool Update(Frontend* pFrontend)
         snd1.mObjectType = result;
     }
     wcsncpy(pFrontend->mMenuPagesArray[kMenuPage].mElementsArray[0].mElementNameStr, PortMenu::Title(), 50);
+    return true;
+}
+
+// The warning in lines; where CONTINUE goes under it.
+s32 DialogQuestion(Frontend* pFrontend, wchar_t* pLines)
+{
+    static const wchar_t* const kCities[PortSaves::kNumCities] = {L"DOWNTOWN", L"RESIDENTIAL", L"INDUSTRIAL"};
+    const u8 city = static_cast<u8>(gGameSession.GetMainStageIdx());
+    wchar_t text[128];
+    swprintf(text, PortSettings::Translate(L"YOUR %ls AUTOSAVE WILL BE REPLACED"),
+             PortSettings::Translate(kCities[city < PortSaves::kNumCities ? city : 0]));
+    const s32 count = TextTable::InsertLineBreaksAndGetNumLines(pLines, text, kQuestionWidth, pFrontend->mNormalFont);
+    return kQuestionTop + count * GetLineSpacingFromFontType(pFrontend->mNormalFont) + 10;
+}
+
+void AfterPageInput(Frontend* pFrontend)
+{
+    if (pFrontend->mState != FrontendState::Booting_Map_2 || gGameSession.GetSaveName()[0] || gGameSession.IsBonusStage() ||
+        !PortSettings::Autosave() ||
+        !PortSaves::HasAutosave(gGameSession.GetPlySlotIdx(), static_cast<u8>(gGameSession.GetMainStageIdx())))
+    {
+        return;
+    }
+    sBootScreen = pFrontend->mMenuScreen;
+    pFrontend->mMenuScreen = sScreenBefore;
+    pFrontend->mState = FrontendState::Delete_Player_Dialog_4;
+    pFrontend->mDialogType = kReplaceDialog;
+    pFrontend->mDialogCursorYpos = kCancelY;
+}
+
+bool UpdateDialog(Frontend* pFrontend)
+{
+    if (pFrontend->mDialogType != kReplaceDialog)
+    {
+        return false;
+    }
+    u16& cursor = pFrontend->mDialogCursorYpos;
+#if defined(GTA2_PORT_SDL)
+    // CONTINUE and CANCEL with the mouse, as the original pages' options.
+    float x;
+    float y;
+    int left;
+    int right;
+    int wheel;
+    const bool moved = port_TakeMouse(&x, &y, &left, &right, &wheel);
+    pFrontend->mEscapePressed = pFrontend->mEscapePressed || right;
+    wchar_t lines[160];
+    const s32 continueTop = DialogQuestion(pFrontend, lines);
+    const u16 choices[2] = {kContinueY, kCancelY};
+    const wchar_t* const names[2] = {PortSettings::Translate(L"CONTINUE"), PortSettings::Translate(L"CANCEL")};
+    for (s32 i = 0; i < 2 && (moved || left); i++)
+    {
+        const f32 width = static_cast<f32>(Frontend::GetMaxTextWidth(const_cast<wchar_t*>(names[i]), pFrontend->mSelectedFont));
+        const f32 top = static_cast<f32>(continueTop + i * kChoiceStep);
+        if (OnText(x, y, kQuestionLeft, top, width, pFrontend->mSelectedFont))
+        {
+            if (cursor != choices[i])
+            {
+                snd1.mObjectType = i ? PortMenu::kMovedDown : PortMenu::kMovedUp;
+                cursor = choices[i];
+            }
+            pFrontend->mReturnPressed = pFrontend->mReturnPressed || left;
+        }
+    }
+#endif
+    if (pFrontend->mReturnPressed && cursor == kContinueY)
+    {
+        pFrontend->mMenuScreen = sBootScreen;
+        pFrontend->mState = FrontendState::Booting_Map_2;
+        snd1.mObjectType = PortMenu::kEntered;
+    }
+    else if (pFrontend->mEscapePressed || pFrontend->mReturnPressed)
+    {
+        gGameSession = sSessionBefore;
+        pFrontend->mMenuScreen = sScreenBefore;
+        pFrontend->mState = FrontendState::Menu_Navigation_1;
+        snd1.mObjectType = PortMenu::kWentBack;
+    }
+    else if (pFrontend->mUpPressed || pFrontend->mDownPressed)
+    {
+        cursor = cursor == kContinueY ? kCancelY : kContinueY;
+        snd1.mObjectType = pFrontend->mUpPressed ? PortMenu::kMovedUp : PortMenu::kMovedDown;
+    }
+    return true;
+}
+
+bool DrawDialog(Frontend* pFrontend)
+{
+    if (pFrontend->mDialogType != kReplaceDialog)
+    {
+        return false;
+    }
+    // In the title bar as the original dialog's DELETE PLAYER, then the question and its choices.
+    DrawStringDefaultPalette(PortSettings::Translate(L"AUTOSAVE"), Fix16(275), Fix16(gText_0x14->LangIsJapanese() ? 16 : 12),
+                             pFrontend->mHeadingFont, Fix16(1));
+    wchar_t lines[160];
+    const s32 continueTop = DialogQuestion(pFrontend, lines);
+    DrawStringDefaultPalette(lines, Fix16(kQuestionLeft), Fix16(kQuestionTop), static_cast<s16>(pFrontend->mNormalFont), Fix16(1));
+    const u16 cursor = pFrontend->mDialogCursorYpos;
+    DrawStringDefaultPalette(PortSettings::Translate(L"CONTINUE"), Fix16(kQuestionLeft), Fix16(continueTop),
+                             cursor == kContinueY ? pFrontend->mSelectedFont : static_cast<s16>(pFrontend->mNormalFont), Fix16(1));
+    DrawStringDefaultPalette(PortSettings::Translate(L"CANCEL"), Fix16(kQuestionLeft), Fix16(continueTop + kChoiceStep),
+                             cursor == kCancelY ? pFrontend->mSelectedFont : static_cast<s16>(pFrontend->mNormalFont), Fix16(1));
+    PortMenu::DrawChoiceHints();
     return true;
 }
 
@@ -371,28 +573,132 @@ bool UpdateNameEntry(Frontend* pFrontend)
     return true;
 }
 
-void PadKeyHint(u8 hint, wchar_t* pText)
+s32 DrawKeyHint(u8 hint, wchar_t* pText, u16 x, u16 y, u16 font, s32 palette)
 {
-    if (!PortMenu::PadMode())
+    using namespace PortPrompts;
+    // Whether the last key hint was a picture; its label follows it.
+    static bool sPicture;
+    const bool pad = PortMenu::PadMode();
+    // ESC, DEL, ENTER and BACKSPACE; the pad deletes a letter with the d-pad's left.
+    const Glyph kKeys[4] = {kKeyEscape, kKeyDelete, kKeyEnter, kKeyBackspace};
+    const Glyph kButtons[4] = {kPadEast, kPadWest, kPadSouth, kPadDpadLeft};
+    if (hint < 4)
     {
-        return;
+        const Glyph glyph = pad ? kButtons[hint] : kKeys[hint];
+        sPicture = glyph != kNoGlyph && Available();
+        if (sPicture)
+        {
+            return static_cast<s32>(PortMenu::DrawHintGlyph(glyph, x, y));
+        }
+        if (pad)
+        {
+            static const wchar_t* const kButtonNames[4] = {L"B", L"X", L"A", NULL};
+            if (kButtonNames[hint])
+            {
+                wcscpy(pText, kButtonNames[hint]);
+            }
+            else
+            {
+                wcscpy(pText, gText_0x14->Find("left_i"));
+            }
+        }
     }
-    switch (hint)
+    // The labels start with the font's colon and two spaces.
+    else if (sPicture && pText[0] == L';')
     {
-        case 0: // ESC
-            wcscpy(pText, L"B");
-            break;
-        case 1: // DEL
-            wcscpy(pText, L"X");
-            break;
-        case 2: // ENTER
-            wcscpy(pText, L"A");
-            break;
-        case 3: // BACKSPACE
-            wcscpy(pText, L"LEFT");
-            break;
-        default:
-            break;
+        const wchar_t* pLabel = pText + 1;
+        while (*pLabel == L' ')
+        {
+            pLabel++;
+        }
+        memmove(pText, pLabel, (wcslen(pLabel) + 1) * sizeof(wchar_t));
+    }
+    if (static_cast<u16>(palette) == 0xFFFF)
+    {
+        DrawStringDefaultPalette(pText, x, y, font, 1);
+    }
+    else
+    {
+        DrawString(pText, x, y, font, 1, palette_types_enum::font_remaps_8, palette, 0, 0);
+    }
+    return Frontend::GetMaxTextWidth(pText, font);
+}
+
+bool IsLevel(Frontend* pFrontend, const PortSaves::Header& header)
+{
+    const MainBlockStrings& level = (pFrontend ? pFrontend->mBlocks : sLevels)[header.mMainStage][header.mBonusStage];
+    return !strncmp(header.mMapName, "data\\", 5) && !strcmp(header.mMapName + 5, level.mGmpName) &&
+        !strncmp(header.mStyleName, "data\\", 5) && !strcmp(header.mStyleName + 5, level.mStyName) &&
+        !strncmp(header.mScriptName, "data\\", 5) && !strcmp(header.mScriptName + 5, level.mScrName);
+}
+
+s32 ListSaves(Frontend* pFrontend, PortSaves::Entry* pEntries, bool* pCities)
+{
+    sListing = pFrontend;
+    const PlySlot& stats = gPlyDat->mPlyrStats[gGameSession.GetPlySlotIdx()];
+    for (u8 city = 0; city < PortSaves::kNumCities && pCities; city++)
+    {
+        pCities[city] = city < (pFrontend ? pFrontend->mNumMainStages : sNumCities) &&
+            stats.mPlyrStageStats[city][0].mIsStageUnlocked && FreeLoader::CheckCityInstalled(city);
+    }
+    return PortSaves::List(gGameSession.GetPlySlotIdx(), IsListingLevel, pEntries);
+}
+
+bool HasSaves(Frontend* pFrontend)
+{
+    PortSaves::Entry saves[PortSaves::kMaxSaves];
+    return ListSaves(pFrontend, saves, NULL) > 0;
+}
+
+bool HasSave(Frontend* pFrontend, u8 mainStage, u8 bonusStage)
+{
+    PortSaves::Entry saves[PortSaves::kMaxSaves];
+    const s32 count = ListSaves(pFrontend, saves, NULL);
+    for (s32 i = 0; i < count; i++)
+    {
+        if (saves[i].mMainStage == mainStage && saves[i].mBonusStage == bonusStage)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Resume(Frontend* pFrontend)
+{
+    PortSaves::Entry saves[PortSaves::kMaxSaves];
+    bool cities[PortSaves::kNumCities];
+    const s32 count = ListSaves(pFrontend, saves, cities);
+    if (!count)
+    {
+        return false;
+    }
+    sSavesReturnPage = pFrontend->mCurrentPageIdx;
+    sSavesReturnOption = pFrontend->mMenuPagesArray[sSavesReturnPage].mCurrentOptionIdx;
+    PortMenu::OpenSaves(saves, count, cities);
+    sShown = true;
+    pFrontend->ChangeMenuPage(kMenuPage);
+    return true;
+}
+
+void AfterGame(Frontend* pFrontend)
+{
+    memcpy(sLevels, pFrontend->mBlocks, sizeof(sLevels));
+    sNumCities = pFrontend->mNumMainStages;
+    char_type name[64];
+    PortSaves::Header header;
+    if (PortRetry::TakeRetry(name, sizeof(name)) && PortSaves::IsValid(name, &header) && IsLevel(pFrontend, header))
+    {
+        Boot(pFrontend, name);
+    }
+}
+
+void ResumeFileName(char_type* pFileName)
+{
+    if (sResumeFile[0])
+    {
+        strcpy(pFileName, sResumeFile);
+        sResumeFile[0] = 0;
     }
 }
 } // namespace PortOptionsMenu

@@ -28,6 +28,7 @@ class Car;
 class TrainStation;
 
 #if defined(GTA2_PORT_64BIT)
+// Port: 64-bit, the collided ped's id holds a pointer, at full width (port/docs/64bit.md).
 typedef intptr_t collided_char_id;
 #else
 typedef s32 collided_char_id;

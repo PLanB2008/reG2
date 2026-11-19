@@ -13,7 +13,7 @@ enum Id
     k3dSound,
     kTextSpeed,
     kLanguage,
-    kDisplay,
+    kFullScreen,
     kBrightness,
     kLighting,
     kExplodingScores,
@@ -37,21 +37,36 @@ enum Id
     kClock,
     kControls,
     kAimCamera,
+    kStrafeAnimation,
+    kVibration,
     kBlood,
     kUpdateCheck,
     kShowFps,
+    kAutosave,
+    kRetry,
+    kKfRespawn,
+    kInfiniteLives,
     kCount,
+    // Group titles in the pages' lists: the settings after one, up to the next, are under it.
+    kSavesGroup,
+    kDifficultyGroup,
+    kTimeOfDayGroup,
+    kLightingGroup,
+    kImageGroup,
+    kScreenGroup,
+    kViewGroup,
+    kGroupsEnd,
 };
 
-// The pages: sound and text settings sit on the options page itself.
-extern const Id kGeneral[];
-extern const s32 kNumGeneral;
-extern const Id kScreen[];
-extern const s32 kNumScreen;
-extern const Id kGraphics[];
-extern const s32 kNumGraphics;
-extern const Id kView[];
-extern const s32 kNumView;
+// The settings of each options page, in their order, with their group titles.
+extern const Id kGameSettings[];
+extern const s32 kNumGameSettings;
+extern const Id kGraphicsSettings[];
+extern const s32 kNumGraphicsSettings;
+extern const Id kDisplaySettings[];
+extern const s32 kNumDisplaySettings;
+extern const Id kSoundSettings[];
+extern const s32 kNumSoundSettings;
 
 // The port's menu texts in the language of the loaded text table, from their English text.
 const wchar_t* Translate(const wchar_t* pEnglish);
@@ -59,7 +74,8 @@ const wchar_t* Translate(const wchar_t* pEnglish);
 // data\<code>.gxt is there: the 2004 freeware has only English and Spanish.
 bool LanguageInstalled(char code);
 
-// In English, as the key to Translate.
+bool IsGroup(Id id);
+// In English, as the key to Translate; a group's title.
 const wchar_t* Name(Id id);
 void Value(Id id, wchar_t* pOut);
 // The numeric settings, shown as sliders: false for the others.
@@ -89,14 +105,36 @@ f32 HudScale();
 
 // CONTROLS: TWIN STICK moves and aims apart on foot (twin_stick.hpp).
 bool TwinStick();
-// AIM CAMERA: with TWIN STICK, the view looks ahead toward the aim.
+// AIM CAMERA: with TWIN STICK, the view leads along the aim.
 bool AimCamera();
+// STRAFE ANIMATION: with TWIN STICK, the legs follow the walk rather than the aim.
+bool StrafeAnimation();
+// VIBRATION: the gamepad shakes as the player is hit, in explosions and in crashes (rumble.hpp).
+bool Vibration();
 
 // CHECK FOR UPDATES: the start menu shows a newer release (options_menu.hpp).
 bool UpdateCheck();
 
 // SHOW FPS: the frames drawn per second in a corner of the HUD (frame_loop.hpp).
 bool ShowFps();
+
+// AUTOSAVE: a save after each job and on quitting, beside the church's (autosave.hpp).
+bool Autosave();
+
+// RETRY JOBS: a checkpoint before each job and kill frenzy, to go back to after a failure (retry.hpp).
+bool Retry();
+
+// FRENZY RESPAWN: a failed kill frenzy comes back on the map (retry.hpp).
+bool KfRespawn();
+
+// INFINITE LIVES: dying costs no life, so no GAME OVER, through the game's do_infinite_lives debug flag.
+bool InfiniteLives();
+// The flag from the setting or the registry's debug setting, from the latter alone for an attract demo.
+void ApplyInfiniteLives(bool demo);
+
+// What the setting does, or its value where that is not plain, on two lines at most under the page; NULL if
+// nothing. A setting with help has it for every value.
+const wchar_t* Help(Id id);
 
 // SAFE AREA: the part of the screen's width or height kept clear at each edge, 0 to 0.1.
 f32 SafeArea();
@@ -106,4 +144,14 @@ s32 MaxFps();
 
 // The renderer's options from the registry, at start-up.
 void ApplyRenderOptions();
+
+// The first start's styles (welcome.hpp), both drawing a frame per screen refresh. CLASSIC: its preset, original
+// lighting and controls, church saves only; ENHANCED: its preset, day-night cycle, twin stick, AUTOSAVE, RETRY JOBS,
+// FRENZY RESPAWN. INFINITE LIVES off in both.
+enum Style
+{
+    kClassicStyle,
+    kEnhancedStyle,
+};
+void ApplyStyle(Style style);
 } // namespace PortSettings

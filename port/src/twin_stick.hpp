@@ -8,6 +8,7 @@
 class Camera;
 class Car;
 class Char;
+class Fix16_Point;
 class Ped;
 class Player;
 class Sprite;
@@ -23,8 +24,12 @@ bool Walk(Char* pChar, Ang16* pFacing);
 // In Char::Update, after the velocity along the facing: the walk's velocity is along its own direction, as
 // the original's backward walk gives it (the shots inherit it).
 void WalkVelocity(Char* pChar);
-// In Sprite::Draw, for a quad of the sprite (its world corners after it if count is 8): draws the player's walk with the
-// legs turned toward the move and the torso at the facing. False if the quad is drawn as usual.
+// The ped's velocity the muzzle flash and the machine gun's bullet start ahead by, and a throw inherits. The original's
+// walk is along the facing; the TWIN STICK player's adds only its part toward the facing, so a walk off it keeps them
+// at the gun and the throw along the aim, and a walk toward it looks as the original's.
+Fix16_Point ShotLead(const Char* pChar);
+// In Sprite::Draw, for a quad of the sprite (its world corners after it if count is 8): draws the player's walk off the
+// facing, its steps shorter toward the side and turned to the move backpedalling. False if the quad is drawn as usual.
 bool DrawLegs(const Sprite* pSprite, STexture* pTexture, u32 flags, const Vert* pVerts, s32 count);
 // In Car::HandleUserInput, unless SPECIAL turns the roof gun: the player's fire truck, tank or gun jeep
 // turns its roof gun toward the aim.
@@ -32,8 +37,11 @@ void AimTurret(Car* pCar);
 // In Ped::ComputeAimAngle: true if the player's machine guns fire where he faces, without the original's
 // lock on a ped near the line of fire.
 bool FreeAim(const Ped* pPed);
+// In Ped::UpdateFacingAngle, a ped standing to shoot: its aim at the player walking on foot leads him, a part of the
+// way his bullets need, as he can walk off his own aim to sidestep them.
+void LeadAim(Ped* pShooter);
 // With the HUD.
 void DrawReticle();
-// AIM CAMERA: after Camera::ApplyPanOffset in Camera::UpdateFollowPedCamera, the target moved toward the aim.
+// AIM CAMERA: after Camera::ApplyPanOffset in Camera::UpdateFollowPedCamera, the target moved along the aim.
 void AimCamera(Camera* pCamera, Ped* pPed, Fix16& x, Fix16& y);
 } // namespace PortTwinStick

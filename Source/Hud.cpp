@@ -1,6 +1,9 @@
 #define FIX16_POINT_ZERO kFpZero_7064C0
 #include "Hud.hpp"
 #if defined(GTA2_PORT)
+// Port: AUTOSAVE, RETRY JOBS, the pause menu, the day and night cycle, the frame loop and TWIN STICK on the HUD.
+#include "../port/src/autosave.hpp"
+#include "../port/src/retry.hpp"
 #include "../port/src/pause_menu.hpp"
 #include "../port/src/day_night.hpp"
 #include "../port/src/frame_loop.hpp"
@@ -134,6 +137,7 @@ MATCH_FUNC(0x4bbbb0)
 Hud::~Hud()
 {
 #if defined(GTA2_PORT)
+    // Port: the pause menu's style and sounds, loaded with the city (Init) and freed with it.
     PortPauseMenu::Release();
 #endif
 }
@@ -2300,7 +2304,7 @@ void Hud_Brief::DrawBrief()
     if (mCurrBriefs)
     {
 #if defined(GTA2_PORT)
-        // The face and the text span the layout's width.
+        // Port: widescreen HUD, the face and the text span the layout's width, so they stay together, centred.
         PortUiCentred centred;
 #endif
         DrawFigureScaled(sprite_types_enum::user_6,
@@ -3228,6 +3232,7 @@ void Hud_PauseScreen::DrawPause()
     u32 sprite_type;
     u16 sprite_pal = 0;
 #if defined(GTA2_PORT)
+    // Port: with the pause menu open, the original's pause screen is drawn only for the menu's STATISTICS lines.
     if (PortPauseMenu::IsOpen() && !PortPauseMenu::IsDrawingStats())
     {
         return;
@@ -3236,7 +3241,7 @@ void Hud_PauseScreen::DrawPause()
     if (gGame_0x40->IsPaused() && !gGame_0x40->mLocalPlayer->mShowQuitMessage)
     {
 #if defined(GTA2_PORT)
-        // For the pause menu, the section line only, which the menu places.
+        // Port: for the pause menu's STATISTICS, no banner: the section line only, which the menu places.
         if (!PortPauseMenu::IsDrawingStats())
         {
 #endif
@@ -3252,6 +3257,7 @@ void Hud_PauseScreen::DrawPause()
 
         DrawStringScaledPalette(pPauseText, (640 - max_width) / 2, y_offset, sPauseFont, palette_types_enum::sprites_2, 0, 0, 0);
 #if defined(GTA2_PORT)
+        // Port: end of the STATISTICS check above.
         }
 #endif
 
@@ -3405,8 +3411,11 @@ void Hud::DrawGui()
         SetFullAmbient();
         mPlayerStats.DrawPlayerStats();
 #if defined(GTA2_PORT)
+        // Port: the CLOCK, SHOW FPS, SAVING, the RETRY hint and the TWIN STICK reticle with the HUD.
         PortDayNight::DrawClock();
         PortFrameLoop::DrawFps();
+        PortAutosave::Draw();
+        PortRetry::Draw();
         PortTwinStick::DrawReticle();
 #endif
         mUnderRoofArrowMarker.Draw();
@@ -3427,6 +3436,7 @@ void Hud::DrawGui()
         mChatInput.DrawChatMessages();
         mQuitMessage.DrawQuitMessage();
 #if defined(GTA2_PORT)
+        // Port: the in-game pause menu that Escape or the pad's Start opens.
         PortPauseMenu::Draw();
 #endif
     }
@@ -3527,6 +3537,7 @@ void Hud::Init()
     mWantedLevel.Init();
     mArrows.CreatePlayerArrows();
 #if defined(GTA2_PORT)
+    // Port: the pause menu's style and sounds loaded with the city, so that opening the menu does not stall a frame.
     PortPauseMenu::Preload();
 #endif
 }
@@ -3535,6 +3546,7 @@ MATCH_FUNC(0x5d6c20)
 bool Hud::HandleInputKey(s32 action, Player* pPlayer)
 {
 #if defined(GTA2_PORT)
+    // Port: the pause menu takes Escape, the pad's Start and its own keys first.
     if (PortPauseMenu::HandleKey(action, pPlayer))
     {
         return true;
@@ -3547,6 +3559,7 @@ MATCH_FUNC(0x5d6c70)
 bool Hud::IsInputKeyConsumed(s32 action)
 {
 #if defined(GTA2_PORT)
+    // Port: no key reaches the game while the pause menu is open.
     if (PortPauseMenu::IsOpen())
     {
         return true;
@@ -3559,7 +3572,7 @@ MATCH_FUNC(0x5d6cb0)
 bool Hud::IsQuitMessageInputKey(s32 action)
 {
 #if defined(GTA2_PORT)
-    // The game drops other keys while paused, and they stay out of replays.
+    // Port: the pause menu's keys, which the paused game drops otherwise, and which stay out of replays.
     if (PortPauseMenu::IsOpen())
     {
         return true;

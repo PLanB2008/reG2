@@ -33,6 +33,10 @@ EXTERN_GLOBAL(Fix16, kFpOneEighth_706CC8);
 #include "rng.hpp"
 #include "ScriptManager.hpp"
 #include "SpriteGrid.hpp"
+#if defined(GTA2_PORT)
+// Port: TWIN STICK shot leads.
+#include "../port/src/twin_stick.hpp"
+#endif
 
 DEFINE_GLOBAL_INIT(Fix16, kFP16Quarter_706CF4, Fix16(0x1000, 0), 0x706CF4);
 DEFINE_GLOBAL_INIT(Fix16, kFP16Two_706EC0, Fix16(2), 0x706EC0);
@@ -521,7 +525,12 @@ void Weapon::smg()
 
             point.RotateByAngle(mpPed->mGameObject->mSpritePtr->mRotation);
 
+#if defined(GTA2_PORT)
+            // Port: TWIN STICK, only the walk toward the aim leads (ShotLead): the bullet leaves the gun.
+            point = point.Add(PortTwinStick::ShotLead(mpPed->mGameObject));
+#else
             point = point.Add(mpPed->GetVelocityVector());
+#endif
 
             if (Weapon::spawn_bullet(objects::machine_gun_bullet_254,
                                      mpPed->get_cam_x() + point.x,
@@ -641,7 +650,12 @@ void Weapon::throwable(s32 obj_idx, s32 throw_strength, s32 throw_charge)
                         {
                             if (!mpPed->mGameObject->mFlagsBf.bReverseVelocity)
                             {
+#if defined(GTA2_PORT)
+                                // Port: TWIN STICK, the throw stays along the aim every way the player walks (ShotLead).
+                                vector = PortTwinStick::ShotLead(mpPed->mGameObject);
+#else
                                 vector = mpPed->GetVelocityVector();
+#endif
                                 pProjectile->SetMovementVector(vector);
                                 if (!vector.IsNull_420360())
                                 {

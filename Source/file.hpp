@@ -45,7 +45,7 @@ class File
     EXPORT static char_type __stdcall SkipWhitespace(FILE* Stream);
 
 #if defined(GTA2_PORT_64BIT)
-    // The game passes u32 and size_t sizes alike, the same type on 32-bit targets.
+    // Port: 64-bit, the game passes u32 and size_t sizes alike, the same type on 32-bit targets.
     template <typename T> static void AppendBufferToFile(const char_type* FileName, void* pBuffer, T* pBufferSize)
     {
         size_t size = *pBufferSize;

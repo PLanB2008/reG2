@@ -51,6 +51,7 @@ enum RenderStateBits
     // Soft shadow (mSoftShadows): texture alpha blurred by the vertex red channel (texels * 32), times the vertex
     // alpha, into a shadow mask that FinishFrame applies; what is drawn later over it lightens the mask.
     RS_SHADOW = 1 << 6,
+    RS_TEXELS = 1 << 7, // magnified as blocks of texels, without the menus' smooth edges
 };
 
 // Mip levels to build for a texture: none, or averaged with or without regard to transparent texels.

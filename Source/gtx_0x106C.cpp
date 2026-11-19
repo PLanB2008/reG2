@@ -400,7 +400,7 @@ void gtx_0x106C::BuildCarInfoContainer(s32 chunk_size)
 }
 
 #if defined(GTA2_PORT_64BIT)
-// A sprite's entry in the delta buffer, whose size the original computes for 4-byte pointers.
+// Port: 64-bit, a sprite's entry in the delta buffer, whose size the original computes for 4-byte pointers.
 #define SPRITE_DELTAS_SIZE(count) (offsetof(sprite_deltas, mDeltas) + sizeof(sprite_delta) * (count))
 #endif
 
@@ -415,6 +415,7 @@ void gtx_0x106C::load_delx(u32 delx_chunk_size)
     {
         u32 size = 2 * pIter->mDeltaCount + 4;
 #if defined(GTA2_PORT_64BIT)
+        // Port: 64-bit, the entry's size for the target's pointers.
         mDeltaLen += SPRITE_DELTAS_SIZE(pIter->mDeltaCount);
 #else
         mDeltaLen += 8 * pIter->mDeltaCount + 4;
@@ -443,6 +444,7 @@ void gtx_0x106C::load_delx(u32 delx_chunk_size)
 
         u32 size = 2 * pSrc->mDeltaCount + 4;
 #if defined(GTA2_PORT_64BIT)
+        // Port: 64-bit, the next entry at the size for the target's pointers.
         pDst = reinterpret_cast<sprite_deltas*>(reinterpret_cast<u8*>(pDst) + SPRITE_DELTAS_SIZE(pDst->mCount));
 #else
         pDst = reinterpret_cast<sprite_deltas*>(reinterpret_cast<u8*>(pDst) + 8 * pDst->mCount + 4);
@@ -464,6 +466,7 @@ void gtx_0x106C::SetDeltaDataPtrs()
         {
             // load_delx left the delta's offset into the store in mpData
 #if defined(GTA2_PORT_64BIT)
+            // Port: 64-bit, the offset added at the pointers' full width.
             pEntry->mDeltas[delta_idx].mpData = reinterpret_cast<delta_store_entry*>(
                 reinterpret_cast<uintptr_t>(pEntry->mDeltas[delta_idx].mpData) + reinterpret_cast<uintptr_t>(mDeltaStore));
 #else
@@ -472,6 +475,7 @@ void gtx_0x106C::SetDeltaDataPtrs()
 #endif
         }
 #if defined(GTA2_PORT_64BIT)
+        // Port: 64-bit, the entry's size for the target's pointers.
         size = SPRITE_DELTAS_SIZE(pEntry->mCount);
 #else
         size = 8 * pEntry->mCount + 4;
@@ -506,6 +510,7 @@ void gtx_0x106C::build_delta_container()
         }
 
 #if defined(GTA2_PORT_64BIT)
+        // Port: 64-bit, the entry's size for the target's pointers.
         u32 size = SPRITE_DELTAS_SIZE(pIter->mCount);
 #else
         u32 size = 8 * pIter->mCount + 4;
@@ -515,6 +520,7 @@ void gtx_0x106C::build_delta_container()
     }
 
 #if defined(GTA2_PORT_64BIT)
+    // Port: 64-bit, the delta container sized for the target's pointers.
     mDel = static_cast<delta_container*>(Memory::Checked_malloc(offsetof(delta_container, mEntries) + sizeof(sprite_deltas*) * (maxSprite + 1)));
 #else
     mDel = static_cast<delta_container*>(Memory::Checked_malloc(4 * maxSprite + 8));
@@ -543,6 +549,7 @@ void gtx_0x106C::build_delta_container()
         }
 
 #if defined(GTA2_PORT_64BIT)
+        // Port: 64-bit, the entry's size for the target's pointers.
         u32 size = SPRITE_DELTAS_SIZE(pIter->mCount);
 #else
         u32 size = 8 * pIter->mCount + 4;
@@ -654,7 +661,8 @@ MATCH_FUNC(0x5AAF80)
 void gtx_0x106C::load_sprite_index(u32 sprx_chunk_size)
 {
 #if defined(GTA2_PORT_64BIT)
-    // The file's entries hold the 4-byte offset that SetSpriteIndexDataPtrs turns into mpData.
+    // Port: 64-bit, the file's entries hold the 4-byte offset that SetSpriteIndexDataPtrs turns into mpData, so
+    // they are read into wider entries.
     struct sprx_entry
     {
         u32 mOffset;

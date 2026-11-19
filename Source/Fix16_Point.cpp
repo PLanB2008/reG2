@@ -42,6 +42,14 @@ Fix16_Point Fix16_Point::NormalizeSafe()
     {
         Fix16_Point scaled = MultBy(128);
         length = scaled.GetLength_scaled_inline_442AD0();
+#if defined(GTA2_PORT)
+        // Port: a null vector (e.g. ApplyTurningForce's collision normal when the CoM is the hit point) would divide
+        // by zero, SIGFPE on x86 (the original raises too); it stays null.
+        if (length == kFpZero_6777CC)
+        {
+            return Fix16_Point(kFpZero_6777CC, kFpZero_6777CC);
+        }
+#endif
         return scaled / length;
     }
     else

@@ -1,5 +1,5 @@
-// The in-game pause menu: Escape pauses the game and opens the settings menu (menu.hpp), with RESUME and
-// QUIT GAME, below lines of the original's pause screen.
+// The in-game pause menu: Escape pauses the game and opens the settings menu (menu.hpp), with RESUME, LOAD
+// GAME, QUIT GAME and STATISTICS, the lines of the original's pause screen, and RADIO in a car that has one.
 #pragma once
 
 #include "Player.hpp"
@@ -19,7 +19,7 @@ bool HandleKey(s32 action, Player* pPlayer);
 // Drawn with the HUD.
 void Draw();
 
-// While the menu draws the original's pause screen lines (Hud_PauseScreen::DrawPause): true, and where
+// While the menu draws the original's pause screen lines (Hud_PauseScreen::DrawPause) or the HUD's briefs: true, and where
 // a position of the HUD layout goes on screen.
 bool IsDrawingStats();
 f32 PlaceUi(f32 pos, bool y);

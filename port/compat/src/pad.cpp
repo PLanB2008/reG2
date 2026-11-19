@@ -31,6 +31,9 @@ const int kMaxGamepads = 8;
 SDL_Gamepad* sGamepads[kMaxGamepads];
 int sNumGamepads;
 SDL_Gamepad* sActivePad; // the last to give an input
+// Each open pad's axes as last reported: an axis is an input when it crosses the threshold, not when its first report
+// finds it beyond (a resting trigger or a worn stick).
+Sint16 sAxisLast[kMaxGamepads][SDL_GAMEPAD_AXIS_COUNT];
 enum Mode
 {
     kKeyboardMode,
@@ -44,7 +47,7 @@ bool sPrevCode[256];
 int sCapturedKey = -1;
 int sCapturedPad = -1;
 bool sMigrated;
-bool sMenuBlocked; // back from a game with a button still down: the menus wait for its release
+bool sMenuBlocked; // back from a game with a button or W, A, S or D still down: the menus wait for its release
 bool sAccelHeld; // RT held since the player drove or was getting into a vehicle: it attacks once pressed again
 bool sMouseAims; // the mouse was used in game after the pad
 bool sKeyDown[256]; // by DIK code
@@ -55,6 +58,9 @@ int sPad[kNumControls]; // pad_<n>, read once: port_UpdatePad wants them several
 bool sPadRead;
 int sWheelCode; // a wheel notch holds its control down for two steps
 unsigned sWheelUntil;
+SDL_Gamepad* sRumblePad; // shaking (port_Rumble) until sRumbleEnd, in SDL ticks
+float sRumbleStrength;
+Uint64 sRumbleEnd;
 
 const SDL_GamepadButton kButtons[] = {SDL_GAMEPAD_BUTTON_SOUTH, SDL_GAMEPAD_BUTTON_EAST, SDL_GAMEPAD_BUTTON_WEST,
                                       SDL_GAMEPAD_BUTTON_NORTH, SDL_GAMEPAD_BUTTON_LEFT_SHOULDER,
@@ -356,6 +362,10 @@ void port_OpenGamepad()
         {
             if (SDL_Gamepad* pPad = SDL_OpenGamepad(pIds[i]))
             {
+                for (int a = 0; a < SDL_GAMEPAD_AXIS_COUNT; a++)
+                {
+                    sAxisLast[sNumGamepads][a] = SDL_GetGamepadAxis(pPad, static_cast<SDL_GamepadAxis>(a));
+                }
                 sGamepads[sNumGamepads++] = pPad;
                 sActivePad = sActivePad ? sActivePad : pPad;
             }
@@ -367,6 +377,40 @@ void port_OpenGamepad()
 bool port_PadMode()
 {
     return sMode == kPadMode;
+}
+
+SDL_Gamepad* port_ActivePad()
+{
+    return sActivePad;
+}
+
+void port_Rumble(float low, float high, int ms)
+{
+    const Uint64 now = SDL_GetTicks();
+    const float strength = low > high ? low : high;
+    // The shake playing goes on unless this one is clearly stronger, or it has less than half this one's time left.
+    if (!sActivePad || (sActivePad == sRumblePad && now < sRumbleEnd && strength < sRumbleStrength * 1.2f &&
+                        sRumbleEnd - now > static_cast<Uint64>(ms / 2)))
+    {
+        return;
+    }
+    if (sRumblePad != sActivePad)
+    {
+        port_StopRumble();
+    }
+    SDL_RumbleGamepad(sActivePad, static_cast<Uint16>(low * 0xFFFF), static_cast<Uint16>(high * 0xFFFF), static_cast<Uint32>(ms));
+    sRumblePad = sActivePad;
+    sRumbleStrength = strength;
+    sRumbleEnd = now + ms;
+}
+
+void port_StopRumble()
+{
+    if (sRumblePad && SDL_GetTicks() < sRumbleEnd)
+    {
+        SDL_RumbleGamepad(sRumblePad, 0, 0, 0);
+    }
+    sRumblePad = NULL;
 }
 
 bool port_MouseMode()
@@ -480,6 +524,9 @@ void port_AddPadMenuKeys(BYTE* pKeys)
         {Button(SDL_GAMEPAD_BUTTON_SOUTH) || Button(SDL_GAMEPAD_BUTTON_START), DIK_RETURN},
         {Button(SDL_GAMEPAD_BUTTON_EAST) || Button(SDL_GAMEPAD_BUTTON_BACK), DIK_ESCAPE},
         {Button(SDL_GAMEPAD_BUTTON_WEST), DIK_DELETE},
+        // The frontend's LOAD GAME changes city with them.
+        {!port_GameRunning() && Button(SDL_GAMEPAD_BUTTON_LEFT_SHOULDER), DIK_PRIOR},
+        {!port_GameRunning() && Button(SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER), DIK_NEXT},
     };
     for (const auto& k : keys)
     {
@@ -487,6 +534,12 @@ void port_AddPadMenuKeys(BYTE* pKeys)
         {
             pKeys[k.mDik] = 0x80;
         }
+    }
+    // W, S, A and D by position as the arrows, whatever the controls.
+    const DWORD kMoveKeys[4][2] = {{DIK_W, DIK_UP}, {DIK_S, DIK_DOWN}, {DIK_A, DIK_LEFT}, {DIK_D, DIK_RIGHT}};
+    for (int i = 0; i < 4 && port_FrontendActive() && !port_FrontendTyping(); i++)
+    {
+        pKeys[kMoveKeys[i][1]] |= pKeys[kMoveKeys[i][0]] & 0x80;
     }
 }
 
@@ -520,7 +573,9 @@ void port_PadEvent(const SDL_Event& e)
                 {
                     SDL_Gamepad* pPad = sGamepads[i];
                     sGamepads[i] = sGamepads[--sNumGamepads];
+                    memcpy(sAxisLast[i], sAxisLast[sNumGamepads], sizeof(sAxisLast[i]));
                     sActivePad = sActivePad == pPad ? (sNumGamepads ? sGamepads[0] : NULL) : sActivePad;
+                    sRumblePad = sRumblePad == pPad ? NULL : sRumblePad;
                     SDL_CloseGamepad(pPad);
                     break;
                 }
@@ -534,10 +589,20 @@ void port_PadEvent(const SDL_Event& e)
             }
             break;
         case SDL_EVENT_GAMEPAD_AXIS_MOTION:
-            if ((e.gaxis.value > kThreshold || e.gaxis.value < -kThreshold) && PadInput(e.gaxis.which))
+            for (int i = 0; i < sNumGamepads && e.gaxis.axis < SDL_GAMEPAD_AXIS_COUNT; i++)
             {
-                sMode = kPadMode;
-                sMouseAims = false;
+                if (SDL_GetGamepadID(sGamepads[i]) != e.gaxis.which)
+                {
+                    continue;
+                }
+                Sint16& last = sAxisLast[i][e.gaxis.axis];
+                const bool crossed = last <= kThreshold && last >= -kThreshold && (e.gaxis.value > kThreshold || e.gaxis.value < -kThreshold);
+                last = e.gaxis.value;
+                if (crossed && PadInput(e.gaxis.which))
+                {
+                    sMode = kPadMode;
+                    sMouseAims = false;
+                }
             }
             break;
         case SDL_EVENT_MOUSE_MOTION:
@@ -587,7 +652,12 @@ void port_UpdatePad()
         }
         ~PadCache() { sPadCache = false; }
     } cache;
-    // New presses, for binding capture (Start stays the pause button).
+    if (sRumblePad && !port_RumbleAllowed())
+    {
+        port_StopRumble();
+    }
+    // New presses: the pad is the last device used, as when its events come too late for the input they make (a
+    // pad's first press as it connects); and for binding capture (Start stays the pause button).
     int codes[kNumControls + 4];
     int n = 0;
     for (int c = 0; c < 12; c++)
@@ -602,6 +672,11 @@ void port_UpdatePad()
     {
         const int code = codes[i];
         const bool down = CodeDown(code);
+        if (down && !sPrevCode[code])
+        {
+            sMode = kPadMode;
+            sMouseAims = false;
+        }
         if (down && !sPrevCode[code] && code != 7 && sCapturedPad < 0)
         {
             sCapturedPad = code;
@@ -630,6 +705,7 @@ void port_UpdatePad()
         {
             anyDown |= CodeDown(codes[i]);
         }
+        anyDown |= sKeyDown[DIK_W] || sKeyDown[DIK_S] || sKeyDown[DIK_A] || sKeyDown[DIK_D];
         sMenuBlocked = anyDown;
     }
     const bool quitShown = inGame && port_QuitMessageShown();
@@ -677,11 +753,11 @@ void port_UpdatePad()
         {
             Tap(DIK_ESCAPE);
         }
-        // The pause menu's navigation.
-        static bool sPrevDir[4];
-        const int dirs[4] = {kPadUp, kPadDown, kPadLeft, kPadRight};
-        const DWORD keys[4] = {DIK_UP, DIK_DOWN, DIK_LEFT, DIK_RIGHT};
-        for (int d = 0; d < 4; d++)
+        // The pause menu's navigation; LB and RB change LOAD GAME's city.
+        static bool sPrevDir[6];
+        const int dirs[6] = {kPadUp, kPadDown, kPadLeft, kPadRight, 4, 5};
+        const DWORD keys[6] = {DIK_UP, DIK_DOWN, DIK_LEFT, DIK_RIGHT, DIK_PRIOR, DIK_NEXT};
+        for (int d = 0; d < 6; d++)
         {
             const bool down = CodeDown(dirs[d]);
             if (quitShown && down && !sPrevDir[d])

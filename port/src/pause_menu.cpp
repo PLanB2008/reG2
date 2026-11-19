@@ -1,11 +1,16 @@
 #include "pause_menu.hpp"
+#include "autosave.hpp"
+#include "retry.hpp"
 #include "Camera.hpp"
 #include "Draw.hpp"
 #include "Frontend.hpp"
 #include "Function.hpp"
 #include "Game.hpp"
+#include "GameSession.hpp"
 #include "Globals.hpp"
 #include "Hud.hpp"
+#include "Ped.hpp"
+#include "Player.hpp"
 #include "TextTable.hpp"
 #include "TextureCache.hpp"
 #include "cSampleManager.hpp"
@@ -13,13 +18,19 @@
 #include "gbh_graphics.hpp"
 #include "gtx_0x106C.hpp"
 #include "menu.hpp"
+#include "options_menu.hpp"
 #include "registry.hpp"
+#include "root_sound.hpp"
 #include "settings.hpp"
+#include "sound_obj.hpp"
+#include "winmain.hpp"
 #include <stdio.h>
 #include <vector>
 #include "winmain.hpp"
 
 EXTERN_GLOBAL(s16, word_7064D8);
+EXTERN_GLOBAL(u16, gBriefFont);
+EXTERN_GLOBAL(u8, gSoundSwitchRadioCoolDown);
 
 namespace PortPauseMenu
 {
@@ -220,6 +231,16 @@ void PlaySound(PortMenu::Result result)
     sNextPair = (sNextPair + 1) % kSoundPairs;
 }
 
+// The stations by number, as GTAudio\<n>.wav: the game's data has no names.
+const wchar_t* const kStations[] = {NULL, L"HEAD RADIO", L"ROCKSTAR RADIO", L"KREZ", L"LO-FI FM", L"FUTURO FM", L"FUNAMI FM",
+                                    L"LITHIUM FM", L"KING 130.7", L"OSMOSIS FM", L"HEAVENLY RADIO", L"KGBH"};
+
+const wchar_t* StationName()
+{
+    const s32 station = gSound_obj.RadioStation();
+    return station > 0 && station < GTA2_COUNTOF_S(kStations) ? kStations[station] : NULL;
+}
+
 void Close()
 {
     sOpen = false;
@@ -230,17 +251,61 @@ void Close()
     }
 }
 
+bool Closes(PortMenu::Result result)
+{
+    return result == PortMenu::kClosed || result == PortMenu::kQuitGame || result == PortMenu::kRetryCheckpoint ||
+        result == PortMenu::kLoadSave || result == PortMenu::kSaveAndQuitGame;
+}
+
 void Apply(PortMenu::Result result)
 {
+    // As the original's F1 and F2, with their wait between changes; the sound takes the change on its next frame.
+    if (result == PortMenu::kPreviousStation || result == PortMenu::kNextStation)
+    {
+        const bool next = result == PortMenu::kNextStation;
+        result = gSoundSwitchRadioCoolDown > 0 ? PortMenu::kNothing : (next ? PortMenu::kRaised : PortMenu::kLowered);
+        gRoot_sound.CycleRadioStation(next);
+    }
     PlaySound(result);
-    if (result == PortMenu::kClosed || result == PortMenu::kQuitGame)
+    if (Closes(result))
     {
         Close();
     }
-    if (result == PortMenu::kQuitGame)
+    // A failed save leaves the player in game, SAVE FAILED on the HUD.
+    if (result == PortMenu::kQuitGame || (result == PortMenu::kSaveAndQuitGame && PortAutosave::SaveToQuit()))
     {
         gGame_0x40->ExitGameNoBonus(1, GameExitType::PlayerQuit_2);
     }
+    if (result == PortMenu::kRetryCheckpoint)
+    {
+        PortRetry::Retry();
+    }
+    if (result == PortMenu::kLoadSave)
+    {
+        PortRetry::Retry(PortMenu::SelectedSave().mFileName);
+    }
+}
+
+// The original pause screen's sections, in UpdatePauseSection's order and with its checks; none in a bonus
+// stage, where it shows none.
+s32 StatSections(u8* pSections)
+{
+    if (gGameSession.IsBonusStage())
+    {
+        return 0;
+    }
+    Hud_PauseScreen& pause = gHud_2B00->mPauseScreen;
+    const Hud_PauseScreen saved = pause;
+    s32 count = 0;
+    pause.mCurrentPauseSection = HudPauseSection::tokens_collected_6;
+    do
+    {
+        pause.mTimer = 1;
+        pause.UpdatePauseSection();
+        pSections[count++] = pause.mCurrentPauseSection;
+    } while (pause.mCurrentPauseSection != HudPauseSection::tokens_collected_6);
+    pause = saved;
+    return count;
 }
 } // namespace
 
@@ -268,6 +333,8 @@ void Release()
     FreeStyle();
 }
 
+static f32 Transcript(f32 top, f32 room, f32 scale = 0, f32 left = 0, f32 menuTop = 0);
+
 bool HandleKey(s32 action, Player* pPlayer)
 {
     if (bStartNetworkGame)
@@ -287,6 +354,31 @@ bool HandleKey(s32 action, Player* pPlayer)
         }
         OpenSounds();
         PortMenu::Open();
+        if (PortSettings::Retry())
+        {
+            s32 money;
+            long long time;
+            PortSaves::JobName job;
+            const PortSaves::Checkpoint kind = PortSaves::GetCheckpoint(&money, &time, &job);
+            PortMenu::OfferRetry(kind, money, time, job, PortRetry::JustFailed(), PortRetry::Running());
+        }
+        PortMenu::OfferRadio(StationName());
+        u8 sections[7];
+        PortMenu::OfferStatistics(StatSections(sections));
+        f32 top;
+        f32 room;
+        PortMenu::OnTranscript(&top, &room);
+        PortMenu::OfferTranscript(Transcript(top, room));
+        if (!PortSaves::Replaying() && !IsNetworkGame() && !gGameSession.IsBonusStage())
+        {
+            PortSaves::Entry saves[PortSaves::kMaxSaves];
+            bool cities[PortSaves::kNumCities];
+            PortMenu::OfferSaves(saves, PortOptionsMenu::ListSaves(NULL, saves, cities), cities);
+            if (PortSettings::Autosave())
+            {
+                PortMenu::OfferQuitChoices(PortAutosave::QuitSaveBlocked());
+            }
+        }
         if (!gGame_0x40->IsPaused())
         {
             gGame_0x40->Pause();
@@ -297,18 +389,29 @@ bool HandleKey(s32 action, Player* pPlayer)
     {
         return true;
     }
+    // W, A, S and D by position too, whatever the controls: the game's own bindings are off while the menu is open.
     const struct
     {
         s32 mDik;
         PortMenu::Input mInput;
     } kInputs[] = {{DIK_UP, PortMenu::kUp},       {DIK_DOWN, PortMenu::kDown},     {DIK_LEFT, PortMenu::kLeft},
-                   {DIK_RIGHT, PortMenu::kRight}, {DIK_RETURN, PortMenu::kSelect}, {DIK_ESCAPE, PortMenu::kCancel}};
+                   {DIK_RIGHT, PortMenu::kRight}, {DIK_RETURN, PortMenu::kSelect}, {DIK_ESCAPE, PortMenu::kCancel},
+                   {DIK_W, PortMenu::kUp},        {DIK_S, PortMenu::kDown},        {DIK_A, PortMenu::kLeft},
+                   {DIK_D, PortMenu::kRight}};
+    const s32 count = sizeof(kInputs) / sizeof(kInputs[0]);
     s32 i = 0;
-    while (i < 6 && kInputs[i].mDik != action)
+    while (i < count && kInputs[i].mDik != action)
     {
         i++;
     }
-    if (i == 6)
+    // LOAD GAME's cities: also Page Up and Page Down (the pad's LB and RB), Q and E, as in the frontend.
+    const bool previousCity = action == DIK_PRIOR || action == DIK_Q;
+    if (PortMenu::OnSaves() && (previousCity || action == DIK_NEXT || action == DIK_E))
+    {
+        Apply(PortMenu::HandleInput(previousCity ? PortMenu::kLeft : PortMenu::kRight));
+        return true;
+    }
+    if (i == count)
     {
         return true;
     }
@@ -336,44 +439,109 @@ f32 PlaceUi(f32 pos, bool y)
     return (y ? sStatTop : sStatLeft) + pos * sStatScale;
 }
 
-// One row per section, in UpdatePauseSection's order and with its checks, packed between the HUD's
-// multiplier (long lines reach it above y 43) and the panel, lowered to 140.
-static void DrawStats(f32 scale, f32 left, f32 top)
+// One row per section from rowTop in the menu's layout, each centred as the original's pause screen draws it.
+static void DrawStats(f32 scale, f32 left, f32 top, f32 rowTop, f32 rowStep)
 {
     Hud_PauseScreen& pause = gHud_2B00->mPauseScreen;
     const Hud_PauseScreen saved = pause;
     u8 sections[7];
-    s32 count = 0;
-    pause.mCurrentPauseSection = HudPauseSection::tokens_collected_6;
-    do
-    {
-        pause.mTimer = 1;
-        pause.UpdatePauseSection();
-        sections[count++] = pause.mCurrentPauseSection;
-    } while (pause.mCurrentPauseSection != HudPauseSection::tokens_collected_6);
-
+    const s32 count = StatSections(sections);
     const Fix16 hudScale = gViewCamera->mUiScale;
     gViewCamera->mUiScale = Fx(scale);
     sDrawingStats = true;
     sStatScale = scale;
     sStatLeft = left;
-    // By section, the distance to the next row: icons are taller than text, the frenzy icon the tallest.
-    const s32 kPitch[7] = {14, 17, 17, 16, 16, 15, 0};
-    s32 y = 118;
-    for (s32 i = 0; i < count - 1; i++)
-    {
-        y -= kPitch[sections[i]];
-    }
     for (s32 i = 0; i < count; i++)
     {
-        sStatTop = top + (y - 220) * scale;
+        // DrawPause puts its text at y 220.
+        sStatTop = top + (rowTop + i * rowStep - 220) * scale;
         pause.mCurrentPauseSection = sections[i];
         pause.DrawPause();
-        y += kPitch[sections[i]];
     }
     sDrawingStats = false;
     gViewCamera->mUiScale = hudScale;
     pause = saved;
+}
+
+// MISSION TRANSCRIPT's height: the brief shown, then those F7 shows again (one per run of the same), stacked while they fit
+// in room; with a scale, drawn by the HUD a little smaller.
+static f32 Transcript(f32 top, f32 room, f32 scale, f32 left, f32 menuTop)
+{
+    const f32 kSize = 0.85f;
+    Hud_Brief& brief = gHud_2B00->mBrief;
+    const Hud_Brief saved = brief;
+    const Fix16 hudScale = gViewCamera->mUiScale;
+    gViewCamera->mUiScale = Fx(scale * kSize);
+    sDrawingStats = scale > 0;
+    sStatScale = scale * kSize;
+    // DrawBrief's face spans about x 8 to 56 and y 412 to 474, its last line ends at y 480: the face's left at x 50.
+    sStatLeft = left + (50 - 8 * kSize) * scale;
+    f32 height = 0;
+    const Hud_BriefEntry* pLast = NULL;
+    Hud_BriefEntry* pEntry = saved.mCurrBriefs && saved.mCurrBriefs->mWasDisplayed ? saved.mCurrBriefs : saved.mPrevBriefs;
+    for (s32 count = 0; pEntry && count < 5; pEntry = pEntry == saved.mCurrBriefs ? saved.mPrevBriefs : pEntry->mpNext)
+    {
+        if (pLast && !strcmp(pEntry->mBriefIdStr, pLast->mBriefIdStr) && pEntry->mCostParam == pLast->mCostParam)
+        {
+            continue;
+        }
+        brief.mCurrBriefs = pEntry;
+        brief.FormatCurrentBrief();
+        const f32 textTop = 480.0f - GetLineSpacingFromFontType_5D7700_inlined(gBriefFont) * brief.mNumLines;
+        const f32 bottom = height + (pLast ? 14 : 0) + (480 - (textTop < 412 ? textTop : 412)) * kSize;
+        if (bottom > room)
+        {
+            break;
+        }
+        sStatTop = menuTop + (top + bottom - 480 * kSize) * scale;
+        if (scale > 0)
+        {
+            brief.mFaceVariant = 0;
+            brief.DrawBrief();
+        }
+        height = bottom;
+        pLast = pEntry;
+        count++;
+    }
+    sDrawingStats = false;
+    gViewCamera->mUiScale = hudScale;
+    brief = saved;
+    return height;
+}
+
+// The HUD brief's text: its right end and top on the screen; a right end of 0 without one.
+static void BriefPlace(f32* pRight, f32* pTop)
+{
+    Hud_Brief& brief = gHud_2B00->mBrief;
+    *pRight = 0;
+    *pTop = 0;
+    if (brief.mCurrBriefs)
+    {
+        PortUiCentred centred;
+        *pRight = PortUiStringX(brief.mStr, Fix16(64), gBriefFont).ToFloat() +
+            Frontend::GetMaxTextWidth(brief.mStr, gBriefFont) * gViewCamera->mUiScale.ToFloat();
+        *pTop = PortUiY(Fix16(480 - GetLineSpacingFromFontType_5D7700_inlined(gBriefFont) * brief.mNumLines)).ToFloat();
+    }
+}
+
+// The local player's position, where the camera follows it (its car's in one), in the frontend's small font in the
+// safe area's bottom right corner, above the brief if it reaches there. Needs the frontend's style.
+static void DrawPosition(f32 scale, f32 briefRight, f32 briefTop)
+{
+    const Ped* pPed = gGame_0x40->mLocalPlayer ? gGame_0x40->mLocalPlayer->GetActivePed() : NULL;
+    if (!pPed)
+    {
+        return;
+    }
+    wchar_t text[48];
+    swprintf(text, L"X %.2f  Y %.2f  Z %.2f", pPed->get_cam_x().ToFloat(), pPed->get_cam_y().ToFloat(), pPed->get_cam_z().ToFloat());
+    const f32 margin = PortSettings::SafeArea();
+    const f32 inset = 6 * scale;
+    const f32 x = gViewCamera->mScreenPxWidth * (1 - margin) - inset - Frontend::GetMaxTextWidth(text, gFrontendFont7) * scale;
+    f32 bottom = gViewCamera->mScreenPxHeight * (1 - margin);
+    bottom = x < briefRight && briefTop < bottom ? briefTop : bottom;
+    const f32 y = bottom - inset - GetLineSpacingFromFontType(gFrontendFont7) * scale;
+    DrawString(text, Fx(x), Fx(y), gFrontendFont7, Fx(scale), palette_types_enum::sprites_2, 0, 0, 0);
 }
 
 void Draw()
@@ -385,23 +553,37 @@ void Draw()
     }
     PlaySound(PortMenu::UpdateCapture());
 
-    // The 640x480 layout centred on the screen, inside the safe area but without the HUD scale, the menu
-    // 10 lower (its panel then ends at the bottom) and above it the lines of the original's pause screen.
+    // The 640x480 layout centred on the screen, inside the safe area but without the HUD scale, 10 lower.
     const f32 scale = PortScreenUiScale().ToFloat() * (1 - 2 * PortSettings::SafeArea());
     const f32 left = (gViewCamera->mScreenPxWidth - 640.0f * scale) / 2;
     const f32 top = (gViewCamera->mScreenPxHeight - 480.0f * scale) / 2;
     const f32 menuTop = top + 10 * scale;
+    PortMenu::OfferRadio(StationName());
+    f32 briefRight;
+    f32 briefTop;
+    BriefPlace(&briefRight, &briefTop);
     UseFrontendStyle(false);
     const PortMenu::Result result = PortMenu::HandleMouse(scale, left, menuTop);
-    if (result == PortMenu::kClosed || result == PortMenu::kQuitGame)
+    if (Closes(result))
     {
         UseGameStyle();
         Apply(result);
         return;
     }
-    PlaySound(result);
+    Apply(result);
     PortMenu::Draw(scale, left, menuTop, true);
+    DrawPosition(scale, briefRight, briefTop);
     UseGameStyle();
-    DrawStats(scale, left, top);
+    f32 rowTop;
+    f32 rowStep;
+    if (PortMenu::OnStatistics(&rowTop, &rowStep))
+    {
+        DrawStats(scale, left, menuTop, rowTop, rowStep);
+    }
+    f32 room;
+    if (PortMenu::OnTranscript(&rowTop, &room))
+    {
+        Transcript(rowTop, room, scale, left, menuTop);
+    }
 }
 } // namespace PortPauseMenu

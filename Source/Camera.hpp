@@ -214,6 +214,7 @@ EXTERN_GLOBAL(Camera*, gViewCamera);
 // Screen positions of the 640x480 HUD layout. The port anchors them to the left, centre or right
 // (top, centre or bottom) of screens of other shapes.
 #if defined(GTA2_PORT)
+// Port: widescreen HUD and view, CAMERA ZOOM, HUD SCALE and SAFE AREA (port/src).
 Fix16 PortUiX(Fix16 x);
 Fix16 PortUiY(Fix16 y);
 Fix16 PortUiStringX(const wchar_t* pStr, Fix16 x, u16 font);

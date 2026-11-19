@@ -20,6 +20,10 @@
 #include "PedGroup.hpp"
 #include "ped_death_cause.hpp"
 #include "PublicTransport.hpp"
+#if defined(GTA2_PORT)
+// Port: the saves, written whole and checked, and none while a replay plays.
+#include "../port/src/saves.hpp"
+#endif
 
 DEFINE_GLOBAL(ScriptManager*, gScriptManager, 0x6F8060);
 DEFINE_GLOBAL(SaveData, gGameSave, 0x6F78C8);
@@ -256,6 +260,7 @@ char_type ScriptManager::AddCranePowerupTrigger(s16 idx)
     return gCarThreadTriggers_214->AddThreadTrigger(car_thread_trigger_type::any_car_1,
                                        car_thread_trigger_action::set_generator_car_type_3,
 #if defined(GTA2_PORT_64BIT)
+                                       // Port: 64-bit, mGenerator is a PtrSlot32 handle, read as its pointer.
                                        reinterpret_cast<SCR_THREAD*>(static_cast<Generator*>(pGenerator->mGenerator)),
 #else
                                        reinterpret_cast<SCR_THREAD*>(pGenerator->mGenerator),
@@ -348,6 +353,17 @@ void ScriptManager::SaveGame(const char_type* pFileName)
         pFileName = gTmpBuffer;
     }
 
+#if defined(GTA2_PORT)
+    // Port: no save while the attract demo or a replay plays; the name kept for PortSaves::Write, as pFileName can
+    // be the shared gTmpBuffer.
+    if (PortSaves::Replaying())
+    {
+        return;
+    }
+    char_type saveName[256];
+    snprintf(saveName, sizeof(saveName), "%s", pFileName);
+#endif
+
     ScriptManager::SaveScriptCounters();
 
     gGame_0x40->mLocalPlayer->CopyPlayerDataToSave(&gGameSave.mPlayerAndWorldStats);
@@ -369,7 +385,19 @@ void ScriptManager::SaveGame(const char_type* pFileName)
     gMap_0x370->GetModifiedMapData(&pColData, &colBytes, &pBlockInfo, &blockInfoBytes, &pMapSub, &mapSubBytes);
 
     ScriptManager::SaveMapInfo();
-
+#if defined(GTA2_PORT)
+    // Port: the save written whole to a temporary file then moved over it, so a crash or a full disk keeps the
+    // previous one; FillSave adds the autosave's exact position, power-ups and car.
+    PortSaves::FillSave(&gGameSave);
+    const PortSaves::Part parts[] = {{&gGameSave, sizeof(SaveData)},
+                                     {&colBytes, sizeof(colBytes)},
+                                     {pColData, colBytes},
+                                     {&blockInfoBytes, sizeof(blockInfoBytes)},
+                                     {pBlockInfo, blockInfoBytes},
+                                     {&mapSubBytes, sizeof(mapSubBytes)},
+                                     {pMapSub, static_cast<u32>(mapSubBytes)}};
+    PortSaves::Write(saveName, parts, GTA2_COUNTOF_S(parts));
+#else
     {
         size_t writeLen = sizeof(SaveData);
         File::WriteBufferToFile(pFileName, &gGameSave, &writeLen);
@@ -401,6 +429,7 @@ void ScriptManager::SaveGame(const char_type* pFileName)
             File::AppendBufferToFile(pFileName, pMapSub, reinterpret_cast<u32*>(&mapSubBytes));
         }
     }
+#endif
 }
 
 MATCH_FUNC(0x511f80)

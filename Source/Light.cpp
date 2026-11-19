@@ -78,6 +78,7 @@ MATCH_FUNC(0x4D6E00)
 void __stdcall LightGrid::AllocGrid()
 {
 #if defined(GTA2_PORT_64BIT)
+    // Port: 64-bit, 4096 pointers where the original allocates 4 bytes each.
     gLightGrid = static_cast<Light**>(crt::malloc(sizeof(Light*) * 4096));
 #else
     gLightGrid = static_cast<Light**>(crt::malloc(0x4000u));

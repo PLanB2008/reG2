@@ -3,6 +3,7 @@
 #include "Game.hpp"
 #include "Player.hpp"
 #include "Camera.hpp"
+#include "debug.hpp"
 #include "pause_menu.hpp"
 #include "settings.hpp"
 #include "net_hooks.hpp"
@@ -17,9 +18,20 @@ bool port_FrontendActive()
     return gFrontend != NULL;
 }
 
+bool port_FrontendTyping()
+{
+    return gFrontend && (gFrontend->mState == FrontendState::User_Typing_New_Player_Name_3 ||
+                         gFrontend->mState == FrontendState::User_Typing_Password_5);
+}
+
 bool port_MenuUsesMouse()
 {
     return port_FrontendActive() || PortPauseMenu::IsOpen();
+}
+
+bool port_DebugKeys()
+{
+    return bDo_debug_keys;
 }
 
 bool port_QuitMessageShown()

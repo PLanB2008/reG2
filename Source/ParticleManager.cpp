@@ -13,6 +13,8 @@
 #include "sprite.hpp"
 #include "rng.hpp"
 #if defined(GTA2_PORT)
+// Port: TWIN STICK shot leads.
+#include "../port/src/twin_stick.hpp"
 #include "../port/src/rand/particle.hpp" // particles on a stream of their own in a network game (port/docs/netcode.md)
 #endif
 
@@ -261,7 +263,12 @@ void ParticleManager::GunMuzzelFlash(Sprite* pSprite)
                 ped_offset.x = -kFpPoint03_6FD464;
                 ped_offset.y = kFpPoint02 + kFpPoint1_6FD2E8;
                 ped_offset.RotateByAngle(pSprite->mRotation);
+#if defined(GTA2_PORT)
+                // Port: TWIN STICK, only the walk toward the aim leads (ShotLead): the flash stays at the gun.
+                ped_offset = ped_offset + PortTwinStick::ShotLead(pChar);
+#else
                 ped_offset = ped_offset + *reinterpret_cast<Fix16_Point*>(&pChar->mVelocityVector);
+#endif
 
                 pParticle->mpOwnSprite->set_ang_lazy(pSprite->mRotation);
                 pParticle->mpOwnSprite->set_xyz_lazy(pSprite->mXy.x + ped_offset.x, pSprite->mXy.y + ped_offset.y, zpos);

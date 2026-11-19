@@ -65,8 +65,13 @@
 #include "sprite.hpp"
 #include "TextTable.hpp"
 #if defined(GTA2_PORT)
+// Port: AUTOSAVE, the frame loop, the settings menu, RETRY JOBS and INFINITE LIVES.
+#include "../port/src/autosave.hpp"
 #include "../port/src/frame_loop.hpp"
 #include "../port/src/net_hooks.hpp" // the network game's hooks (port/docs/netcode.md)
+#include "../port/src/options_menu.hpp"
+#include "../port/src/retry.hpp"
+#include "../port/src/settings.hpp"
 #endif
 
 DEFINE_STATIC_GLOBAL(u8, sNetDisconnectPlayersBits, 0x6F56B8);
@@ -381,6 +386,7 @@ EXPORT void __stdcall ResetFrameTimer()
     sMatchStartTime = timeGetTime();
     sFramesSinceDraw = 0;
 #if defined(GTA2_PORT)
+    // Port: the frame loop's backlog and interpolation start over.
     PortFrameLoop::Reset();
 #endif
 }
@@ -391,7 +397,8 @@ void UpdateGameScreenSize()
     if (gGame_0x40)
     {
 #if defined(GTA2_PORT)
-        // The cache keeps one dimension only, which the port's sizes can share (the frontend's 640x480, then 800x480).
+        // Port: the game resized on every screen size update. The cache keeps one dimension only, which the port's
+        // sizes can share (the frontend's 640x480, then 800x480).
         gCachedScreenDimension = 0;
 #endif
         if (gVidSys->field_40_full_screen == -2)
@@ -447,7 +454,8 @@ EXPORT void __stdcall Init_FrameRateLightingAndExplodingScores()
 
     bExplodingScoresOff = gRegistry.Get_Screen_Setting("exploding_on", 1) != 1;
 #if defined(GTA2_PORT)
-    // The port's BLOOD option: the pool under the dead, the original's GOREFEST cheat.
+    // Port: the BLOOD option (on by default): the pool under the dead, which the original leaves to the do_blood
+    // debug key and the GOREFEST cheat.
     bDo_blood = gRegistry.Get_Screen_Setting("blood", 1) != 0;
 #endif
 }
@@ -923,6 +931,10 @@ void __stdcall ExitGameCallback(Game* pGame, s32 reason)
 MATCH_FUNC(0x4DA4D0)
 EXPORT void __stdcall InitializeGame()
 {
+#if defined(GTA2_PORT)
+    // Port: INFINITE LIVES as the game starts; a replay's header and a network game's ClearDebugFlags below override it.
+    PortSettings::ApplyInfiniteLives(sbReplayMode != 0);
+#endif
     if (sbReplayMode)
     {
         gInputRecorder.input_init_replay(gHInstance);
@@ -977,6 +989,13 @@ EXPORT void __stdcall InitializeGame()
     }
 
     gGame_0x40->LoadGameFiles();
+#if defined(GTA2_PORT)
+    // Port: AUTOSAVE and RETRY JOBS start with the level; a church save goes to plyslotN.svg, never over the file
+    // the level was loaded from (an autosave, a copy or a checkpoint).
+    PortAutosave::Start();
+    PortRetry::Start();
+    gGameSession.SetSaveFileName("");
+#endif
     gGame_0x40->BootGame();
 
     sMatchStartTime = timeGetTime();
@@ -984,6 +1003,7 @@ EXPORT void __stdcall InitializeGame()
     sbForceGameUpdate = false;
     sbInputsPending = true;
 #if defined(GTA2_PORT)
+    // Port: the frame loop's backlog and interpolation start over with the game.
     PortFrameLoop::Reset();
 #endif
 }
@@ -1462,8 +1482,8 @@ EXPORT void __stdcall do_network_and_local_inputs()
 }
 
 #if defined(GTA2_PORT)
-// The original's order (inputs, step, draw) on the port's pacing; one action per call, so that the
-// message loop runs between them.
+// Port: logic steps of the original's length on a monotonic clock, frames drawn between them, in the original's
+// order (inputs, step, draw), one action per call so that the message loop runs between them.
 static bool PortRunGameFrame()
 {
     bool exit_requested = false;
@@ -1480,6 +1500,11 @@ static bool PortRunGameFrame()
             PortFrameLoop::BeforeStep();
             exit_requested = ExecuteGameTimed();
             PortFrameLoop::AfterStep();
+            if (!exit_requested)
+            {
+                PortAutosave::AfterStep();
+                PortRetry::AfterStep();
+            }
             sbForceGameUpdate = false;
             sbInputsPending = true;
             updated_logic = true;
@@ -1505,6 +1530,7 @@ MATCH_FUNC(0x4DA850)
 EXPORT bool RunGameFrame()
 {
 #if defined(GTA2_PORT)
+    // Port: the port's frame loop for local games; a network game keeps the original's.
     if (!bStartNetworkGame)
     {
         return PortRunGameFrame();
@@ -1620,7 +1646,7 @@ EXPORT void __stdcall GetDirectXVersion(u32* pDXVer, u32* osKind)
     struct _OSVERSIONINFOA osVersionInfo;
 
 #if defined(GTA2_PORT_SDL)
-    // No DirectX to probe: the renderer and input are built in.
+    // Port: SDL builds have no DirectX to probe; the renderer and input are built in.
     *pDXVer = 0x601;
     *osKind = VER_PLATFORM_WIN32_NT;
     return;
@@ -2400,6 +2426,10 @@ s32 __stdcall GameWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lp
         {
             Frontend::create();
             gFrontend->ChangeMenuPage(state);
+#if defined(GTA2_PORT)
+            // Port: if RETRY or the pause menu's LOAD GAME ended the game, the frontend boots that save at once.
+            PortOptionsMenu::AfterGame(gFrontend);
+#endif
         }
         else
         {
@@ -2511,9 +2541,16 @@ s32 __stdcall GameWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lp
                                         break;
 
                                     case GameExitType::PlayerQuit_2:
-                                        gGameSession.StoreCrimeStats(gGame_0x40->mLocalPlayer);
-                                        gPlyDat->UpdateStageScore(gGame_0x40->mLocalPlayer);
-                                        gPlyDat->UpdateHiScores();
+#if defined(GTA2_PORT)
+                                        // Port: RETRY ends the game as QUIT GAME does; the game it leaves
+                                        // for the checkpoint is not scored.
+                                        if (!PortRetry::Retrying())
+#endif
+                                        {
+                                            gGameSession.StoreCrimeStats(gGame_0x40->mLocalPlayer);
+                                            gPlyDat->UpdateStageScore(gGame_0x40->mLocalPlayer);
+                                            gPlyDat->UpdateHiScores();
+                                        }
 
                                         state = gGameSession.IsBonusStage() != 0 ? MENUPAGE_BONUS_AREA : MENUPAGE_RESULTS_PLAYER_QUIT;
                                         CleanUpInputAndOthers();

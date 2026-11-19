@@ -327,10 +327,11 @@ void __stdcall LogFuncAddr(u32 codeAddr, s32 mode);
 #endif
 
 #if defined(GTA2_PORT) && __SIZEOF_POINTER__ == 8
+// Port: 64-bit targets, whose pointers do not fit the original's 4-byte fields (port/docs/64bit.md).
     #define GTA2_PORT_64BIT
 #endif
 
-// const on reference parameters that receive temporaries, which only MSVC binds to non-const references.
+// Port: const on reference parameters that receive temporaries, which only MSVC binds to non-const references.
 // Empty for VC6: the const adds to an inline's size and moves VC6's inlining cut-offs.
 #if defined(GTA2_PORT)
     #define PORT_CONST const
@@ -338,7 +339,7 @@ void __stdcall LogFuncAddr(u32 codeAddr, s32 mode);
     #define PORT_CONST
 #endif
 
-// What _findfirst returns: a pointer on 64-bit Windows, so a long would truncate it.
+// Port: what _findfirst returns, a pointer on 64-bit Windows, where a long truncates it and _findnext crashes.
 #if defined(GTA2_PORT_64BIT)
 #include <stdint.h>
 typedef intptr_t find_handle_t;
@@ -347,7 +348,8 @@ typedef long find_handle_t;
 #endif
 
 #if defined(GTA2_PORT_64BIT)
-    // The asserted sizes are the 32-bit ones; port/src/layout_checks.cpp checks the files' structures on every target.
+    // Port: 64-bit, the asserted sizes are the 32-bit ones; port/src/layout_checks.cpp checks the files' structures
+    // on every target.
     #define GTA2_ASSERT_SIZEOF_ALWAYS(structureName, expectedSize)
 #elif defined(_MSC_VER)
     #if defined(__clang__) || (_MSC_VER <= 1200)

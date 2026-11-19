@@ -408,6 +408,14 @@ class sound_obj
     EXPORT u8 FindEmitterByStation(s32 station_idx) const;
     EXPORT bool IsPoliceOrServiceVehicle(Car* pCar) const;
     EXPORT bool IsTrainOrBoxcar(Car* pCar) const;
+#if defined(GTA2_PORT)
+    // Port: for the pause menu's RADIO line, the station the player's car plays; 0 without one (on foot, police and
+    // service vehicles, trains, a wreck).
+    s32 RadioStation() const
+    {
+        return mbInRadioCar && mActiveEmitterIdx[0] < 5 ? mRadioEmitters[mActiveEmitterIdx[0]].mStationIdx : 0;
+    }
+#endif
 };
 
 EXTERN_GLOBAL(sound_obj, gSound_obj);

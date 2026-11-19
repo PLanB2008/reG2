@@ -46,12 +46,11 @@ void LogFirstFrames()
     }
 }
 
-// Scroll Lock toggles faithful rendering and the gta2gl.ini options.
+// With the game's debug keys, Scroll Lock toggles faithful rendering and the gta2gl.ini options, unsaved.
 void PollToggleKey(VidSystem* pSys)
 {
     static bool sWasDown;
-    static const bool sDisabled = getenv("GTA2GL_NO_TOGGLE_KEY") != NULL;
-    if (sDisabled)
+    if (!port_DebugKeys())
     {
         return;
     }
@@ -145,6 +144,44 @@ void port_FrameSize(int* pW, int* pH)
         *pW = sVidSystem->Renderer().LogicalWidth();
         *pH = sVidSystem->Renderer().LogicalHeight();
     }
+}
+
+// The window's pixels per pixel of the frame the game draws.
+float port_PixelScale()
+{
+    const int height = sVidSystem ? sVidSystem->Renderer().LogicalHeight() : 0;
+    return height > 0 ? static_cast<float>(sVidSystem->Renderer().TargetHeight()) / height : 1.0f;
+}
+
+// The frontend's frame, 480 lines high: as wide as the window's shape for a page drawn across the whole window
+// (port/src/welcome.cpp), else its own 640. The new width.
+int port_SetFrameWidth(bool wide)
+{
+    int w = 640;
+    int windowW = 0;
+    int windowH = 0;
+    SDL_Window* pWindow = port_MainSDLWindow();
+    if (wide && pWindow && SDL_GetWindowSizeInPixels(pWindow, &windowW, &windowH) && windowH > 0)
+    {
+        w = windowW * 480 / windowH > 640 ? (windowW * 480 / windowH) & ~1 : 640;
+    }
+    if (sVidSystem && sVidSystem->Renderer().LogicalWidth() != w)
+    {
+        sVidSystem->Renderer().SetLogicalSize(w, 480);
+    }
+    return w;
+}
+
+void port_ShowMovieFrame(const unsigned char* pRgba, int width, int height)
+{
+    if (!sVidSystem)
+    {
+        return;
+    }
+    sTestFrame++;
+    sVidSystem->SetTestFrame(sTestFrame);
+    sVidSystem->ShowImage(pRgba, width, height);
+    LogFirstFrames();
 }
 
 namespace

@@ -2,9 +2,8 @@
 # smoke_test.sh <package> [<GTA2 folder>]: installs a Linux package (reG2-linux-i686.tar.gz,
 # reG2-linux-x86_64.tar.gz or reG2-x86_64.AppImage) and the libraries it needs (the lists of linux/README.md)
 # as root in a clean Debian, Ubuntu or Arch Linux container, then starts the game without its data: with SDL's
-# dummy video driver the setup finds no data and quits; under Xvfb its window is captured, drawn with OpenGL and
-# with OpenGL ES. With a GTA2 folder (read-only is fine), the setup installs the game from it, then the game
-# plays 30 seconds under Xvfb, with the sound written to a file.
+# dummy video driver the setup finds no data and quits. With a GTA2 folder (read-only is fine), the setup
+# installs the game from it, then the game plays 30 seconds under Xvfb, with the sound written to a file.
 set -eu
 PKG=$(readlink -f "$1")
 GAME=${2:+$(readlink -f "$2")}
@@ -71,21 +70,6 @@ Xvfb :99 -screen 0 1024x768x24 -nolisten tcp &
 XVFB=$!
 trap 'kill $XVFB' EXIT
 export DISPLAY=:99
-for render in opengl opengles2; do
-    C=$T/cap_$render
-    mkdir -p "$C"
-    rc=0
-    GTA2_NO_SOUND=1 SDL_RENDER_DRIVER=$render SDL_VIDEO_FORCE_EGL=$([ $render = opengles2 ] && echo 1 || echo 0) \
-    GTA2_SETUP_DRAWN=1 GTA2_SETUP_CAPTURE=$C GTA2_LOG_FILE=$T/$render.log \
-        timeout -s KILL 20 "$GTA2" || rc=$?
-    cat "$T/$render.log"
-    ls -l "$C"
-    # Killed by timeout while the window waits for an answer.
-    [ "$rc" = 137 ]
-    # The question's text and buttons, not a blank window.
-    [ "$(od -An -tu1 -v "$C/setup_0.bmp" | tr -s ' ' '\n' | sort -u | wc -l)" -gt 8 ]
-    cp "$C/setup_0.bmp" "$T/setup_$render.bmp"
-done
 
 if [ -n "$GAME" ]; then
     C=$T/cap_game

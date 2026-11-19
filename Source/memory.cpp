@@ -32,6 +32,7 @@ void* __stdcall Memory::Aligned_malloc(s32 requestedSize, void** pUnAlignedPtr)
     }
 
 #if defined(GTA2_PORT_64BIT)
+    // Port: 64-bit, the 64 KB alignment at the pointer's full width.
     return reinterpret_cast<void*>((reinterpret_cast<uintptr_t>(*pUnAlignedPtr) + 0xFFFF) & ~static_cast<uintptr_t>(0xFFFF));
 #else
     return reinterpret_cast<void*>((reinterpret_cast<u32>(*pUnAlignedPtr) + 0xFFFF) & 0xFFFF0000);

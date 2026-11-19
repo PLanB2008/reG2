@@ -2,6 +2,7 @@
 //   name = dword:<hex> | sz:<text> | hex:<bytes>
 // Keys and value names ignore case, as in the Windows registry.
 #include <windows.h>
+#include <SDL3/SDL.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -137,14 +138,69 @@ void SetValue(Key& k, const std::string& name, DWORD type, const void* data, siz
     k.mValues[Lower(name)] = std::make_pair(name, v);
 }
 
-// What GTA2's installer writes and the game does not create itself. Movies are off: the Bink
-// library is a stub.
+// What GTA2's installer writes and the game does not create itself.
 void SetDefaults()
 {
     DWORD cities = 3;
     SetValue(GetKey("HKLM\\Software\\freeloader.com\\GTA2"), "CityInstalled", REG_DWORD, &cities, 4);
-    DWORD noMovie = 0;
-    SetValue(GetKey("HKLM\\SOFTWARE\\DMA Design Ltd\\GTA2\\Screen"), "do_play_movie", REG_DWORD, &noMovie, 4);
+}
+
+// The intro on, once per profile (port_movie_default), as soon as the game has it; do_play_movie = 0
+// set afterwards stays. True if it changed the settings.
+bool EnableMovieOnce()
+{
+    Key& screen = GetKey("HKLM\\SOFTWARE\\DMA Design Ltd\\GTA2\\Screen");
+    if (screen.mValues.count("port_movie_default") || GetFileAttributesA("data\\Movie\\intro.bik") == INVALID_FILE_ATTRIBUTES)
+    {
+        return false;
+    }
+    DWORD on = 1;
+    SetValue(screen, "do_play_movie", REG_DWORD, &on, 4);
+    SetValue(screen, "port_movie_default", REG_DWORD, &on, 4);
+    return true;
+}
+
+// Unless the stored language has its data\<code>.gxt: the system's first one there, else English, else
+// the first there. True if it changed the settings.
+bool ChooseLanguage()
+{
+    Key& option = GetKey("HKLM\\SOFTWARE\\DMA Design Ltd\\GTA2\\Option");
+    const auto installed = [](char code)
+    {
+        char path[] = "data\\?.gxt";
+        path[5] = code;
+        return code && strchr("efgisjr", code) && GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES;
+    };
+    auto it = option.mValues.find("language");
+    if (it != option.mValues.end() && !it->second.second.mData.empty() && installed(it->second.second.mData[0]))
+    {
+        return false;
+    }
+    std::string order;
+    if (SDL_Locale** ppLocales = SDL_GetPreferredLocales(NULL))
+    {
+        for (int i = 0; ppLocales[i]; i++)
+        {
+            for (const char* pCode : {"ene", "frf", "deg", "iti", "ess"})
+            {
+                if (strncmp(ppLocales[i]->language, pCode, 2) == 0)
+                {
+                    order += pCode[2];
+                }
+            }
+        }
+        SDL_free(ppLocales);
+    }
+    for (const char code : order + "efgis")
+    {
+        if (installed(code))
+        {
+            const char value[2] = {code, 0};
+            SetValue(option, "language", REG_SZ, value, sizeof(value));
+            return true;
+        }
+    }
+    return false;
 }
 
 void Load()
@@ -158,6 +214,8 @@ void Load()
     if (!f)
     {
         SetDefaults();
+        EnableMovieOnce();
+        ChooseLanguage();
         Save();
         return;
     }
@@ -214,6 +272,10 @@ void Load()
         }
     }
     fclose(f);
+    if (EnableMovieOnce() | ChooseLanguage())
+    {
+        Save();
+    }
 }
 
 LONG Open(HKEY root, LPCSTR subKey, PHKEY pResult, bool create)

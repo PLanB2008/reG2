@@ -50,39 +50,59 @@ A developer can also run it from a copy of the game folder, or point `GTA2_DIR` 
 GTA2_DIR=~/games/gta2 ./build_linux/reg2
 ```
 
-Settings live in `gta2_registry.ini` (the registry keys of the Windows game). Alt+Enter switches
-between window and full screen. Every gamepad drives the player (only those whose name contains
+Settings live in `gta2_registry.ini` (the registry keys of the Windows game). When its `language` is unset or
+has no `data/<code>.gxt`, the start picks the first of the system's preferred languages that the game has, else
+English, else any language there. Alt+Enter switches
+between window and full screen, and is no Enter for the game or the menus. Other keys pressed with Left Alt
+(SPECIAL 2 by default) act as usual: the original dropped Space, Tab and Enter while it was held. Every gamepad drives the player (only those whose name contains
 `GTA2_GAMEPAD` if set): a button counts on any of them, the sticks are those of the pad used last.
 Bind them in the game's control options (stick and d-pad are the two axes).
 In a vehicle, with FORWARD and BACKWARD on the pad's up and down (the default), RT accelerates, LT brakes
 or reverses, both as far as they are pressed, the left stick only steers, more gently when pushed part
 way, and the d-pad works as on foot; SPECIAL 2 (the camera pan, LT
 by default) is then on L3, unless a control uses it.
-The menus also take the mouse: pointing selects, a click enters or changes a value, the right
+The menus, the pause menu too, move with the arrows or WASD by their position (ZQSD on AZERTY), whatever the
+controls, except while a player name is typed.
+They also take the mouse: pointing selects, a click enters or changes a value, the right
 button goes back, the wheel changes a value; the cursor shows while the mouse is in use over a menu.
 Each control has a key, a second key (ALTERNATE: a key, a mouse button or a wheel notch, by default
 WASD by their position (ZQSD on AZERTY) to move, F to enter or exit, the left button to attack and the
-wheel to change weapons; Delete clears it) and a gamepad input.
+wheel to change weapons; Delete clears it) and a gamepad input. F1 to F12 cannot be bound: they keep their
+own uses (F7 the brief, F9 the zone name, F10 the network chat).
 CONTROLS on the controls page chooses how the player walks on foot: CLASSIC, the original's tank
 controls, or TWIN STICK, which moves and aims apart, both relative to the screen.
 The left stick, the d-pad or the movement keys walk; the right stick aims (its reticle
 further out the more it is pushed, up to the screen's edge, and held a moment once released), or the mouse does (confined to the window,
 a reticle in place of the cursor). RT attacks (held from driving or getting in, once pressed again), the other controls stay as bound. Without an aim the player faces the
 way he walks; with one he turns to it and walks any way at the same speed (backward with the run
-animation, as the original's back key; his shots and flames take on his speed along the way he walks, so backing
-off shortens their reach as the original's backward walk does). Walking off the aim, he is drawn as Hotline Miami's peds
-are: from 45 to 135 degrees off, the walk frame's legs hidden, behind and in front, his feet, rounded boxes the colour of his shoes, step out from under his torso along the move, one ahead while the other is behind, the rest of him at the aim; further back his legs come back, the trailing one along the move, and his walk plays backward. In a jump the move steers him toward its way, as fast as the
+animation, as the original's back key; his shots, flames and throws take on only the part of his walk toward the aim,
+as the original's forward walk does, so walking sideways or backing off leaves them where a standing throw goes). Walking off the aim, his steps shorten the
+more the move is to the side, down to none at 90 degrees, where his legs stay under him, his back rounded, and he
+bobs a little along the move; further back his walk plays backward, his legs turned along the move, the one ahead
+longer than the one behind. STRAFE ANIMATION (on by default, experimental) draws these legs; off, he runs with the
+original's animation whichever way he walks. In a jump the move steers him toward its way, as fast as the
 original's left and right turn him in the air. The machine guns fire straight along the aim: the original bends
 their shots toward a ped up to 16 degrees off the line of fire. The electro weapons keep their lock on a target.
-AIM CAMERA (on by default) moves the view toward the aim on foot, about a third of the way to the
-cursor or the pad's reticle; held, left Shift, LT (instead of SPECIAL 2, while that keeps its default LT)
-or R3 (unless a control is bound to it) looks further, as far as keeps the player on screen.
+Peds standing to shoot at him with a pistol or a machine gun lead him by a part of his move while their bullets
+fly, drawn between 0.4 and 0.9 every half second: walking sideways still dodges most shots, no longer all.
+AIM CAMERA (on by default) leads the view a little ahead of the player on foot, as Hotline Miami does: 0.3 of
+the half screen height along the aim (the mouse's direction from him or the right stick's), however far the
+cursor or the reticle is, and along the last aim once the stick is released; held, left Shift, LT (instead of
+SPECIAL 2, while that keeps its default LT) or R3 (unless a control is bound to it) looks toward the cursor or
+the reticle, as far as keeps the player on screen.
 In vehicles the controls stay classic, but the fire truck's, the tank's and the gun jeep's roof gun turns
 toward the mouse or the right stick's reticle at the original's turret speed; ATTACK fires it as before, RB
 too (instead of NEXT WEAPON, while that keeps its default RB), and SPECIAL with left or right still turns it
 while held. The stick and mouse are not recorded in replays.
-Movies are skipped. Renderer options are in `gta2gl.ini` (`renderer/gta2gl.ini.example`);
-Scroll Lock toggles them.
+VIBRATION (on by default) shakes the pad used last when the player is hit on foot, at an explosion within a few
+blocks (more the nearer it is) and when the car he drives crashes (more the harder the hit), never in the menus or the pause.
+The intro movie (`data/Movie/intro.bik`, after `preintro.bik` in the editions that have one) plays as in
+the original, and any key or a pad button that works in the menus skips it. libbink decodes it at the file's
+frame rate and shows it in true colour, letterboxed, whatever the renderer settings; its sound goes through
+the game's mixer. The start turns `do_play_movie` on once, as soon as the game has the intro; set to 0
+afterwards, it stays. A movie that cannot be decoded is skipped.
+Renderer options are in `gta2gl.ini` (`renderer/gta2gl.ini.example`);
+with the debug setting `do_debug_keys`, Scroll Lock toggles them.
 
 ## Game data and first start
 
@@ -108,40 +128,99 @@ errors, message boxes and the crash report) is written next to the executable wh
 writable, else in the per-user folder, and the message gives its path. A run without an error
 writes no log.
 
-Without the data there, a message box offers three choices:
+Without the data there, a message box names what the setup reads (`kSourceKinds` in `setup/install.hpp`)
+and offers three choices:
 
 - **Use an existing install:** a GTA2 folder (the one holding `data`, or `data` itself). Its
   `data` folder is copied, with `gta2_registry.ini`, `gta2gl.ini` and `player/` if the port ran there.
 - **Install from a file:** the game's installer or a disc image, read by the port (nothing is run).
 - **I don't have the game:** a short text (`kNoGameText` in `setup/setup.cpp`) and a link to the
-  Internet Archive item [rockstar-classics](https://archive.org/details/rockstar-classics), which
-  holds the 2004 Rockstar Classics `GTA2.exe`.
+  Internet Archive item [gta2_rockstar-classics](https://archive.org/details/gta2_rockstar-classics), which
+  holds the 2004 Rockstar Classics freeware installer alone (`GTA2INSTALLER.exe`, the same file as the
+  `GTA2.exe` Rockstar gave away).
 
-The files are copied into a temporary folder, checked (the essential files are listed in
-`setup/install.cpp`), then moved into place. Without the music (the 22 tracks of `GTAudio` on the
-original CD) the game runs, and the setup offers to add it from a folder (the CD, its `GTAudio`), a
-disc image or the installer. `reg2 --setup` shows the setup again, to replace the data or add the music.
+Before anything is copied, a message lists what the chosen copy holds, each marked `[x]` or
+`[ ]`: the game files (the essential ones are listed in `setup/install.cpp`), the music, the intro
+movie and the five languages (`data/<code>.gxt`; the 2004 freeware has only English and Spanish; at
+least one is needed). It comes from the source's list of files: of InstallShield cabinets only
+`data1.hdr` is extracted (unshield lists their files from it). **Install** then copies the files into
+a temporary folder, checks them, moves them into place and starts the game. Without the music (the 22
+tracks of `GTAudio` on the original CD) or the intro movie the message warns and still offers
+Install; the music can be added later from a folder (the CD, its `GTAudio`), a disc image or the
+installer. Without an essential file it offers only **Choose another...** and **Quit**. `reg2 --setup`
+lists the installed data the same way, to replace it or add the music: a source with only the music
+or the movie (a `GTAudio` folder) is added to a complete install.
 
 | Source | Read with |
 |---|---|
 | A game folder, or its `data` or `GTAudio` folder | |
 | InstallShield setup `.exe` (the 2004 Rockstar Classics `GTA2.exe`): its files follow the PE image | `setup/install.cpp`, then unshield |
-| InstallShield cabinets (`data1.hdr`, `data*.cab`: the original CD), in a folder or a disc image | unshield |
+| InstallShield cabinets (`data1.hdr`, `data*.cab`: the original CD), in a folder or a disc image, with the CD's `GTAudio` and `Movie/intro.bik` beside them | unshield |
 | Disc images (`.iso`, Joliet names), `.zip`, `.7z` and the other formats of libarchive | libarchive |
 
 Other installers (NSIS, Inno Setup) are not read: install the game with them, then use its folder.
+The original 1999 CD is read as a folder (the disc, or a copy of its files): libarchive refuses its
+`.iso` (the primary volume descriptors carry Joliet escape sequences), and raw `.mdf`/`.bin` images
+(2352-byte sectors) are not read.
 
 Message boxes are SDL's: task dialogs on Windows, `NSAlert` on macOS. On Linux, zenity if installed
-(GTK dialogs), else SDL's own X11 box; when neither is available (Wayland without XWayland) the port
-draws the question in a window of its own. The folder and file pickers are SDL's (the
+(GTK dialogs), else SDL's own X11 box; when neither is available (Wayland without XWayland) the setup
+logs the question and quits, and `GTA2_SETUP_PATH` can name the source. The folder and file pickers are SDL's (the
 xdg-desktop-portal on Linux, else zenity). The progress is a small SDL
 window; closing it cancels the copy.
+
+## Welcome screen, options and saves
+
+The first start shows CHOOSE YOUR STYLE before the start menu. CLASSIC is the game as it was: its
+look, its controls and church saves only. ENHANCED, selected at first, turns on the new lights and
+shadows, the day and night cycle, twin stick controls, AUTOSAVE, RETRY JOBS and FRENZY RESPAWN. Pick one with the
+keys, the mouse or a pad (Left and Right, or LB and RB, as the hint under it shows); every setting can
+be changed later. `GTA2_WELCOME=1` shows the screen again.
+
+OPTIONS has five pages: GAME (language, text speed, AUTOSAVE, RETRY JOBS, FRENZY RESPAWN, INFINITE LIVES, blood, lighting and the
+day and night cycle), GRAPHICS, DISPLAY (full screen, frame rate, zoom, HUD), SOUND and CONTROLS.
+Their settings are grouped under small titles, and the less common ones say under the page what they
+do, or what their value does (PRESET, LIGHTING, FRAME LIMIT, CONTROLS, AIM CAMERA, STRAFE ANIMATION).
+In a game, Escape opens the same menu as a pause menu, with RESUME, RADIO (in a car with a radio: its station by
+name, Left and Right or Enter to change it, as F1 and F2 did), STATISTICS (the original pause screen's lines),
+MISSION TRANSCRIPT (the last mission messages, newest first), LOAD GAME and QUIT GAME. The hints under the pages show the keys, or once a pad is used its
+buttons: PlayStation's symbols on a PlayStation pad, otherwise Xbox's pictures with the letters
+printed on the pad (a Nintendo pad's bottom button is B), from SDL's pad type and button labels.
+The bottom right corner shows the player's position in the map's blocks (X, Y and Z, his car's in one).
+
+Saves are kept per city, in `player/`:
+
+- A church save goes to `plyslotN.svg`, as in the original, and to a copy for its city.
+- AUTOSAVE (`port_autosave`) saves the city after each job or kill frenzy, once the player is safe, and
+  as he leaves it through the exit arrow (a few steps back from it). SAVING shows at the top of the
+  screen, SAVE FAILED in red if the file could not be written; the game goes on. With it on, the pause
+  menu's QUIT GAME offers SAVE AND QUIT, QUIT and CANCEL. SAVE AND QUIT writes the autosave, then quits
+  (if the save fails, SAVE FAILED and the game goes on); it is greyed during a job or a frenzy, when
+  wasted, busted or burning (NOT NOW), or with no firm ground to save on (NOT HERE). QUIT and closing
+  the window save nothing.
+- RETRY JOBS (`port_retry`) keeps a checkpoint taken as a job or a kill frenzy starts. After a failure,
+  the pause menu offers RETRY JOB or RETRY FRENZY (RESTART while it runs), with the job's name, the
+  money then and how long ago. Passing it, a church save or a new game deletes the checkpoint.
+- FRENZY RESPAWN (`port_kf_respawn`): a failed kill frenzy is no longer marked started in the save, and a new skull
+  or vehicle and its trigger are back at once; standing on the skull starts it again. The old vehicle locks the
+  player out once he leaves it and despawns as traffic does; while it or the player is on the new one's spot, it stays
+  the frenzy's instead. A passed one stays gone. Off in network games and bonus stages.
+- INFINITE LIVES (`port_infinite_lives`, off in both styles): dying costs no life, so never GAME OVER, but still ends at
+  the hospital; it sets the original's `do_infinite_lives` debug flag, at once in a game, and changes nothing in network
+  games, which count no lives.
+- LOAD GAME (the original's RESUME SAVED STATUS, on the Play, quit, dead and area complete pages)
+  lists the saves, even a single one: a tab per city (Left and
+  Right, Q and E, or LB and RB), each save with its money, jobs passed and date, newest first.
+  The pause menu's LOAD GAME (not in a bonus stage or a network game) first warns that the progress since the
+  last save will be lost; the game it leaves is not scored, as for RETRY.
+- With AUTOSAVE on, a new game in a city that has an autosave warns first: YOUR DOWNTOWN AUTOSAVE
+  WILL BE REPLACED, CONTINUE or CANCEL.
 
 ## Frame rate
 
 The game logic always runs in the original's steps of 33 ms (11 ms in fast forward), 30.3 per
 second, on a monotonic clock; the original's `max_frame_rate` (off: the game as fast as the
-machine) is not read. The SCREEN settings page chooses how often frames are drawn:
+machine) is not read. The DISPLAY settings page chooses how often frames are drawn:
 
 - FRAME LIMIT (`port_max_fps`): 30 ORIGINAL draws once after each step, as the original; 60, 120,
   144, 240 or UNLIMITED draw in between, with every sprite and the camera interpolated between the
@@ -209,16 +288,28 @@ Then add `-DGTA2_OPENAL_DIR=$PWD/openal_linux32` (or `openal_mingw32`) to the po
 `-DHAVE_WFUNCTION_EFFECTS=OFF` works around recent clang rejecting OpenAL Soft 1.25.2's
 `-Werror=function-effects`.
 
+## License
+
+The port's own code in `port/` is under the MIT license (`port/LICENSE`), except the third-party code
+below, under its own license. The rest of the repository comes from gta2_re, which has no license.
+
 ## Third-party code
 
 | Code | Version | License | Use |
 |---|---|---|---|
 | [SDL 3](https://libsdl.org) | 3.4 | zlib | platform layer (linked) |
+| [libbink](https://github.com/raynorpat/libbink) | 73d884f4 | LGPL 2.1 | the movies' Bink 1 decoder (`3rdParty/libbink`, built in, static) |
 | [OpenAL Soft](https://github.com/kcat/openal-soft) | 1.25.2 | LGPL | 3D sound (loaded at run time, optional) |
 | [libarchive](https://github.com/libarchive/libarchive/releases/tag/v3.8.11) | 3.8.11 | BSD | setup: disc images and archives (linked) |
 | [unshield](https://github.com/twogood/unshield/releases/tag/1.6.2) | 1.6.2 | MIT | setup: InstallShield cabinets (linked) |
 | [ENet](http://enet.bespin.org) | 1.3.18 | MIT | the network game (vendored in `net/enet`) |
 | [zlib](https://github.com/madler/zlib/releases/tag/v1.3.2), [xz](https://github.com/tukaani-project/xz/releases/tag/v5.8.4) | 1.3.2, 5.8.4 | zlib, 0BSD | their compression, where the system has none (MinGW) |
+
+libbink is linked statically, so the LGPL asks that its users can rebuild the game with a changed copy:
+the port's source, which holds it, is public, and the packages carry its licence.
+
+The key and button pictures (`resources/prompts_*.png`, made by `resources/prompts_atlas.py`) are from
+[Gamepad UI / Controller Prompts Pack](https://greatdocbrown.itch.io/gamepad-ui) by greatdocbrown (CC0).
 
 ### Setup libraries
 
@@ -311,7 +402,7 @@ To release:
 
 The start menu looks for a newer release at most once a day (`curl`, else `wget`, on
 `api.github.com/repos/reG2-project/reG2/releases/latest`), and shows it beside the version: a click opens the
-release's page. OPTIONS, CHECK FOR UPDATES turns it off; `-DGTA2_UPDATE_CHECK=OFF` leaves it out, as in the
+release's page. OPTIONS, GAME, CHECK FOR UPDATES turns it off; `-DGTA2_UPDATE_CHECK=OFF` leaves it out, as in the
 Flatpak. `GTA2_UPDATE_URL` replaces the API's URL, for tests.
 
 The executable is `reg2` (`reg2.exe`), so that it never replaces a GTA2 folder's `gta2.exe`. The app id of
@@ -345,8 +436,9 @@ the AppImage in a clean Debian, Ubuntu or Arch Linux container with the librarie
 
 | Variable | Effect |
 |---|---|
-| `GTA2_INPUT=<frame>:<key>[:<frames held>],...` | key presses at given frames (SDL key names: `Return`, `Up`, `Left Ctrl`, `Alt+Return`), a virtual gamepad (`pad.a`, `pad.dpup`, `pad.lefty-`, `pad.rightx=0.5` for part of an axis; `pad2.` a second one, the first then idle), or the mouse (`mouse.<x>x<y>` moves it to that window position, `mouse.left`, `mouse.right`, `mouse.wheelup`, `mouse.wheeldown`) |
+| `GTA2_INPUT=<frame>:<key>[:<frames held>],...` | key presses at given frames (SDL key names: `Return`, `Up`, `Left Ctrl`, `Alt+Return`), a virtual gamepad (`pad.a`, `pad.dpup`, `pad.lefty-`, `pad.rightx=0.5` for part of an axis; `pad2.` a second one, the first then idle; it logs the rumble it gets), or the mouse (`mouse.<x>x<y>` moves it to that window position, `mouse.left`, `mouse.right`, `mouse.wheelup`, `mouse.wheeldown`) |
 | `GTA2_EXIT_AT=<frame>` | quit at that frame |
+| `GTA2_WELCOME=1` | the first start's CHOOSE YOUR STYLE screen shown again |
 | `GTA2_CURSOR_BMP=<file>` | the mouse cursor's image written to that BMP |
 | `GTA2GL_CAPTURE=<dir>,<frame>,<a>-<b>,...` | write those frames as BMP (the first frame drawn at each); `GTA2GL_CAPTURE_FLIPS=1` counts presented frames instead |
 | `GTA2_LOOP_STATS=1` | logic steps and frames per second on stderr, every 5 seconds |
@@ -361,9 +453,8 @@ the AppImage in a clean Debian, Ubuntu or Arch Linux container with the librarie
 | `GTA2_TEST_CRASH=1`, `GTA2_TEST_CRASH=abort` | a null pointer write or `abort()` once the window exists, to try the crash report |
 | `GTA2_AUDIO_DRIVER`, `GTA2_AUDIO_FILE` | SDL's audio driver and disk output file (wine hides `SDL_*` variables from Windows programs) |
 | `GTA2_DEBUG_OUTPUT=1` | the game's debug strings on stderr and in the log |
-| `GTA2_SETUP_PATH=<folder or file>` | the setup installs from it, without the first question and the dialog (messages shown after it still wait, unless `GTA2_NO_MESSAGEBOX=1`) |
-| `GTA2_SETUP_DRAWN=1` | the setup's questions in its own window, not in message boxes |
-| `GTA2_SETUP_CAPTURE=<dir>` | the setup's windows written there as BMP |
+| `GTA2_SETUP_PATH=<folder or file>` | the setup installs from it without asking; a source missing an essential file, or an error, still shows its message, unless `GTA2_NO_MESSAGEBOX=1` |
+| `GTA2_SETUP_CAPTURE=<dir>` | the setup's progress window written there as BMP |
 
 Frames count presented frames, except that while the game runs they count its logic steps, so a
 script does the same at any frame rate. A run nobody sees, with the sound written to a file:

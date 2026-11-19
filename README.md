@@ -22,17 +22,25 @@ You need your own copy of GTA2 for PC. The free 2004 release works.
 
 ![Downtown at night](docs/images/pc_night_street.png)
 
-## Classic by default
+## Classic or enhanced
 
-Out of the box it looks and plays like the original: same lighting, same controls, 30 fps. All the
-extras below are off until you turn them on in OPTIONS (start menu, or Escape in game).
+On first start, CHOOSE YOUR STYLE asks how you want to play. CLASSIC is the game as it was in 1999:
+same lighting, same controls, saves at churches only. ENHANCED turns on refined lights and shadows, the
+day and night cycle, twin stick controls, autosave, job retry and frenzy respawn. Nothing is forced: every extra below
+can be turned on or off later in OPTIONS (start menu, or Escape in game), one by one.
 
-A few things differ anyway:
+![CHOOSE YOUR STYLE](docs/images/pc_welcome.png)
+
+A few things differ anyway, whatever you pick:
 
 - it runs at your screen's resolution, and a wide screen shows a bit more on the sides
+- it draws a frame each time your screen refreshes, while the game itself keeps its original speed
 - the settings are in the game: OPTIONS in the start menu replaces GTA2 Manager, the original's separate
-  settings program, and pressing Escape during a game pauses it and opens the same menu
+  settings program, in five pages (GAME, GRAPHICS, DISPLAY, SOUND, CONTROLS), and pressing Escape during
+  a game pauses it and opens the same menu, with the original pause screen's numbers under STATISTICS
 - every menu works with the mouse, the keyboard or a gamepad
+- a few crashes of the original are fixed, among them some the community found
+  ([Vike's GTA2 11.44](https://gtamp.com/gta2/) patch, gtamp.com); the game plays the same
 - no intro movie for now
 
 ![The options menu](docs/images/pc_options_menu.png)
@@ -44,26 +52,59 @@ car headlights, light from gunfire, explosions and fires, soft shadows, bloom, a
 
 ![Classic and enhanced graphics](docs/images/pc_compare_graphics.png)
 
-**Day and night.** SCREEN > LIGHTING > DAY-NIGHT CYCLE instead of the fixed dusk.
+**Day and night.** GAME > LIGHTING > DAY-NIGHT CYCLE instead of the fixed dusk.
 
 ![A full day in 20 seconds](docs/images/pc_day_night.gif)
 
-**Frame rate.** Up to 240 fps. The game still runs at its 30 steps per second and the frames in between
-are interpolated, so it plays exactly the same, just smoother.
+**Frame rate.** As fast as your screen, or a fixed limit up to 240 fps (DISPLAY > FRAME LIMIT, where
+30 ORIGINAL brings back the original's rate). The game still runs at its 30 steps per second and the
+frames in between are interpolated, so it plays exactly the same, just smoother.
 
-**Controls.** CONTROLS lets you change every key, in three columns: the original keys, a second set of
-keys and the gamepad. The second set comes ready for keyboard and mouse: WASD to move, F to get in and
-out of cars, left click to shoot, the wheel to change weapon. A gamepad works as soon as it's plugged in,
-and in a car the triggers accelerate and brake progressively and the stick steers smoothly.
+**Controls.** CONTROLS lets you change every key, in three columns: the original keys, a second set and
+the gamepad.
 
-CONTROLS > TWIN STICK is a Hotline Miami style mode: move with one stick (or WASD), aim with the other
-(or the mouse). Shots go where you aim, the camera leans toward the aim, and holding Shift (LT on a pad)
-looks further. The turrets of the fire truck, tank and gun jeep aim the same way.
+- **Keyboard and mouse:** the second set is ready to use: WASD to move, F to get in and out of cars,
+  left click to shoot, the wheel to change weapon.
+- **Gamepad:** complete, beyond the original's basic joystick: any pad plugged in, analog driving, every
+  menu, its own button pictures.
+- **Twin stick** (CONTROLS > TWIN STICK), in the style of Hotline Miami: move with one stick or WASD, aim
+  with the other or the mouse. Shots go where you aim and the camera leads a little ahead the way you aim;
+  hold Shift (LT on a pad) to look out toward the cursor. The turrets of the fire truck, tank and gun jeep aim the same way.
 
 ![Twin stick](docs/images/pc_twin_stick.gif)
 
 **And also** 3D sound, camera zoom, HUD scale, a frame rate counter. The new menus follow the game's language, as far as your
 copy of the game has it.
+
+## Saves
+
+reG2 keeps the original church saves, one per city, and adds an optional autosave, job retry and frenzy respawn.
+
+**Churches.** Church saves work exactly as before: same cost, and the same file the original reads. reG2
+also keeps one per city, so you can go back to a city you left.
+
+**Autosave.** GAME > AUTOSAVE saves after each job or kill frenzy and as you leave a city. A small SAVING
+sign shows while it writes. When you quit from the pause menu, you choose: SAVE AND QUIT, or QUIT
+without saving.
+
+![The SAVING sign](docs/images/pc_saving.gif)
+
+**Retry jobs.** GAME > RETRY JOBS: when a job or a kill frenzy fails, retry it from the pause menu, a few
+steps from where it started, with the money you had then.
+
+![RETRY in the pause menu](docs/images/pc_retry.png)
+
+**Frenzy respawn.** GAME > FRENZY RESPAWN: a failed kill frenzy comes back on the map at once, like a job's phone
+after a failure: its skull, or for a vehicle frenzy a new vehicle where the first one was parked. A passed frenzy
+never comes back.
+
+**Load game.** RESUME SAVED STATUS shows your saves with a tab per city: church save, autosave and retry,
+each with its money, jobs passed and date.
+
+![LOAD GAME](docs/images/pc_load_game.png)
+
+AUTOSAVE, RETRY JOBS and FRENZY RESPAWN are off unless you turn them on, or pick ENHANCED. Purists can ignore all of it:
+with CLASSIC, only churches save, as in the original.
 
 ## Download
 
@@ -85,7 +126,20 @@ All releases are on the [releases page](https://github.com/reG2-project/reG2/rel
   me if it works. The app isn't signed by Apple, so the first time, right-click it and choose Open.
 
 On first start reG2 asks for the game files: it can copy an existing GTA2 install, or install from the
-free Rockstar Classics installer or the CD. Saves and settings go in your user folder.
+free Rockstar Classics installer or the CD. Saves and settings go in your user folder: see [Where files go](#where-files-go).
+
+## Where files go
+
+reG2 looks for the game in `GTA2_DIR`, the current folder and its own folder, else in the per-user folder
+below, where the first start copies it. Settings (`gta2_registry.ini`) and saves (`player/`) sit next to
+the game data; `reG2.log` is written only after a crash or an error.
+
+| System | Per-user folder |
+|---|---|
+| Windows | `%APPDATA%\reG2\` |
+| Linux (AppImage, tar.gz) | `~/.local/share/reG2/` |
+| Linux (Flatpak) | `~/.var/app/io.github.reG2_project.reG2/data/reG2/` |
+| macOS | `~/Library/Application Support/reG2/` |
 
 ## Building
 
