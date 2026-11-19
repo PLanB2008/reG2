@@ -17,6 +17,7 @@ namespace net
 {
 struct ClientConfig
 {
+    std::string build; // port_BuildId: the server takes only its own
     std::string host = "127.0.0.1";
     uint16_t port = kDefaultPort;
     std::string name = "player";
@@ -109,6 +110,7 @@ class Client
     void Reconnect(); // the connection dropped: a new one, now and then, until the server has us back
     void Rejoined(const Welcome& welcome);
     void LeaveToMenu(const char* why); // off the server, and the game back to the frontend's network page
+    void SendLeave(const std::string& why); // tells the server why we go (before Leave)
     void ShowStatus(); // the ping, and an outage, over the frame
     // The round flow (session/round_flow.cpp), a client's part: its commands to the server, its keys, the panel
     void SendCommand(const std::string& text);

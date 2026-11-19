@@ -28,13 +28,29 @@ void net::WriteHello(BitWriter& w, const Hello& m)
 {
     w.Bits(kMsgHello, 8);
     w.VarU(m.version);
+    WriteString(w, m.build);
     WriteString(w, m.name);
+    w.Bits(m.carInfo, 32);
 }
 
 bool net::ReadHello(BitReader& r, Hello& m)
 {
     m.version = r.VarU();
-    return ReadString(r, m.name) && !r.Overflow();
+    const bool ok = ReadString(r, m.build) && ReadString(r, m.name);
+    m.carInfo = r.Bits(32);
+    return ok && !r.Overflow();
+}
+
+static void WritePrint(net::BitWriter& w, const net::MapPrint& p)
+{
+    w.Bits(p.gmp, 32);
+    w.Bits(p.sty, 32);
+}
+
+static void ReadPrint(net::BitReader& r, net::MapPrint& p)
+{
+    p.gmp = r.Bits(32);
+    p.sty = r.Bits(32);
 }
 
 void net::WriteWelcome(BitWriter& w, const Welcome& m)
@@ -48,9 +64,11 @@ void net::WriteWelcome(BitWriter& w, const Welcome& m)
     w.VarU(m.timeLimitMin);
     w.VarU(m.tickMs);
     w.Bits(m.police, 8);
+    WriteString(w, m.map);
     WriteString(w, m.gmp);
     WriteString(w, m.sty);
     WriteString(w, m.scr);
+    WritePrint(w, m.print);
     w.VarU(m.serverTick);
     w.Bits((uint32_t)(m.maps.size() < 15 ? m.maps.size() : 15), 4);
     for (size_t i = 0; i < m.maps.size() && i < 15; i++)
@@ -69,7 +87,8 @@ bool net::ReadWelcome(BitReader& r, Welcome& m)
     m.timeLimitMin = (uint16_t)r.VarU();
     m.tickMs = (uint16_t)r.VarU();
     m.police = (uint8_t)r.Bits(8);
-    bool ok = ReadString(r, m.gmp) && ReadString(r, m.sty) && ReadString(r, m.scr);
+    bool ok = ReadString(r, m.map) && ReadString(r, m.gmp) && ReadString(r, m.sty) && ReadString(r, m.scr);
+    ReadPrint(r, m.print);
     m.serverTick = r.VarU();
     m.maps.resize(r.Bits(4));
     for (size_t i = 0; ok && i < m.maps.size(); i++)
@@ -104,15 +123,18 @@ bool net::ReadText(BitReader& r, std::string& text)
 void net::WriteMapChange(BitWriter& w, const MapChange& m)
 {
     w.Bits(kMsgMapChange, 8);
+    WriteString(w, m.map);
     WriteString(w, m.gmp);
     WriteString(w, m.sty);
     WriteString(w, m.scr);
+    WritePrint(w, m.print);
     w.Bits(m.game, 16);
 }
 
 bool net::ReadMapChange(BitReader& r, MapChange& m)
 {
-    const bool ok = ReadString(r, m.gmp) && ReadString(r, m.sty) && ReadString(r, m.scr);
+    const bool ok = ReadString(r, m.map) && ReadString(r, m.gmp) && ReadString(r, m.sty) && ReadString(r, m.scr);
+    ReadPrint(r, m.print);
     m.game = (uint16_t)r.Bits(16);
     return ok && !r.Overflow();
 }

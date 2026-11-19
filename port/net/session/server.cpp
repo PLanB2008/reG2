@@ -97,7 +97,10 @@ bool net::Server::Start(const ServerConfig& config, std::string* error)
     mRounds.Start(mConfig.rules, mapNames, mConfig.currentMap);
     engine::CurrentRound() = mRounds.State();
     mProbe.Start();
-    printf("net: server on port %u, %d player slots, %s\n", config.port, config.game.players, config.game.scr.c_str());
+    mCarInfo = engine::DataFileCrc("nyc.gci");
+    mPrint.gmp = engine::DataFileCrc(mConfig.game.gmp);
+    mPrint.sty = engine::DataFileCrc(mConfig.game.sty);
+    printf("net: server on port %u, %d player slots, %s, reG2 %s\n", config.port, config.game.players, config.game.scr.c_str(), config.build.c_str());
     return true;
 }
 
@@ -113,15 +116,32 @@ int net::Server::SlotOfPeer(uint32_t peer) const
     return -1;
 }
 
+// Another build plays another game (its code and its protocol); other car physics too
+std::string net::Server::Refusal(const Hello& hello, bool read) const
+{
+    if (!read || hello.version != kProtocolVersion || hello.build != mConfig.build)
+    {
+        return "the server runs reG2 " + mConfig.build + ", you run " + (!read || hello.build.empty() ? "another version" : hello.build);
+    }
+    if (hello.carInfo != mCarInfo)
+    {
+        return "your data/nyc.gci differs from the server's";
+    }
+    return "";
+}
+
 void net::Server::OnHello(uint32_t peer, BitReader& r)
 {
     Hello hello;
     BitWriter w;
-    if (!ReadHello(r, hello) || hello.version != kProtocolVersion)
+    const bool read = ReadHello(r, hello);
+    const std::string refusal = Refusal(hello, read);
+    if (!refusal.empty())
     {
         Reject reject;
-        reject.reason = "protocol version differs";
+        reject.reason = refusal;
         WriteReject(w, reject);
+        printf("net: turned away a client: %s\n", refusal.c_str());
     }
     else if (SlotOfPeer(peer) < 0)
     {
@@ -135,11 +155,12 @@ void net::Server::OnHello(uint32_t peer, BitReader& r)
         {
             slot = mSlots[i].used ? slot : i;
         }
-        auto ban = mBanned.find(hello.name);
+        const std::string& name = hello.name;
+        auto ban = mBanned.find(name);
         if (ban != mBanned.end() && mTick < ban->second)
         {
             Reject reject;
-            reject.reason = "kicked by vote, for a while";
+            reject.reason = "kicked by vote: try again later";
             WriteReject(w, reject);
         }
         else if (slot == (int)mSlots.size())
@@ -154,7 +175,7 @@ void net::Server::OnHello(uint32_t peer, BitReader& r)
             s = Slot();
             s.used = true;
             s.peer = peer;
-            s.name = hello.name;
+            s.name = name;
             Welcome welcome;
             welcome.slot = (uint8_t)slot;
             welcome.players = (uint8_t)mSlots.size();
@@ -163,15 +184,17 @@ void net::Server::OnHello(uint32_t peer, BitReader& r)
             welcome.timeLimitMin = (uint16_t)mConfig.game.timeLimitMin;
             welcome.tickMs = (uint16_t)mConfig.game.tickMs;
             welcome.police = (uint8_t)mConfig.game.police;
+            welcome.map = mMap < mConfig.voteMaps.size() ? mConfig.voteMaps[mMap].name : "";
             welcome.gmp = mConfig.game.gmp;
             welcome.sty = mConfig.game.sty;
             welcome.scr = mConfig.game.scr;
+            welcome.print = mPrint;
             welcome.serverTick = mTick;
             welcome.maps = mRounds.Maps();
             WriteWelcome(w, welcome);
             engine::PutInGame(slot, true); // a fresh start at the next restart zone
-            engine::SetPlayerName(slot, hello.name.c_str());
-            printf("net: %s joined as player %d\n", hello.name.c_str(), slot);
+            engine::SetPlayerName(slot, name.c_str());
+            printf("net: %s joined as player %d\n", name.c_str(), slot);
         }
     }
     if (w.ByteCount()) // a second hello from a client already in: nothing to say
@@ -227,9 +250,14 @@ void net::Server::OnReceive(const TransportEvent& e)
         return;
     }
     const int slot = SlotOfPeer(e.peer);
+    std::string why;
     if (slot >= 0 && type == kMsgCommands) // else: not joined, or nothing a client sends
     {
         OnCommands(slot, r);
+    }
+    else if (slot >= 0 && type == kMsgLeave && ReadText(r, why))
+    {
+        printf("net: player %d (%s) leaves: %s\n", slot, mSlots[slot].name.c_str(), why.c_str());
     }
     else if (slot >= 0 && type == kMsgCommand)
     {
@@ -695,8 +723,12 @@ void net::Server::ChangeToMap(int map)
     mConfig.game.gmp = m.gmp; // for the welcome of those joining
     mConfig.game.sty = m.sty;
     mConfig.game.scr = m.scr;
+    mPrint.gmp = engine::DataFileCrc(m.gmp);
+    mPrint.sty = engine::DataFileCrc(m.sty);
     printf("net: the next map: %s\n", m.name.c_str());
     MapChange change;
+    change.map = m.name;
+    change.print = mPrint;
     change.gmp = m.gmp;
     change.sty = m.sty;
     change.scr = m.scr;

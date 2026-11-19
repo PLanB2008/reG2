@@ -97,7 +97,9 @@ int net::Client::PollConnect(engine::NetworkGame* pGame, std::string* error)
         if (e.type == TransportEvent::kConnect && !mHelloSent)
         {
             Hello hello;
+            hello.build = mConfig.build;
             hello.name = mConfig.name;
+            hello.carInfo = engine::DataFileCrc("nyc.gci");
             BitWriter w;
             WriteHello(w, hello);
             mTransport->Send(0, kChannelReliable, w.Data().data(), w.ByteCount(), true);
@@ -145,6 +147,18 @@ static bool HaveMap(const std::string& gmp, const std::string& sty, const std::s
     return false;
 }
 
+// The same map as the server's: its files as the server has them, else <error> says which differs
+static bool SameMap(const std::string& map, const std::string& gmp, const std::string& sty, const net::MapPrint& print, std::string* error)
+{
+    const std::string* differs = net::engine::DataFileCrc(gmp) != print.gmp ? &gmp : net::engine::DataFileCrc(sty) != print.sty ? &sty : NULL;
+    if (!differs)
+    {
+        return true;
+    }
+    *error = "your copy of " + map + " differs from the server's (data/" + *differs + ")";
+    return false;
+}
+
 bool net::Client::OnWelcome(const TransportEvent& e, engine::NetworkGame* pGame, std::string* error)
 {
     BitReader r(e.data.data(), e.data.size());
@@ -153,7 +167,7 @@ bool net::Client::OnWelcome(const TransportEvent& e, engine::NetworkGame* pGame,
     {
         Reject reject;
         ReadReject(r, reject);
-        *error = "rejected: " + reject.reason;
+        *error = reject.reason;
         return false;
     }
     Welcome welcome;
@@ -162,8 +176,9 @@ bool net::Client::OnWelcome(const TransportEvent& e, engine::NetworkGame* pGame,
         *error = "a welcome we don't understand";
         return false;
     }
-    if (!HaveMap(welcome.gmp, welcome.sty, welcome.scr, error))
+    if (!HaveMap(welcome.gmp, welcome.sty, welcome.scr, error) || !SameMap(welcome.map, welcome.gmp, welcome.sty, welcome.print, error))
     {
+        SendLeave(*error);
         Leave();
         return false;
     }
@@ -663,13 +678,20 @@ void net::Client::HandleEvents(const std::vector<TransportEvent>& events)
             else if (type == kMsgReject && !mConnected && ReadReject(r, reject))
             {
                 printf("net: frame %u, the server won't have us back: %s\n", mFrame, reject.reason.c_str());
+                if (reject.reason != "the server is full")
+                {
+                    LeaveToMenu(reject.reason.c_str()); // another build, kicked: no use trying again
+                    return;
+                }
                 mTransport.reset(); // and try again: it may be full only for now
             }
         }
         else if (e.type == TransportEvent::kConnect && !mConnected && mTransport)
         {
             Hello hello;
+            hello.build = mConfig.build;
             hello.name = mConfig.name; // the server gives us our slot back by it
+            hello.carInfo = engine::DataFileCrc("nyc.gci");
             BitWriter w;
             WriteHello(w, hello);
             mTransport->Send(0, kChannelReliable, w.Data().data(), w.ByteCount(), true);
@@ -696,9 +718,10 @@ void net::Client::OnMapChange(BitReader& r)
     if (ReadMapChange(r, m))
     {
         std::string missing;
-        if (!HaveMap(m.gmp, m.sty, m.scr, &missing))
+        if (!HaveMap(m.gmp, m.sty, m.scr, &missing) || !SameMap(m.map, m.gmp, m.sty, m.print, &missing))
         {
             printf("net: frame %u, %s\n", mFrame, missing.c_str());
+            SendLeave(missing);
             LeaveToMenu(missing.c_str());
             return;
         }
@@ -966,6 +989,25 @@ void net::Client::ShowStatus()
         centre = "Connection interrupted";
     }
     engine::SetNetStatus(mConnected && mPingShown ? "ping " + std::to_string(mPingShown) : "", centre);
+}
+
+void net::Client::SendLeave(const std::string& why)
+{
+    if (mTransport)
+    {
+        BitWriter w;
+        WriteText(w, kMsgLeave, why);
+        mTransport->Send(0, kChannelReliable, w.Data().data(), w.ByteCount(), true);
+        mTransport->Flush();
+        // A disconnect after it, not at once: the server drops what came with an abrupt one (enet_peer_reset_queues)
+        mTransport->Disconnect(0);
+        TransportEvent e;
+        for (const long long until = NowMs() + 500; NowMs() < until && !(mTransport->Poll(e) && e.type == TransportEvent::kDisconnect);)
+        {
+            mTransport->Flush();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    }
 }
 
 void net::Client::Leave()

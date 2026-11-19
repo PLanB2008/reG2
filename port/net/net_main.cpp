@@ -3,6 +3,7 @@
 #include "net_main.hpp"
 #include "cmdline.hpp"
 #include "maps.hpp"
+#include "port/src/build_id.hpp"
 #include "port/src/net_hooks.hpp"
 #include "engine/dev/dev.hpp"
 #include "session/client.hpp"
@@ -205,6 +206,7 @@ int NetMain_Init(std::vector<std::string>& args)
     }
     net::ServerConfig& sc = o.sc;
     net::ClientConfig& cc = o.cc;
+    sc.build = cc.build = port_BuildId();
     if (!o.server && o.connect.empty() && o.replay.empty())
     {
         gMenuConfig = cc; // the frontend's network page may join a server later (port/net/menu.cpp)

@@ -153,6 +153,8 @@ void SetNetBanner(const std::string& text);
 void ChangeMap(const std::string& gmp, const std::string& sty, const std::string& scr, int pauseTicks);
 // The first of a map's files that isn't in data/ (the game's fatal error if it opened it); empty: all are
 std::string MissingMapFile(const std::string& gmp, const std::string& sty, const std::string& scr);
+// data/<name>'s CRC-32, read as the game opens it (0: it can't be read)
+uint32_t DataFileCrc(const std::string& name);
 // This network game ends at once for the frontend (LeftForMenu() says so to winmain.cpp's gPortLeaveNetworkGame), and
 // StopNetworkGame puts back what a single-player game expects
 void LeaveForMenu();
