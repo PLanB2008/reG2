@@ -184,8 +184,10 @@ else()
     endif()
     # reg2, not gta2: unpacked into a GTA2 folder, it must not replace the original's gta2.exe.
     set_target_properties(gta2 PROPERTIES OUTPUT_NAME reg2)
-    # dladdr: the network game's random draw log (net/engine/dev/compare.cpp); in libdl before glibc 2.34
-    target_link_libraries(gta2 PRIVATE gta2gl gta2setup bink SDL3::SDL3 enet ${CMAKE_DL_LIBS})
+    # dladdr: the network game's random draw log (net/engine/dev/compare.cpp); in libdl before glibc 2.34.
+    # pthread_sigmask (the crash report, compat/src/main.cpp): in libpthread before glibc 2.34.
+    find_package(Threads REQUIRED)
+    target_link_libraries(gta2 PRIVATE gta2gl gta2setup bink SDL3::SDL3 enet ${CMAKE_DL_LIBS} Threads::Threads)
     if(openal_runtime AND NOT APPLE)
         add_custom_command(TARGET gta2 POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${openal_runtime} $<TARGET_FILE_DIR:gta2>)
