@@ -287,6 +287,18 @@ static bool LiveCar(const Car* car)
             return true;
         }
     }
+    // A train's wagons aren't on the list (TrainCars)
+    for (int i = 0; car && gPublicTransport_181C && i < 10; i++)
+    {
+        const Train& t = gPublicTransport_181C->mTrainArray[i];
+        for (int k = 0; t.mAllocState == 2 && k <= t.mWagonCount && k < kTrainCarriages; k++)
+        {
+            if (t.mCarriages[k] == car)
+            {
+                return true;
+            }
+        }
+    }
     return false;
 }
 
