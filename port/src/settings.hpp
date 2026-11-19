@@ -47,6 +47,7 @@ enum Id
     kKfRespawn,
     kInfiniteLives,
     kAmbientOcclusion,
+    kFireEffects,
     kCount,
     // Group titles in the pages' lists: the settings after one, up to the next, are under it.
     kSavesGroup,
@@ -94,6 +95,8 @@ bool Headlights();
 bool LightEffects();
 // AMBIENT OCCLUSION (ambient_occlusion.hpp).
 bool AmbientOcclusion();
+// FIRE EFFECTS: HEAT HAZE (heat_haze.hpp), smoke and embers (fire_smoke.hpp).
+bool FireEffects();
 
 // LIGHTING's DAY-NIGHT CYCLE (day_night.hpp), its CYCLE LENGTH in minutes and its START TIME, the hour a
 // level starts at.

@@ -65,6 +65,15 @@ enum RMipmaps
     RMIP_ALPHA,  // blended: transparent texels lend no colour
 };
 
+// HEAT HAZE over the flames drawn with AddHeat: the ground's texel grid in logical pixels (a texel's size and the
+// world texel at the screen's top left), seconds, the offset's amplitude and the ripples' size in ground texels,
+// how often they change (Hz), and how far the heat rises above the flames (blocks).
+struct RHazeParams
+{
+    f32 texel, worldX, worldY;
+    f32 time, amplitude, ripple, speed, rise;
+};
+
 struct RTexture;
 
 class IRenderer
@@ -95,6 +104,12 @@ class IRenderer
 
     // Stats exposed through gbh_GetGlobals.
     virtual u32 GetDrawCallCount() const = 0;
+
+    // Heat haze over what is drawn so far (RHazeParams); a backend without it draws nothing.
+    virtual void DrawHaze(const RHazeParams&) {}
+    // Triangles just drawn that are hot (flames), level 0..1: their texture's bright, opaque texels go into the heat
+    // mask DrawHaze distorts over.
+    virtual void AddHeat(const RVertex*, s32, RTexture*, f32) {}
 };
 
 // Lets the render DLL find the backend from the SVideo pointer the game hands to gbh_InitDLL.

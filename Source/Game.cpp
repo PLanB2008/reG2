@@ -71,6 +71,8 @@
 #include "../port/src/saves.hpp"
 // Port: VIBRATION for explosions (ShakeCamerasAtPos).
 #include "../port/src/rumble.hpp"
+// Port: HEAT HAZE over fires (Draw).
+#include "../port/src/heat_haze.hpp"
 #endif
 
 DEFINE_GLOBAL_INIT(Fix16, kFpFive_67DECC, Fix16(5), 0x67DECC);
@@ -407,6 +409,11 @@ void Game::Draw()
     pgbh_BeginScene();
 
     gpMapRenderer->Draw(); // Note: Also seems to draw sprites
+
+#if defined(GTA2_PORT)
+    // Port: HEAT HAZE over fires and blasts, on the world but not on the HUD.
+    PortHeatHaze::Draw();
+#endif
 
     if (!bExplodingScoresOff)
     {
