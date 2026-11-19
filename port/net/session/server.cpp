@@ -130,6 +130,27 @@ std::string net::Server::Refusal(const Hello& hello, bool read) const
     return "";
 }
 
+// The slot this name had (a client back after its connection dropped: the same player), else the first free one
+// that nobody left, else the first free one
+int net::Server::FreeSlot(const std::string& name) const
+{
+    int any = (int)mSlots.size(), unclaimed = any;
+    for (int i = (int)mSlots.size() - 1; i >= 0; i--)
+    {
+        if (mSlots[i].used)
+        {
+            continue;
+        }
+        if (mSlots[i].name == name)
+        {
+            return i;
+        }
+        any = i;
+        unclaimed = mSlots[i].name.empty() ? i : unclaimed;
+    }
+    return unclaimed < (int)mSlots.size() ? unclaimed : any;
+}
+
 void net::Server::OnHello(uint32_t peer, BitReader& r)
 {
     Hello hello;
@@ -145,17 +166,20 @@ void net::Server::OnHello(uint32_t peer, BitReader& r)
     }
     else if (SlotOfPeer(peer) < 0)
     {
-        // The slot this name had (a client back after its connection dropped: the same player), else the first free
-        int slot = 0;
-        while (slot < (int)mSlots.size() && (mSlots[slot].used || mSlots[slot].name != hello.name))
+        std::vector<std::string> taken;
+        for (const Slot& s : mSlots)
         {
-            slot++;
+            if (s.used)
+            {
+                taken.push_back(s.name);
+            }
         }
-        for (int i = 0; slot == (int)mSlots.size() && i < (int)mSlots.size(); i++)
+        std::string name = PlayerName(hello.name, std::vector<std::string>());
+        int slot = FreeSlot(name);
+        if (slot < (int)mSlots.size() && mSlots[slot].name != name)
         {
-            slot = mSlots[i].used ? slot : i;
+            name = PlayerName(name, taken); // a new player: a name nobody in the game has
         }
-        const std::string& name = hello.name;
         auto ban = mBanned.find(name);
         if (ban != mBanned.end() && mTick < ban->second)
         {
@@ -184,6 +208,7 @@ void net::Server::OnHello(uint32_t peer, BitReader& r)
             welcome.timeLimitMin = (uint16_t)mConfig.game.timeLimitMin;
             welcome.tickMs = (uint16_t)mConfig.game.tickMs;
             welcome.police = (uint8_t)mConfig.game.police;
+            welcome.name = name;
             welcome.map = mMap < mConfig.voteMaps.size() ? mConfig.voteMaps[mMap].name : "";
             welcome.gmp = mConfig.game.gmp;
             welcome.sty = mConfig.game.sty;
@@ -194,7 +219,7 @@ void net::Server::OnHello(uint32_t peer, BitReader& r)
             WriteWelcome(w, welcome);
             engine::PutInGame(slot, true); // a fresh start at the next restart zone
             engine::SetPlayerName(slot, name.c_str());
-            printf("net: %s joined as player %d\n", name.c_str(), slot);
+            printf("net: %s joined as player %d%s\n", name.c_str(), slot, name != hello.name ? (" (asked for \"" + hello.name + "\")").c_str() : "");
         }
     }
     if (w.ByteCount()) // a second hello from a client already in: nothing to say

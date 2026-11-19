@@ -46,7 +46,7 @@ struct Hello
 {
     uint32_t version = kProtocolVersion;
     std::string build; // port_BuildId (port/src/build_id.hpp): a server takes only its own
-    std::string name;
+    std::string name; // empty, too long or taken: the server gives one
     uint32_t carInfo = 0; // data/nyc.gci's CRC-32 (the cars' physics, every map's)
 };
 
@@ -61,6 +61,7 @@ struct Welcome
     uint16_t timeLimitMin = 10;
     uint16_t tickMs = 33;
     uint8_t police = 0;
+    std::string name; // the player's name, as the server has it (another than the hello's if that was taken)
     std::string map; // the map's name (data/<map>.mmp)
     std::string gmp, sty, scr; // file names in data/
     MapPrint print; // the server's copy of gmp and sty
@@ -86,6 +87,11 @@ struct InputCmd
     uint32_t tick; // the server tick it is for
     uint32_t buttons; // the game's input bits (Source/input_bits.hpp), 22 bits
 };
+
+const size_t kMaxName = 15; // the game's player names (Player::mPlayerName)
+// <asked> as a player's name: printable ASCII, at most kMaxName, "PLAYER" if that leaves nothing, and with a number
+// ("PLAYER 2") if a name in <taken> is the same but for case
+std::string PlayerName(const std::string& asked, const std::vector<std::string>& taken);
 
 void WriteHello(BitWriter& w, const Hello& m);
 bool ReadHello(BitReader& r, Hello& m);

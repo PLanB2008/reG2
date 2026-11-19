@@ -240,7 +240,7 @@ void Setup(Frontend* pFrontend)
         loaded = true;
         const std::string address = Load("ServerAddress");
         gAddress = address.empty() ? gAddress : address;
-        gName = NetMenu_DefaultName().empty() ? Load("PlayerName") : NetMenu_DefaultName();
+        gName = NetMenu_DefaultName().empty() ? Load("PlayerName") : NetMenu_DefaultName(); // --name, else the saved one
     }
     gName = gName.empty() ? "PLAYER" : gName;
     for (char& c : gName)

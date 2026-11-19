@@ -78,6 +78,7 @@ class Server
     void OnReceive(const TransportEvent& e);
     void OnHello(uint32_t peer, BitReader& r);
     std::string Refusal(const Hello& hello, bool read) const; // why a hello's client can't play here ("": it can)
+    int FreeSlot(const std::string& name) const; // the slot a joining <name> gets (mSlots.size(): none)
     void OnCommands(int slot, BitReader& r);
     void StartGameOnce();
     void PollTransport();

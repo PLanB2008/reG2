@@ -20,7 +20,7 @@ struct ClientConfig
     std::string build; // port_BuildId: the server takes only its own
     std::string host = "127.0.0.1";
     uint16_t port = kDefaultPort;
-    std::string name = "player";
+    std::string name; // empty: the server gives one (PlayerName)
     std::string bot; // a bot brain plays instead of the controls ("simple"); empty: a person
     int lagMs = 0, jitterMs = 0, lossPercent = 0; // the link conditioner (tests)
 };

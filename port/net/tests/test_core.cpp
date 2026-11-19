@@ -248,6 +248,7 @@ void TestMessages()
     w.gmp = "wil-multi.gmp";
     w.sty = "wil.sty";
     w.scr = "downtown-6P.scr";
+    w.name = "PLAYER 2";
     w.map = "downtown-6p";
     w.print.gmp = 0x80000001;
     w.print.sty = 7;
@@ -260,7 +261,7 @@ void TestMessages()
     net::Welcome got;
     CHECK(net::ReadWelcome(br, got));
     CHECK(got.slot == 2 && got.players == 6 && got.gameType == 3 && got.fragLimit == 25 && got.gmp == w.gmp &&
-          got.scr == w.scr && got.serverTick == 123456 && got.maps == w.maps &&
+          got.scr == w.scr && got.serverTick == 123456 && got.maps == w.maps && got.name == w.name &&
           got.map == w.map && got.print.gmp == w.print.gmp && got.print.sty == 7);
 
     net::Hello hello;
@@ -333,6 +334,21 @@ void TestCrc()
     CHECK(net::Crc32("123456789", 9) == 0xCBF43926u);
     CHECK(net::Crc32("56789", 5, net::Crc32("1234", 4)) == 0xCBF43926u);
     CHECK(net::Crc32("", 0) == 0);
+}
+
+// Players' names: printable, 15 characters at most, never the same as another's but for case
+void TestNames()
+{
+    const std::vector<std::string> none;
+    CHECK(net::PlayerName("bob", none) == "bob");
+    CHECK(net::PlayerName("", none) == "PLAYER");
+    CHECK(net::PlayerName("  \t\x01 ", none) == "PLAYER");
+    CHECK(net::PlayerName("  a\x7f b  ", none) == "a b");
+    CHECK(net::PlayerName("ABCDEFGHIJKLMNOPQRST", none) == "ABCDEFGHIJKLMNO");
+    CHECK(net::PlayerName("PLAYER", {"player"}) == "PLAYER 2");
+    CHECK(net::PlayerName("", {"PLAYER", "PLAYER 2"}) == "PLAYER 3");
+    CHECK(net::PlayerName("ABCDEFGHIJKLMNO", {"abcdefghijklmno"}) == "ABCDEFGHIJKLM 2");
+    CHECK(net::PlayerName("bob", {"alice"}) == "bob");
 }
 } // namespace
 
@@ -415,6 +431,7 @@ int main()
     fflush(stdout);
     TestMessages();
     TestCrc();
+    TestNames();
     printf("messages ok\n");
     printf("net core tests passed\n");
     return 0;

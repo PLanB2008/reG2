@@ -1,5 +1,6 @@
 // port/net core: see protocol.hpp.
 #include "protocol.hpp"
+#include <ctype.h>
 
 namespace
 {
@@ -23,6 +24,53 @@ bool ReadString(net::BitReader& r, std::string& s)
     return r.Bytes(&s[0], n);
 }
 } // namespace
+
+static bool SameName(const std::string& a, const std::string& b)
+{
+    if (a.size() != b.size())
+    {
+        return false;
+    }
+    for (size_t i = 0; i < a.size(); i++)
+    {
+        if (toupper((unsigned char)a[i]) != toupper((unsigned char)b[i]))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::string net::PlayerName(const std::string& asked, const std::vector<std::string>& taken)
+{
+    std::string base;
+    for (char c : asked)
+    {
+        if (c >= ' ' && c <= '~' && base.size() < kMaxName && !(c == ' ' && base.empty()))
+        {
+            base += c;
+        }
+    }
+    while (!base.empty() && base.back() == ' ')
+    {
+        base.pop_back();
+    }
+    base = base.empty() ? "PLAYER" : base;
+    for (int n = 1;; n++)
+    {
+        const std::string suffix = n > 1 ? " " + std::to_string(n) : "";
+        const std::string name = base.substr(0, kMaxName - suffix.size()) + suffix;
+        bool used = false;
+        for (const std::string& t : taken)
+        {
+            used = used || SameName(t, name);
+        }
+        if (!used)
+        {
+            return name;
+        }
+    }
+}
 
 void net::WriteHello(BitWriter& w, const Hello& m)
 {
@@ -64,6 +112,7 @@ void net::WriteWelcome(BitWriter& w, const Welcome& m)
     w.VarU(m.timeLimitMin);
     w.VarU(m.tickMs);
     w.Bits(m.police, 8);
+    WriteString(w, m.name);
     WriteString(w, m.map);
     WriteString(w, m.gmp);
     WriteString(w, m.sty);
@@ -87,7 +136,7 @@ bool net::ReadWelcome(BitReader& r, Welcome& m)
     m.timeLimitMin = (uint16_t)r.VarU();
     m.tickMs = (uint16_t)r.VarU();
     m.police = (uint8_t)r.Bits(8);
-    bool ok = ReadString(r, m.map) && ReadString(r, m.gmp) && ReadString(r, m.sty) && ReadString(r, m.scr);
+    bool ok = ReadString(r, m.name) && ReadString(r, m.map) && ReadString(r, m.gmp) && ReadString(r, m.sty) && ReadString(r, m.scr);
     ReadPrint(r, m.print);
     m.serverTick = r.VarU();
     m.maps.resize(r.Bits(4));

@@ -35,6 +35,7 @@ void net::CorrectionStats::Print(uint32_t frame, const char* what) const
 void net::Client::Welcomed(const Welcome& welcome, engine::NetworkGame* pGame)
 {
     mSlot = welcome.slot;
+    mConfig.name = welcome.name; // a reconnect asks for it: the server keeps our slot under it
     mMaps = welcome.maps;
     mConnected = true;
     pGame->players = welcome.players;
