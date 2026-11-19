@@ -493,6 +493,10 @@ std::unique_ptr<net::BotBrain> net::CreateBotBrain(const std::string& kind)
     {
         return std::unique_ptr<BotBrain>(new RamBot());
     }
+    if (kind.compare(0, 5, "human") == 0)
+    {
+        return CreateHumanBrain(kind.size() > 6 ? kind.substr(6) : "");
+    }
     if (kind.compare(0, 3, "nn:") == 0)
     {
         return CreateNeuralBrain(kind.substr(3));
@@ -514,9 +518,9 @@ void net::FillBotView(BotView& view, const Snapshot& snap, int self, uint32_t fr
     for (size_t i = 0; i < snap.entities.size(); i++)
     {
         const EntityState& e = snap.entities[i];
-        if (e.type == engine::kEntityWorld || e.type == engine::kEntityTrain)
+        if (e.type == engine::kEntityWorld)
         {
-            continue; // the world has no position; a train is seen as its lead, a car entity
+            continue; // the world has no position
         }
         BotView::Seen s;
         s.id = e.id;
@@ -527,6 +531,7 @@ void net::FillBotView(BotView& view, const Snapshot& snap, int self, uint32_t fr
         s.rot = e.f[3];
         s.health = 0;
         s.inCar = false;
+        s.model = engine::CarModel(e);
         s.weapon = engine::PickupModel(e) >= 200 && engine::PickupModel(e) <= 227; // Ped::HandlePickupCollision
         uint32_t buttons = 0;
         if (engine::PlayerOf(e, &s.player, &buttons))
@@ -550,7 +555,10 @@ void net::FillBotView(BotView& view, const Snapshot& snap, int self, uint32_t fr
         }
         else
         {
-            s.kind = e.type == engine::kEntityCar ? BotView::Seen::kCar : e.type == engine::kEntityObject ? BotView::Seen::kPickup : BotView::Seen::kPed;
+            s.kind = e.type == engine::kEntityCar     ? BotView::Seen::kCar
+                     : e.type == engine::kEntityTrain ? BotView::Seen::kTrain
+                     : e.type == engine::kEntityObject ? BotView::Seen::kPickup
+                                                       : BotView::Seen::kPed;
         }
         view.seen.push_back(s);
     }

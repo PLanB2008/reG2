@@ -290,6 +290,8 @@ Bots are players whose input comes from a brain (`session/bot.hpp`), on the same
 `BotView` built from what its client knows (its own body as predicted, the snapshot's players, cars and peds, and the
 map as plain data: `engine::NavMap`, the walking height and the ways between cells) and returns the input bits a
 person would press. It uses no game logic: no route finder, no ped AI. Navigation is A* (`session/bot_nav.cpp`).
+A bot client still takes the keyboard's key events (Escape and the leave prompt, the chat), so `GTA2_INPUT` can press
+them in a test.
 
 | Brain | |
 |---|---|
@@ -298,6 +300,7 @@ person would press. It uses no game logic: no route finder, no ped AI. Navigatio
 | `rammer` | drives at players |
 | `hunter` | the rammer when a car is near and nobody is, the fighter otherwise |
 | `soldier` | a weapon, a car, then to the nearest player: runs it over when coming at it head on, or gets out and shoots |
+| `human` | for crash hunts, what people do and the others don't, in turns: cars, buses and the tank (in, about, out at speed), trains (on at a station, a ride, off), every weapon it has, pickups, into water, its own blasts (`session/bot_human.cpp`) |
 | `nn:<file>` | a trained network (`session/bot_nn.cpp`): 62 inputs (`BotFeatures`), a choice in six groups of outputs |
 
 In the round flow bots ready up, vote for map 2 in the results and yes on any vote but their own kick.
