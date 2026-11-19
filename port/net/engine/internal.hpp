@@ -83,6 +83,11 @@ enum WorldField
     kWorldVoteNo,
     kWorldVoteLeft,
     kWorldMapChoice, // kRoundSlots of them
+    // The map's light level (MapRenderer's mAmbient, mTargetAmbient, mAmbientStep, raw): its script sets it, and scripts
+    // run on the server only
+    kWorldAmbient = kWorldMapChoice + kRoundSlots,
+    kWorldTargetAmbient,
+    kWorldAmbientStep,
 };
 enum CarField
 {

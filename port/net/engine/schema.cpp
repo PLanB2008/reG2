@@ -75,6 +75,9 @@ net::Schema BuildSchema()
     world.fields.push_back(FieldDesc{"vote_no", 8, false});
     world.fields.push_back(FieldDesc{"vote_left", 7, false});
     AppendNumbered(world.fields, "map_choice", net::kRoundSlots, 4);
+    world.fields.push_back(FieldDesc{"ambient", 32, true}); // kWorldAmbient
+    world.fields.push_back(FieldDesc{"target_ambient", 32, true});
+    world.fields.push_back(FieldDesc{"ambient_step", 32, true});
     net::EntityType object = {"object", {{"x", 22, false}, {"y", 22, false}, {"z", 17, false}, {"rot", 11, false}, {"model", 9, false}, {"idx", 8, false},
                                          {"age", 6, false}}};
     net::EntityType train = {"train", {{"x", 22, false}, {"y", 22, false}, {"z", 17, false}, {"rot", 11, false}, {"wagons", 4, false},
