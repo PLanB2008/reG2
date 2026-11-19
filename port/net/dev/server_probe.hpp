@@ -5,6 +5,7 @@
 #include "../core/snapshot.hpp"
 #include "jerk.hpp"
 #include <stdint.h>
+#include <utility>
 #include <vector>
 
 namespace net
@@ -31,7 +32,7 @@ class ServerProbe
     };
     std::vector<TestEvent> mEvents;
     int mWanted = -1; // GTA2_NET_TESTWANTED's points
-    int mArmWeapon = -1, mArmAmmo = 50; // GTA2_NET_TESTARM
+    std::vector<std::pair<int, int>> mArm; // GTA2_NET_TESTARM: the weapons and their ammo
     JerkMeter mJerk;
 };
 } // namespace net

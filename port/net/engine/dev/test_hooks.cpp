@@ -8,6 +8,7 @@
 #include "Source/Player.hpp"
 #include "Source/PublicTransport.hpp"
 #include "Source/Weapon.hpp"
+#include "Source/map_0x370.hpp"
 #include <stdlib.h>
 #include <string>
 
@@ -64,12 +65,39 @@ void net::engine::DebugTrain(int player, int train)
     Player* p = GetPlayer(player);
     Ped* ped = p ? p->mPlayerPed : NULL;
     const int i = train % 10;
-    Train* t = gPublicTransport_181C && train >= 0 && train < 20 ? &gPublicTransport_181C->mTrainArray[i] : NULL;
+    Train* t = gPublicTransport_181C && train >= 0 && train < 30 ? &gPublicTransport_181C->mTrainArray[i] : NULL;
     if (!t || t->mAllocState != 2 || !t->mCarriages[0] || !t->mCarriages[0]->mDriver)
     {
         return;
     }
-    if (train >= 10)
+    if (train >= 20)
+    {
+        // On the platform of the station it stops at next: the zone's highest cell
+        const gmp_map_zone* zone = t->mStation ? t->mStation->mpZone : NULL;
+        int bestX = -1, bestY = -1;
+        s32 bestZ = -1;
+        for (int y = zone ? zone->mY : 0; zone && y < zone->mY + zone->mH; y++)
+        {
+            for (int x = zone->mX; x < zone->mX + zone->mW; x++)
+            {
+                s32 z = -1;
+                if (gMap_0x370->FindHighestBlockForCoord(x, y, &z) && z > bestZ)
+                {
+                    bestX = x, bestY = y, bestZ = z;
+                }
+            }
+        }
+        if (ped && !ped->mCar && !ped->isDead() && bestX >= 0)
+        {
+            Fix16 x, y, z;
+            x.mValue = (bestX << 14) + 0x2000;
+            y.mValue = (bestY << 14) + 0x2000;
+            z.FromInt(bestZ + 1);
+            MovePed(ped, x, y, z, Angle(0));
+            SnapCamera(p); // else its ped stays off its screen, and dead there the game frees it (Ped::PoolUpdate)
+        }
+    }
+    else if (train >= 10)
     {
         // Into reverse as a player driving it puts it there (from standing): the cab and the last wagon swap ends
         t->mState = 2;

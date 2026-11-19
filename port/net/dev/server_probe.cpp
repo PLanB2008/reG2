@@ -37,10 +37,12 @@ void net::ServerProbe::Start()
     {
         mWanted = atoi(wanted);
     }
-    if (const char* arm = Env().testArm) // <weapon>:<ammo>: every player kept armed (weapon_type, 0 pistol, 1 smg, ...)
+    // <weapon>:<ammo>[,<weapon>:<ammo>...]: every player kept armed (weapon_type, 0 pistol, 1 smg, ..., 15.. a car's)
+    for (const char* arm = Env().testArm; arm && *arm; arm = strchr(arm, ',') ? strchr(arm, ',') + 1 : "")
     {
-        mArmWeapon = 0;
-        sscanf(arm, "%d:%d", &mArmWeapon, &mArmAmmo);
+        int weapon = 0, ammo = 50;
+        sscanf(arm, "%d:%d", &weapon, &ammo);
+        mArm.push_back(std::make_pair(weapon, ammo));
     }
     mJerk.PrintJumps(Env().jerkLog >= 2);
 }
@@ -80,9 +82,9 @@ void net::ServerProbe::Tests(uint32_t tick, int players)
         {
             engine::DebugWanted(i, mWanted);
         }
-        if (mArmWeapon >= 0)
+        for (const std::pair<int, int>& arm : mArm)
         {
-            engine::DebugArm(i, mArmWeapon, mArmAmmo);
+            engine::DebugArm(i, arm.first, arm.second);
         }
     }
 }

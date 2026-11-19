@@ -473,8 +473,8 @@ off by default:
 | `GTA2_NET_TESTKILL=<tick>:<victim>:<killer>,...` | server | a player killed by the game's own death |
 | `GTA2_NET_TESTPOWERUP=<tick>:<player>:<power-up>,...` | server | a power-up (12: an instant gang) |
 | `GTA2_NET_TESTCAR=<tick>:<player>:<model>,...` | server | a car beside the player (11: a bus) |
-| `GTA2_NET_TESTTRAIN=<tick>:<player>:<train>,...` | server | the player at the wheel of a train; train + 10: that train into reverse |
-| `GTA2_NET_TESTARM=<weapon>:<ammo>`, `GTA2_NET_TESTWANTED=<points>` | server | every player kept armed, or at least that wanted (600: a star) |
+| `GTA2_NET_TESTTRAIN=<tick>:<player>:<train>,...` | server | the player at the wheel of a train; train + 10: that train into reverse; train + 20: the player on the platform of the station it stops at next |
+| `GTA2_NET_TESTARM=<weapon>:<ammo>[,...]`, `GTA2_NET_TESTWANTED=<points>` | server | every player kept armed (car weapons from 15), or at least that wanted (600: a star) |
 | `GTA2_NET_SAY=<frame>:<command>;...` | client | commands sent at those frames |
 | `GTA2_SIMBENCH=...`, `GTA2_SIMBENCH_FILL=<cars>`, `GTA2_NETEVAL=...`, `GTA2_OFFLINE_MP=...` | game | the measurements below (`port/net/eval`, `engine/netplay.cpp`) |
 
