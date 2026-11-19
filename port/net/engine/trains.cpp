@@ -5,6 +5,8 @@
 #include "internal.hpp"
 #include "Source/Car.hpp"
 #include "Source/CarAI.hpp"
+#include "Source/Ped.hpp"
+#include "Source/Player.hpp"
 #include "Source/PublicTransport.hpp"
 #include "Source/explosion_type.hpp"
 #include "Source/sprite.hpp"
@@ -81,6 +83,30 @@ bool MatchReversed(Train* t, bool there)
     return Reversed(t) == there;
 }
 
+// The lead's driver as the server has it: whether a player drives decides the train's state (PublicTransportService). A
+// ped driving it gets in by its own entity; the traffic driver stands in until then
+void MatchDriver(Car* lead, int there)
+{
+    Ped* here = lead->mDriver;
+    if (there >= kTrainDriverPlayer)
+    {
+        Player* p = GetPlayer(there - kTrainDriverPlayer);
+        Ped* ped = p && p->mInUse ? p->mPlayerPed : NULL;
+        if (ped && here != ped)
+        {
+            lead->mDriver = ped; // as ReassignTrainHead hands it over: the ped's own car stays as it is
+        }
+    }
+    else if (there == kDriverNone && IsSpareDriver(here))
+    {
+        lead->SetDriver(NULL);
+    }
+    else if (there != kDriverNone && !here)
+    {
+        lead->SpawnDriverPed();
+    }
+}
+
 int gMismatched; // for the log: trains this game has otherwise
 } // namespace
 
@@ -106,6 +132,8 @@ void net::engine::CaptureTrains(Snapshot& out)
         e.f[kTrainPassengerTimer] = t->mPassengerTimer;
         e.f[kTrainPassengerCount] = t->mPassengerCount;
         e.f[kTrainSpeed] = lead->mAI ? lead->mAI->mSpeed.mValue : 0;
+        const Ped* d = lead->mDriver;
+        e.f[kTrainDriver] = !d ? kDriverNone : IsSpareDriver(d) ? kDriverTraffic : d->mPlayer ? kTrainDriverPlayer + d->mPlayer->mPlayerIdx : kDriverPed;
         const TrainStation* s = t->mStation;
         e.f[kTrainStation] = StationIndex(s) + 1;
         e.f[kTrainPlatform] = s ? s->mPlatformState : 0;
@@ -135,7 +163,7 @@ void net::engine::TrainCars(std::vector<Car*>& out)
     }
 }
 
-bool net::engine::ApplyTrain(const EntityState& e, const std::set<const Car*>& playerIn, std::vector<std::pair<uint32_t, Car*>>& carriages)
+bool net::engine::ApplyTrain(const EntityState& e, std::vector<std::pair<uint32_t, Car*>>& carriages)
 {
     carriages.clear();
     Train* t = LiveTrain((int)(e.id - kTrainIdBase));
@@ -185,18 +213,42 @@ bool net::engine::ApplyTrain(const EntityState& e, const std::set<const Car*>& p
             c->mDamage = (s16)e.f[kTrainDamage0 + k];
         }
     }
-    // The lead where the server has it (the snapshot's car entity has it too, but only near this client's player);
-    // its wagons follow in its next update. One a player drives follows the player (players.cpp)
+    // The lead where the server has it, a player in it or not (the snapshot's car entity has it too, but only near this
+    // client's player); its wagons follow in its next update
     Car* lead = t->mCarriages[0];
-    if (!playerIn.count(lead))
-    {
-        MoveCar(lead, Raw(e.f[kTrainX]), Raw(e.f[kTrainY]), Raw(e.f[kTrainZ]), Angle(e.f[kTrainRot]));
-    }
+    MoveCar(lead, Raw(e.f[kTrainX]), Raw(e.f[kTrainY]), Raw(e.f[kTrainZ]), Angle(e.f[kTrainRot]));
     if (lead->mAI)
     {
         lead->mAI->mSpeed = Fix16(e.f[kTrainSpeed], 0);
     }
+    MatchDriver(lead, e.f[kTrainDriver]);
     return true;
+}
+
+void net::engine::GuardTrains()
+{
+    for (int i = 0; i < kTrains; i++)
+    {
+        Train* t = LiveTrain(i);
+        Ped* d = t ? t->mCarriages[0]->mDriver : NULL;
+        if (!d || !d->mPlayer || d->mCar == t->mCarriages[0])
+        {
+            continue;
+        }
+        bool aboard = false;
+        for (int k = 1; k <= t->mWagonCount; k++)
+        {
+            aboard = aboard || d->mCar == t->mCarriages[k];
+        }
+        if (aboard && d->mPedState1 == ped_state_1::in_car_10 && !d->mEnterCarAsPassenger)
+        {
+            d->mCar = t->mCarriages[0];
+        }
+        else if (!aboard)
+        {
+            t->mCarriages[0]->SetDriver(NULL); // out of the train: as the game's own leaving clears a lead's driver
+        }
+    }
 }
 
 bool net::engine::IsTrainModel(int model)

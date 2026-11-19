@@ -248,8 +248,9 @@ void ApplyCar(Pass& a, const EntityState& e)
     {
         return; // none, or the state the client already has (a busy area's far car): predicted on here
     }
-    // The shared traffic driver, as the server has it (a car with its own driver gets it from its ped entity)
-    if (!a.owned.count(car))
+    // The shared traffic driver, as the server has it (a car with its own driver gets it from its ped entity; a train's
+    // lead from its train, ApplyTrains)
+    if (!a.owned.count(car) && !car->IsTrainModel())
     {
         const bool spare = IsSpareDriver(car->mDriver);
         if (e.f[kCarDriver] == kDriverTraffic && !car->mDriver)
@@ -261,7 +262,8 @@ void ApplyCar(Pass& a, const EntityState& e)
             car->SetDriver(NULL);
         }
     }
-    if (!a.playerIn.count(car)) // a car a player sits in follows the player (players.cpp); one being entered, the server
+    // A car a player sits in follows the player (players.cpp), a train's its train; one being entered, the server
+    if (!a.playerIn.count(car) || car->IsTrainModel())
     {
         const GridCheck check("moving a car", car);
         MoveCar(car, Raw(e.f[kCarX]), Raw(e.f[kCarY]), Raw(e.f[kCarZ]), Angle(e.f[kCarRot]));
@@ -403,7 +405,7 @@ void ApplyTrains(Pass& a, const Snapshot& snap)
     std::vector<std::pair<uint32_t, Car*>> carriages;
     for (const EntityState& e : snap.entities)
     {
-        if (e.type != kEntityTrain || !ApplyTrain(e, a.playerIn, carriages))
+        if (e.type != kEntityTrain || !ApplyTrain(e, carriages))
         {
             continue;
         }

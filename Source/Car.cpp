@@ -4883,7 +4883,12 @@ void Car::TryHonkHorn(s32 horn_mode)
 
     if (!this->mHorn && !IsMaxDamage())
     {
+#if defined(GTA2_PORT)
+        // Port: a train's lead goes on moving without a driver once a player gets out of a carriage that stood still
+        if (this->mDriver && this->mDriver->mPlayer)
+#else
         if (this->mDriver->mPlayer)
+#endif
         {
             this->mHorn = 45;
         }

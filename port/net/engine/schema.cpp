@@ -80,7 +80,7 @@ net::Schema BuildSchema()
     net::EntityType train = {"train", {{"x", 22, false}, {"y", 22, false}, {"z", 17, false}, {"rot", 11, false}, {"wagons", 4, false},
                                        {"reversed", 1, false}, {"state", 3, false}, {"stop_phase", 4, false}, {"wait", 16, true},
                                        {"hijacked", 1, false}, {"fleeing", 1, false}, {"passenger_timer", 8, true},
-                                       {"passengers", 8, true}, {"speed", 32, true}, {"station", 7, false}, {"platform", 3, false},
+                                       {"passengers", 8, true}, {"speed", 32, true}, {"driver", 4, false}, {"station", 7, false}, {"platform", 3, false},
                                        {"stopped", 4, false}}};
     AppendNumbered(train.fields, "carriage", kTrainCarriages, 25);
     AppendNumbered(train.fields, "damage", kTrainCarriages, 16);

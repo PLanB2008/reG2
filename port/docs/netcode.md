@@ -172,7 +172,8 @@ command, applies snapshots and rolls back. Between frames both poll the network 
   starts it as the key does.
 - **Guards** (`engine/guards.cpp`, on the server too): what a network game breaks in the game's own logic is made
   safe: peds given on-foot orders while in a car, the HUD arrows to players who joined after the start, objects
-  attached to cars the client moved (a tank's turret).
+  attached to cars the client moved (a tank's turret), a player driving a train that reversed (`Train::ReassignTrainHead`
+  makes the other end the lead and its driver, the ped stays in its old carriage: it goes with the driver's seat).
 
 ### Entities
 
@@ -348,6 +349,7 @@ The netcode's hooks, declared in `port/src/net_hooks.hpp`; those in `Source/` ar
 | `port/src/rumble.cpp` | `gPortNoRumble` | no vibration on a server (its local player is a remote one) or in a client's resimulation |
 | `port/compat/src` | `gPortIdleHook`, `gPortNoAudio`, `gPortCrashHook` | polling while a frame waits (`window.cpp`), no sound on a server (`miles.cpp`), the crash report (`main.cpp`) |
 | `Ped.cpp` | `gPortKeepWantedPoints` | a client keeps the server's wanted points with its police off |
+| `Car.cpp` | `Car::TryHonkHorn` | a train's lead without a driver (a player got out of a carriage that stood still) doesn't read it |
 | `Hud.cpp` | `port_TypedChar` (`port/compat/src/dinput.cpp`) | the chat types the keyboard layout's characters |
 | `Hud.cpp` | `gPortServerKillNotices` | a client's kill notices are the server's deaths only |
 | `Pool.hpp`, `Car.cpp`, `Char_Pool.cpp`, `Game.cpp` | `PortRand::Scope` (`port/src/rand/owner.hpp`) | who a random draw belongs to |

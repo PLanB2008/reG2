@@ -129,6 +129,7 @@ enum ObjectField
     kObjIdx, // Object::mPedRefIdx (what kind, for some)
 };
 const int kTrainCarriages = 11; // Train::mCarriages: the lead and up to 10 wagons
+const int kTrainDriverPlayer = 3;
 enum TrainField
 {
     kTrainX, // its lead carriage's place
@@ -147,6 +148,7 @@ enum TrainField
     kTrainPassengerTimer,
     kTrainPassengerCount,
     kTrainSpeed, // its lead's CarAI::mSpeed (raw)
+    kTrainDriver, // its lead's driver: kDriverNone, kDriverTraffic, kDriverPed (not a player), or kTrainDriverPlayer + slot
     // The station it heads for (index in PublicTransport::mStations + 1, 0 none), and that station's mPlatformState
     // and mpStoppedTrain (train index + 1, 0 none)
     kTrainStation,
@@ -246,9 +248,12 @@ void ApplyCarAi(Car* car, const EntityState& e);
 void CaptureTrains(Snapshot& out);
 void TrainCars(std::vector<Car*>& out); // every carriage of this game's trains (only their leads are in the car pool's list)
 // The server's state into this game's train of the same index, and its carriages by the server's car ids. False: this
-// game's train differs (nothing applied). <playerIn>: the cars players sit in, which follow their players
-bool ApplyTrain(const EntityState& e, const std::set<const Car*>& playerIn, std::vector<std::pair<uint32_t, Car*>>& carriages);
+// game's train differs (nothing applied)
+bool ApplyTrain(const EntityState& e, std::vector<std::pair<uint32_t, Car*>>& carriages);
 bool IsTrainModel(int model); // a car model that is a train's carriage (Car::IsTrainModel)
+// A player driving a train sits in its lead: reversing makes the other end the lead and its driver and leaves the ped in
+// its old carriage (Train::ReassignTrainHead), so the ped goes with the seat; one not aboard drives it no longer (guards.cpp)
+void GuardTrains();
 void PrintTrainLog();
 
 // Getting into and out of cars (car_entry.cpp): at once, ending as the game's own entering and leaving do; or started as

@@ -53,6 +53,7 @@ void net::engine::GuardPeds()
     {
         gPolice_7B8->mMaxWantedStars = MaxWantedStars();
     }
+    GuardTrains(); // before the next: a player driving a reversed train sits in its old carriage, not the lead's driver
     // Two players getting into one empty car by the same door at once: the second one's entry ends with it as the
     // driver, without pulling the first out, which sits on in it as no driver or passenger. The
     // car doesn't know it: blown up, it doesn't kill it, and it drives the wreck without physics (a crash). Out at
