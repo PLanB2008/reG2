@@ -216,9 +216,10 @@ f32 Flame(u32 seed, u32 step)
 // Flame() between the last two logic steps, as the sprites are drawn.
 f32 FlameNow(u32 seed)
 {
-    const u32 step = PortFrameLoop::StepCount();
+    const f64 steps = PortFrameLoop::WorldSeconds() / 0.033;
+    const u32 step = static_cast<u32>(steps);
     const f32 prev = Flame(seed, step - 1);
-    return prev + (Flame(seed, step) - prev) * PortFrameLoop::DrawAlpha();
+    return prev + (Flame(seed, step) - prev) * static_cast<f32>(steps - step);
 }
 
 // Blasts flash over their first steps (the countdown starts at 100); fires glow while they burn. Molotov

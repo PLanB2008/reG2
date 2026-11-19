@@ -225,7 +225,7 @@ void Draw()
         sNumHeat = 0;
         return;
     }
-    const f64 seconds = (PortFrameLoop::StepCount() + static_cast<f64>(PortFrameLoop::DrawAlpha())) * 0.033;
+    const f64 seconds = PortFrameLoop::WorldSeconds();
     const f32 dt = static_cast<f32>(seconds - sLastSeconds);
     sLastSeconds = seconds;
     for (s32 i = 0; i < sNumHeat; i++)

@@ -52,7 +52,6 @@ const f32 kWindX = 0.05f, kWindY = -0.30f;
 const f32 kTrail = 5.0f; // wisps a block a moving fire adds
 const f32 kTurbulence = 0.35f; // blocks a wisp is pushed about by the moving noise, at the end of its life
 const f32 kEmberLift = 1.1f; // blocks a second squared pulling an ember's climb back
-const f32 kStep = 0.033f; // a logic step
 
 const s32 kMaxEmitters = 48;
 const s32 kMaxPuffs = 256;
@@ -574,7 +573,7 @@ void Clear()
 // The frame's emitters, wisps and embers, and their quads.
 void Update(bool smoke)
 {
-    const f64 now = (PortFrameLoop::StepCount() + static_cast<f64>(PortFrameLoop::DrawAlpha())) * kStep;
+    const f64 now = PortFrameLoop::WorldSeconds();
     // Time going back (a new game) or leaping forward: nothing carries over.
     if (now < sLastSeconds - 0.001 || now - sLastSeconds > 2.0)
     {
