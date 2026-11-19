@@ -14,6 +14,7 @@
 #include "Source/sound_obj.hpp"
 #include "Source/Ped.hpp"
 #include "Source/SoundObject.hpp"
+#include "port/src/net_hooks.hpp"
 #include <algorithm>
 #include <stddef.h>
 #include <string.h>
@@ -151,11 +152,14 @@ void net::engine::ResimTick(const uint32_t* buttons, int count)
     GuardPeds();
     KeepPlayerArrows();
     SeenByAll();
+    const bool noRumble = gPortNoRumble;
+    gPortNoRumble = true; // felt when the tick was predicted, as its sounds were heard
     g->UpdateAllPlayersControls();
     if (g->mGameState == GameState::Running_1)
     {
         g->UpdateGame(); // the tick without the sound service (Game::ExecuteGame without sound)
     }
+    gPortNoRumble = noRumble;
     GuardPeds(); // after it too: the live tick follows the last one without a frame in between
     // What the sound service takes from the sim each tick, taken here as it doesn't run: a resimulated sound was heard
     // when it was predicted. Left there, it went into the saves and every restore played it again (a gun that went on
