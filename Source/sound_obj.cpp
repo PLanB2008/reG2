@@ -4269,8 +4269,13 @@ void sound_obj::ProcessActiveQueues()
                         active.mEntityIndex = 0;
                         continue;
                     }
+#if defined(GTA2_PORT)
+                    // Port: a rate of 0 gives 0, as in UpdateFramesToPlay.
+                    active.mFramesToPlay = sample.mRate ? mFramesPerSecond * gSampManager.GetSampleLength(active.mSampIdx) / sample.mRate : 0;
+#else
                     active.mFramesToPlay = mFramesPerSecond *
                         gSampManager.GetSampleLength(active.mSampIdx) / sample.mRate;
+#endif
                 }
                 else
                 {
@@ -4498,6 +4503,14 @@ void sound_obj::UpdateFramesToPlay(sound_0x68* pObj)
 {
     if (pObj->mReleasingSoundFlag)
     {
+#if defined(GTA2_PORT)
+        // Port: a network client's queued sample can carry a rate of 0 (Industrial-6P), SIGFPE on x86; 0 as on arm64.
+        if (pObj->mLoopCount && pObj->mRate == 0)
+        {
+            pObj->mFramesToPlay = 0;
+            return;
+        }
+#endif
         if (pObj->mLoopCount)
         {
             pObj->mFramesToPlay = (static_cast<u32>(mFramesPerSecond) * gSampManager.GetSampleLength(pObj->mSampIdx)) /
