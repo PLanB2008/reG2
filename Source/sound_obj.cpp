@@ -804,7 +804,12 @@ bool sound_obj::SelectCarObjectCollisionSound(CollisionEvent* pEvent)
         return SelectObjectImpactSound(pEvent, 3);
     }
     PlayPickupVoice(pEvent->mObjectModel);
+#if defined(GTA2_PORT)
+    // Port: only the voice; true would queue the scratch sample as it stands (rate 0 before any sound: SIGFPE on x86)
+    return false;
+#else
     return true;
+#endif
 }
 
 MATCH_FUNC(0x413040)
@@ -865,7 +870,12 @@ bool sound_obj::SelectPedObjectCollisionSound(CollisionEvent* pEvent)
         return SelectObjectImpactSound(pEvent, 7);
     }
     PlayPickupVoice(pEvent->mObjectModel);
+#if defined(GTA2_PORT)
+    // Port: only the voice; true would queue the scratch sample as it stands (rate 0 before any sound: SIGFPE on x86)
+    return false;
+#else
     return true;
+#endif
 }
 
 MATCH_FUNC(0x413120)
