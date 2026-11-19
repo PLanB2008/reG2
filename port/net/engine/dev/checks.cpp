@@ -272,70 +272,92 @@ bool net::engine::DebugCheckPlayerCars(const char* where)
     return true;
 }
 
+// Whether a car or ped is on its pool's list, allocating nothing (malloc can hang after a heap corruption); a bounded
+// walk, as the list may be what broke
+static bool LiveCar(const Car* car)
+{
+    int n = 0;
+    for (const Car* c = gCar_BC_Pool ? gCar_BC_Pool->mPool.mpPrev : NULL; car && c && n < 4096; c = c->mpNext, n++)
+    {
+        if (c == car)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool LivePed(const Ped* ped)
+{
+    int n = 0;
+    for (const Ped* p = gPedPool ? gPedPool->mPool.mpPrev : NULL; ped && p && n < 4096; p = p->mpNext, n++)
+    {
+        if (p == ped)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 // The crash report's line for a ped and for a car: what they are, and whether what they point to is live
-static void CrashPed(const char* what, const Ped* q, const std::set<Car*>& liveCars, const std::set<Ped*>& livePeds)
+static void CrashPed(const char* what, const Ped* q)
 {
     if (!q)
     {
         return;
     }
-    const bool live = livePeds.count(const_cast<Ped*>(q)) != 0;
+    const bool live = LivePed(q);
     const Char* c = live ? q->mGameObject : NULL;
     const Sprite* sp = c ? c->mSpritePtr : NULL;
     fprintf(stderr, "net: crash state: %s ped %p live %d id %d states %d/%d objective %d player %p car %p (live %d) objective car %p (live %d) to enter %p (live %d) char %p state %d velocity %.3f at (%.2f, %.2f, %.2f)\n",
             what, (const void*)q, live, live ? (int)q->mId : -1, live ? (int)q->mPedState1 : -1, live ? (int)q->mPedState2 : -1,
             live ? (int)q->mObjective : -1, live ? (void*)q->mPlayer : NULL, live ? (void*)q->mCar : NULL,
-            live ? (int)liveCars.count(q->mCar) : -1, live ? (void*)q->mTargetObjectiveCar : NULL,
-            live ? (int)liveCars.count(q->mTargetObjectiveCar) : -1, live ? (void*)q->mTargetToEnter : NULL,
-            live ? (int)liveCars.count(q->mTargetToEnter) : -1, (const void*)c, c ? (int)c->mCharState : -1,
+            live ? (int)LiveCar(q->mCar) : -1, live ? (void*)q->mTargetObjectiveCar : NULL,
+            live ? (int)LiveCar(q->mTargetObjectiveCar) : -1, live ? (void*)q->mTargetToEnter : NULL,
+            live ? (int)LiveCar(q->mTargetToEnter) : -1, (const void*)c, c ? (int)c->mCharState : -1,
             c ? c->mVelocity.ToFloat() : 0.f, sp ? sp->mXy.x.ToFloat() : 0.f, sp ? sp->mXy.y.ToFloat() : 0.f,
             sp ? sp->mZpos.ToFloat() : 0.f);
 }
 
-static void CrashCar(const char* what, const Car* car, const std::set<Car*>& liveCars, const std::set<Ped*>& livePeds)
+static void CrashCar(const char* what, const Car* car)
 {
     if (!car)
     {
         return;
     }
-    const bool live = liveCars.count(const_cast<Car*>(car)) != 0;
+    const bool live = LiveCar(car);
     const Sprite* sp = live ? car->mCarSprite : NULL;
     fprintf(stderr, "net: crash state: %s car %p live %d id %d model %d despawn status %d driver %p (live %d) at (%.2f, %.2f, %.2f)\n", what,
             (const void*)car, live, live ? (int)car->mCarId : -1, live ? (int)car->mCarInfoIdx : -1,
             live ? (int)car->mDespawnStatus : -1, live ? (void*)car->mDriver : NULL,
-            live ? (int)livePeds.count(car->mDriver) : -1, sp ? sp->mXy.x.ToFloat() : 0.f, sp ? sp->mXy.y.ToFloat() : 0.f,
+            live ? (int)LivePed(car->mDriver) : -1, sp ? sp->mXy.x.ToFloat() : 0.f, sp ? sp->mXy.y.ToFloat() : 0.f,
             sp ? sp->mZpos.ToFloat() : 0.f);
 }
 
 void net::engine::DebugOnCrash()
 {
     Game* g = gGame_0x40;
-    std::set<Car*> liveCars;
-    std::set<Ped*> livePeds;
-    if (gPedPool && gCar_BC_Pool)
-    {
-        LiveEntities(liveCars, livePeds);
-    }
     fprintf(stderr, "net: crash state: frame %u, tick %u\n", gDebugFrame, gpRng ? (uint32_t)gpRng->get_cur_rng() : 0u);
     if (gCopyingBlock)
     {
         fprintf(stderr, "net: crash state: saving or restoring the block %s at %p, %zu bytes\n", gCopyingBlock->name, (void*)gCopyingBlock->addr,
                 gCopyingBlock->size);
     }
-    CrashPed("the last updated", PortRand::gLastPed, liveCars, livePeds);
-    CrashCar("the last updated", PortRand::gLastCar, liveCars, livePeds);
+    CrashPed("the last updated", PortRand::gLastPed);
+    CrashCar("the last updated", PortRand::gLastCar);
     if (!g || !g->mLocalPlayer)
     {
         return;
     }
     Player* p = g->mLocalPlayer;
     Ped* ped = p->mPlayerPed;
-    CrashPed("the local player's", ped, liveCars, livePeds);
+    CrashPed("the local player's", ped);
     Ped* camPed = p->mGameCamera.mTargetPed;
     Car* camCar = p->mGameCamera.mTargetCar;
     fprintf(stderr, "net: crash state: local player %d in use %d, ped %p (live %d) car %p, camera ped %p (live %d, the player's %d) car %p (live %d)\n",
-            (int)p->mPlayerIdx, (int)p->mInUse, (void*)ped, (int)livePeds.count(ped), ped ? (void*)ped->mCar : NULL,
-            (void*)camPed, (int)livePeds.count(camPed), camPed == ped, (void*)camCar, (int)liveCars.count(camCar));
+            (int)p->mPlayerIdx, (int)p->mInUse, (void*)ped, (int)LivePed(ped), ped ? (void*)ped->mCar : NULL,
+            (void*)camPed, (int)LivePed(camPed), camPed == ped, (void*)camCar, (int)LiveCar(camCar));
     // The sound listener's camera (sound_obj::InterrogateAudioEntities reads its followed ped's car)
     Camera* listener = NULL;
     if (gSound_obj.mType5Idx)
@@ -348,14 +370,14 @@ void net::engine::DebugOnCrash()
     {
         Ped* cp = cams[k]->mTargetPed;
         fprintf(stderr, "net: crash state: camera %d%s follows ped %p (live %d, in car %p live %d)\n", k, cams[k] == listener ? " (the listener)" : "",
-                (void*)cp, (int)livePeds.count(cp), cp && livePeds.count(cp) ? (void*)cp->mCar : NULL,
-                cp && livePeds.count(cp) ? (int)liveCars.count(cp->mCar) : -1);
+                (void*)cp, (int)LivePed(cp), cp && LivePed(cp) ? (void*)cp->mCar : NULL,
+                cp && LivePed(cp) ? (int)LiveCar(cp->mCar) : -1);
     }
     if (listener && listener != cams[0] && listener != cams[1] && listener != cams[2])
     {
         Ped* cp = listener->mTargetPed;
         fprintf(stderr, "net: crash state: the listener is another camera %p, follows ped %p (live %d, aux of the player %d)\n", (void*)listener,
-                (void*)cp, (int)livePeds.count(cp), cp == p->mAuxPed);
+                (void*)cp, (int)LivePed(cp), cp == p->mAuxPed);
     }
     Car* cars[2] = {ped ? ped->mCar : NULL, camPed ? camPed->mCar : NULL};
     for (int k = 0; k < 2; k++)
@@ -363,7 +385,7 @@ void net::engine::DebugOnCrash()
         if (cars[k])
         {
             fprintf(stderr, "net: crash state: car %p live %d sprite %p despawn status %d driver %p mapped %d\n", (void*)cars[k],
-                    (int)liveCars.count(cars[k]), (void*)cars[k]->mCarSprite, (int)cars[k]->mDespawnStatus,
+                    (int)LiveCar(cars[k]), (void*)cars[k]->mCarSprite, (int)cars[k]->mDespawnStatus,
                     (void*)cars[k]->mDriver, (int)(MappedId(cars[k]) != 0));
         }
     }

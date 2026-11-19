@@ -403,7 +403,8 @@ A field the server sent unchanged that the client has otherwise was written in t
 **The crash report** (`port/compat/src/main.cpp`, installed for network games only, then the netcode's `DebugOnCrash`): the backtrace, then the frame and tick, the
 rollback block being saved or restored if that is where it was (`gCopyingBlock`), the ped and the car whose update
 started last (`PortRand::gLastPed`, `PortRand::gLastCar`: a crash in a ped's or a car's update names
-it), and on a client its player, cameras and their cars.
+it), and on a client its player, cameras and their cars. It allocates nothing, and if it hangs anyway (a lock the crash
+left held) an alarm ends the process with its signal after 5 s.
 
 **The comparison check** (`GTA2_NET_COMPARE=1` on a client): on each snapshot, with the game restored to the
 snapshot's tick and before it is applied, every mapped entity is captured here and compared with the server's, field
