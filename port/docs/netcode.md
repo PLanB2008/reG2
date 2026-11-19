@@ -343,6 +343,7 @@ The netcode's hooks, declared in `port/src/net_hooks.hpp`; those in `Source/` ar
 | `map_0x370.cpp` | a file static in port builds | the restart zones' turn, a function's static in the original: registered from the start, so rolled back and sent |
 | `sprite.cpp` | `gPortSpriteMovedHook` | a sprite moved: the grid check (`GTA2_NET_CHECKGRID`) |
 | `port/src/game_hooks.cpp` | `gPortLeavePromptShown` | the leave prompt is up: a gamepad's A and B answer it |
+| `port/src/rumble.cpp` | `gPortNoRumble` | no vibration on a server (its local player is a remote one) or in a client's resimulation |
 | `port/compat/src` | `gPortIdleHook`, `gPortNoAudio`, `gPortCrashHook` | polling while a frame waits (`window.cpp`), no sound on a server (`miles.cpp`), the crash report (`main.cpp`) |
 | `Ped.cpp` | `gPortKeepWantedPoints` | a client keeps the server's wanted points with its police off |
 | `Hud.cpp` | `port_TypedChar` (`port/compat/src/dinput.cpp`) | the chat types the keyboard layout's characters |
@@ -353,10 +354,13 @@ The netcode's hooks, declared in `port/src/net_hooks.hpp`; those in `Source/` ar
 Other files' statics the netcode reads (winmain.cpp's inputs and its player, the restart zones' turn) it reaches through
 the registry by their 10.5.exe address (`PortStatic`, accessors in `engine/internal.hpp`).
 
-reG2's own extras that would change the game outside the input bits a server gets are off in a network game: twin
-stick, mouse aim, the turret's aim, the pad's analog driving and the aim camera (`port/src/twin_stick.cpp`, `view.cpp`),
-each player's day and night (`day_night.cpp`) and the pause menu (`pause_menu.cpp`). A network game runs the original's
-frame path in `winmain.cpp` (a step, then a frame), without reG2's frame limit and interpolation.
+reG2's own extras that would change the game outside the input bits a server gets are off in a network game: twin stick,
+mouse aim, the turret's aim, the pad's analog driving and the aim camera (`port/src/twin_stick.cpp`, `view.cpp`), each
+player's day and night (`day_night.cpp`) and the pause menu (`pause_menu.cpp`). AUTOSAVE, RETRY JOBS and FRENZY RESPAWN
+(`autosave.cpp`, `retry.cpp`) are for single player only, and INFINITE LIVES goes with the debug flags a network game
+clears (`InitializeGame`). Vibration is the local player's, from the ticks a client predicts (`gPortNoRumble`). A
+network game runs the original's frame path in `winmain.cpp` (a step, then a frame), without reG2's frame limit and
+interpolation.
 
 ## Checks
 
