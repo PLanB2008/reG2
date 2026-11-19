@@ -44,8 +44,8 @@ error on the page; welcomed, the frontend boots the network game as it boots a l
 conditioner's options apply to a join from the page too.
 
 **Leaving.** Escape in a network game is the client's: "Leave the game? Y / N" over the frame. Yes leaves the server
-and goes back to the network page as a single player again. So does a client that lost the server for good, or was
-kicked, with why on the page.
+and goes back to the network page as a single player again. So does a client that lost the server for good, was
+kicked, or hasn't the next map's files, with why on the page; without the map's files a join fails the same way.
 
 **Connection.** The ping shows at the bottom right: the network's round trip alone (`kMsgPing`, answered at once,
 both polled between frames). With no snapshot for 0.7 s it shows **Connection interrupted** and plays on with the

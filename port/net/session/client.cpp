@@ -132,6 +132,19 @@ bool net::Client::Connect(const ClientConfig& config, engine::NetworkGame* pGame
     return result > 0;
 }
 
+// A map this machine lacks ends the game with its fatal error at the first file it opens: <error> names it instead
+static bool HaveMap(const std::string& gmp, const std::string& sty, const std::string& scr, std::string* error)
+{
+    const std::string missing = net::engine::MissingMapFile(gmp, sty, scr);
+    if (missing.empty())
+    {
+        return true;
+    }
+    const std::string name = scr.substr(0, scr.rfind('.'));
+    *error = "no map " + name + " here (data/" + missing + ")";
+    return false;
+}
+
 bool net::Client::OnWelcome(const TransportEvent& e, engine::NetworkGame* pGame, std::string* error)
 {
     BitReader r(e.data.data(), e.data.size());
@@ -147,6 +160,11 @@ bool net::Client::OnWelcome(const TransportEvent& e, engine::NetworkGame* pGame,
     if (type != kMsgWelcome || !ReadWelcome(r, welcome) || welcome.version != kProtocolVersion)
     {
         *error = "a welcome we don't understand";
+        return false;
+    }
+    if (!HaveMap(welcome.gmp, welcome.sty, welcome.scr, error))
+    {
+        Leave();
         return false;
     }
     Welcomed(welcome, pGame);
@@ -677,6 +695,13 @@ void net::Client::OnMapChange(BitReader& r)
     MapChange m;
     if (ReadMapChange(r, m))
     {
+        std::string missing;
+        if (!HaveMap(m.gmp, m.sty, m.scr, &missing))
+        {
+            printf("net: frame %u, %s\n", mFrame, missing.c_str());
+            LeaveToMenu(missing.c_str());
+            return;
+        }
         printf("net: frame %u, the next map: %s\n", mFrame, m.scr.c_str());
         engine::ChangeMap(m.gmp, m.sty, m.scr, 90);
         mScr = m.scr;

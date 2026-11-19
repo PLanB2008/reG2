@@ -149,6 +149,8 @@ void SetNetBanner(const std::string& text);
 // (winmain.cpp, gPortNextNetworkGame); KeepMapChange every frame until then. GameGeneration counts the games, for
 // the session to start over when it changes
 void ChangeMap(const std::string& gmp, const std::string& sty, const std::string& scr, int pauseTicks);
+// The first of a map's files that isn't in data/ (the game's fatal error if it opened it); empty: all are
+std::string MissingMapFile(const std::string& gmp, const std::string& sty, const std::string& scr);
 // This network game ends at once for the frontend (LeftForMenu() says so to winmain.cpp's gPortLeaveNetworkGame), and
 // StopNetworkGame puts back what a single-player game expects
 void LeaveForMenu();

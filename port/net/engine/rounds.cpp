@@ -8,6 +8,7 @@
 #include "Source/Hud.hpp"
 #include "Source/Player.hpp"
 #include "Source/hud_message_priority.hpp"
+#include <stdio.h>
 #include <string.h>
 
 net::engine::Round& net::engine::CurrentRound()
@@ -40,6 +41,20 @@ namespace
 {
 int gExitTicks; // the pause left before a map change ends the game
 } // namespace
+
+std::string net::engine::MissingMapFile(const std::string& gmp, const std::string& sty, const std::string& scr)
+{
+    for (const std::string* name : {&gmp, &sty, &scr})
+    {
+        FILE* f = fopen(("data\\" + *name).c_str(), "rb"); // as the game opens it
+        if (!f)
+        {
+            return *name;
+        }
+        fclose(f);
+    }
+    return "";
+}
 
 void net::engine::ChangeMap(const std::string& gmp, const std::string& sty, const std::string& scr, int pauseTicks)
 {
