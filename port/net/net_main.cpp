@@ -13,6 +13,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if !defined(_WIN32)
+    #include <unistd.h>
+#endif
 
 
 namespace
@@ -22,8 +25,11 @@ net::Client* gClient;
 int gTickMs = 33;
 bool gTickSet;
 
+void StopIfRequested();
+
 void OnFrame(void*)
 {
+    StopIfRequested();
     if (!gTickSet && net::engine::GameRunning())
     {
         net::engine::SetTickMs(gTickMs);
@@ -49,10 +55,34 @@ void LeaveServer()
     }
 }
 
+volatile sig_atomic_t gStopRequested;
+
+// A stop signal's work, from the frame or idle hook: the handler can't leave the server itself, as ENet allocates and
+// frees, and the signal may come in the middle of a malloc (it would wait on that lock for ever)
+void StopIfRequested()
+{
+    if (gStopRequested)
+    {
+        LeaveServer();
+        _Exit(0);
+    }
+}
+
 void OnStopSignal(int)
 {
-    LeaveServer();
+    if (gStopRequested)
+    {
+        _Exit(0); // a second one: at once
+    }
+    gStopRequested = 1;
+    // Neither hook may run soon (a map loading, the frontend): out without leaving after a second
+#if defined(_WIN32)
+    SDL_Delay(1000); // the handler has a thread of its own
     _Exit(0);
+#else
+    signal(SIGALRM, [](int) { _Exit(0); });
+    alarm(1);
+#endif
 }
 
 // Before any network game's start: what each end draws its random numbers from, and the log
@@ -79,7 +109,7 @@ void NetworkSetup(bool server)
 void StartClientGame(const net::engine::NetworkGame& game)
 {
     atexit(LeaveServer);
-    gPortIdleHook = [] { gClient->Idle(); net::engine::IdleWait(); }; // pongs timed as they come
+    gPortIdleHook = [] { StopIfRequested(); gClient->Idle(); net::engine::IdleWait(); }; // pongs timed as they come
     signal(SIGTERM, OnStopSignal);
     signal(SIGINT, OnStopSignal);
 #if !defined(_WIN32)
