@@ -48,6 +48,22 @@ void net::engine::TakeOutOfGame(int slot)
             ForceOutBesideCar(ped, ped->mCar);
         }
     }
+    // The slot's weapons stay the slot's: the pedestrian it leaves holds none, as its Deallocate would free them into
+    // the pool while the slot keeps them (as Player.cpp clears a corpse clone's)
+    for (Ped* ped : {p->mPlayerPed, p->mAuxPed})
+    {
+        for (int w = 0; ped && w < kPlayerWeapons; w++)
+        {
+            if (p->mWeapons[w] && ped->mSelectedWeapon == p->mWeapons[w])
+            {
+                ped->mSelectedWeapon = NULL;
+            }
+            if (p->mWeapons[w] && ped->mpWeapon == p->mWeapons[w])
+            {
+                ped->mpWeapon = NULL;
+            }
+        }
+    }
     p->Disconnect(); // keeps its ped pointer, as the game does: the HUD and camera of a local slot use it
 }
 
