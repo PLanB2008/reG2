@@ -88,6 +88,14 @@ bool gLightAreaSet;
 f32 gAmbient[3] = {255.0f, 255.0f, 255.0f};
 // The game's and the port's lights scaled by it (the DAY-NIGHT CYCLE's fade).
 f32 gLightScale = 1.0f;
+// Ambient occlusion (port_SetOcclusion): 0 when off.
+f32 gAoStrength;
+// The game's tile and sprite vertices (port_SetGameVerts): pVerts[4..7] are world positions, LIGHTING or not.
+const void* gpGameVerts[2];
+// The last blocks port_SetOcclusion gave, sent again to a new renderer (gbh_InitDLL) at its first scene.
+const u8* gpAoCells;
+s32 gAoSize[3];
+bool gAoResend;
 f32 gWindow[4];
 s32 gScreenTable[1700];
 u32 gTextureId;
@@ -452,8 +460,16 @@ u32 NearLights(const Vert* pWorld, s32 count)
     return n;
 }
 
-// numNear: the primitive's NearLights.
-u32 LightVertex(const Vert& vert, u8 shade, u32 colour, u32 numNear)
+// The share of a lit colour that ambient occlusion darkens: all of the ambient light and a little of the lights'.
+const f32 kAoOfLights = 0.25f;
+
+f32 AoShare(f32 ambient, f32 total)
+{
+    return total > 1.0f ? (ambient + kAoOfLights * (total - ambient)) / total : 1.0f;
+}
+
+// numNear: the primitive's NearLights. pAoShare, when given: AoShare of the result.
+u32 LightVertex(const Vert& vert, u8 shade, u32 colour, u32 numNear, f32* pAoShare = NULL)
 {
     f32 lr = 0.0f, lg = 0.0f, lb = 0.0f;
     f32 sr = 0.0f, sg = 0.0f, sb = 0.0f;
@@ -495,6 +511,12 @@ u32 LightVertex(const Vert& vert, u8 shade, u32 colour, u32 numNear)
     const u32 ri = r > 255.0f ? 255 : (u32)r;
     const u32 gi = g > 255.0f ? 255 : (u32)g;
     const u32 bi = b > 255.0f ? 255 : (u32)b;
+    if (pAoShare)
+    {
+        const f32 ambient = Ambient(0, (colour >> 16) & 0xFF) + Ambient(1, (colour >> 8) & 0xFF) + Ambient(2, colour & 0xFF);
+        const f32 total = (f32)(ri + gi + bi);
+        *pAoShare = AoShare(ambient < total ? ambient : total, total);
+    }
     return (colour & 0xFF000000u) | (ri << 16) | (gi << 8) | bi;
 }
 
@@ -633,6 +655,10 @@ void RenderVerts(u32 flags, STexture* pTexture, Vert* pVerts, s32 count, u32 bas
     const bool lit = (flags & FLAG_LIGHTING) && !fullAmbient;
     const bool shadowLit = softShadow && !fullAmbient;
     const bool perPixel = (lit || shadowLit) && gRenderer->Options().mPerPixelLighting;
+    // Ambient occlusion needs world positions: those of FLAG_LIGHTING draws, and the game's tiles and sprites at NOON.
+    const bool occluded = gAoStrength > 0.0f && ((flags & FLAG_LIGHTING) || pVerts == gpGameVerts[0] || pVerts == gpGameVerts[1]) &&
+                          !softShadow && !(flags & FLAG_INTERNAL_BLIT);
+    f32 aoShare[4] = {1.0f, 1.0f, 1.0f, 1.0f};
     u32 unlit[4];
     const u32 numNear = lit || (shadowLit && !perPixel) ? NearLights(pVerts + 4, count) : 0;
     if (lit)
@@ -640,7 +666,7 @@ void RenderVerts(u32 flags, STexture* pTexture, Vert* pVerts, s32 count, u32 bas
         for (s32 i = 0; i < count; i++)
         {
             unlit[i] = pVerts[i].diff;
-            pVerts[i].diff = LightVertex(pVerts[i + 4], shade, pVerts[i].diff, numNear);
+            pVerts[i].diff = LightVertex(pVerts[i + 4], shade, pVerts[i].diff, numNear, occluded ? &aoShare[i] : NULL);
         }
     }
     else if (shadowLit)
@@ -702,20 +728,27 @@ void RenderVerts(u32 flags, STexture* pTexture, Vert* pVerts, s32 count, u32 bas
         rv[i].v = pVerts[i].v * scaleV;
         if (perPixel)
         {
-            rv[i].wx = pVerts[i + 4].x;
-            rv[i].wy = pVerts[i + 4].y;
-            rv[i].wz = pVerts[i + 4].z;
             rv[i].unlit = ArgbToRgba(unlit[i]);
             rv[i].shade = shade / 255.0f;
             rv[i].lit = 1.0f;
         }
         else
         {
-            rv[i].wx = rv[i].wy = rv[i].wz = 0.0f;
             rv[i].unlit = 0;
             rv[i].shade = 0.0f;
             rv[i].lit = 0.0f;
         }
+        if (perPixel || occluded)
+        {
+            rv[i].wx = pVerts[i + 4].x;
+            rv[i].wy = pVerts[i + 4].y;
+            rv[i].wz = pVerts[i + 4].z;
+        }
+        else
+        {
+            rv[i].wx = rv[i].wy = rv[i].wz = 0.0f;
+        }
+        rv[i].ao = occluded ? aoShare[i] : 0.0f;
     }
     RVertex tris[6];
     s32 n = 3;
@@ -758,6 +791,7 @@ void DrawColouredQuad(f32 l, f32 t, f32 r, f32 b, u32 argb)
         v[i].unlit = 0;
         v[i].shade = 0.0f;
         v[i].lit = 0.0f;
+        v[i].ao = 0.0f;
     }
     gRenderer->DrawTriangles(v, 6, 0, 0);
 }
@@ -816,6 +850,7 @@ GBH_EXPORT u32 GTA2_CC gbh_InitDLL(SVideo* pVideo)
     }
     gRenderer = pHeader->mRenderer;
     gFlipCounter = pHeader->mFlipCounter;
+    gAoResend = gpAoCells != NULL;
     gCmd.Init("gl");
     return 1;
 }
@@ -860,6 +895,11 @@ GBH_EXPORT void GTA2_CC gbh_BeginScene()
 #endif
     if (gRenderer)
     {
+        if (gAoResend)
+        {
+            gAoResend = false;
+            gRenderer->SetOcclusion(gpAoCells, gAoSize[0], gAoSize[1], gAoSize[2], gAoStrength);
+        }
         gRenderer->BeginScene();
     }
 }
@@ -1095,6 +1135,29 @@ GBH_EXPORT void GTA2_CC gbh_SetAmbient(f32 ambient)
 {
     gAmbient[0] = gAmbient[1] = gAmbient[2] = ambient * 255.0f;
     gLightsDirty = true;
+}
+
+// The map's solid blocks (port/src/ambient_occlusion.cpp), width x height x depth bytes, x fastest, 255 solid;
+// strength is how much of the ambient light the most occluded surfaces lose. NULL blocks only set the strength.
+void port_SetOcclusion(const u8* pCells, s32 width, s32 height, s32 depth, f32 strength)
+{
+    gAoStrength = strength;
+    if (pCells)
+    {
+        gpAoCells = pCells;
+        gAoSize[0] = width, gAoSize[1] = height, gAoSize[2] = depth;
+    }
+    if (gRenderer)
+    {
+        gRenderer->SetOcclusion(pCells, width, height, depth, strength);
+    }
+}
+
+// The game's tile and sprite vertex arrays, for ambient occlusion without LIGHTING's flag.
+void port_SetGameVerts(const void* pTileVerts, const void* pSpriteVerts)
+{
+    gpGameVerts[0] = pTileVerts;
+    gpGameVerts[1] = pSpriteVerts;
 }
 
 // The level's ambient light in colour, and the scale of the lights added after it.
