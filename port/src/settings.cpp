@@ -498,17 +498,17 @@ const char* ScreenName(Id id)
 }
 
 #if defined(GTA2_PORT_SDL)
-bool OtherPresetValuesEnhanced();
+s32 PresetDefault(Id id);
 #endif
 
 // The game's own settings are on by default; the port's graphics additions off.
 s32 ScreenDefault(Id id)
 {
 #if defined(GTA2_PORT_SDL)
-    // Without a saved value: on where the other GRAPHICS settings are ENHANCED's, so a setup made before it stays ENHANCED.
-    if (id == kAmbientOcclusion || id == kFireEffects)
+    const s32 preset = PresetDefault(id);
+    if (preset >= 0)
     {
-        return OtherPresetValuesEnhanced() ? 1 : 0;
+        return preset;
     }
 #endif
     if (id == kFrameLimit)
@@ -676,6 +676,35 @@ bool OtherPresetValuesEnhanced()
         }
     }
     return true;
+}
+
+// The preset last chosen; a setup from before it was saved is ENHANCED where its GRAPHICS settings are.
+s32 LastPreset()
+{
+    static bool sGuessing;
+    s32 preset = gRegistry.Get_Screen_Setting("gl_preset", -1);
+    if (preset < 0 && !sGuessing)
+    {
+        sGuessing = true;
+        preset = OtherPresetValuesEnhanced() ? kEnhanced : kClassic;
+        sGuessing = false;
+        gRegistry.Set_Screen_Setting("gl_preset", preset);
+    }
+    return preset;
+}
+
+// A GRAPHICS setting never saved takes the last preset's value; -1 for the others.
+s32 PresetDefault(Id id)
+{
+    for (s32 i = 0; i < kNumPresetValues; i++)
+    {
+        if (kPresetValues[i].mId == id)
+        {
+            const s32 preset = LastPreset();
+            return preset < 0 ? -1 : PresetTarget(kPresetValues[i], preset);
+        }
+    }
+    return -1;
 }
 
 Preset CurrentPreset()
@@ -1070,6 +1099,7 @@ void ApplyStyle(Style style)
     {
         gRegistry.Set_Screen_Setting(ScreenName(kPresetValues[i].mId), PresetTarget(kPresetValues[i], enhanced ? kEnhanced : kClassic));
     }
+    gRegistry.Set_Screen_Setting("gl_preset", enhanced ? kEnhanced : kClassic);
     ApplyRenderOptions();
     // The original's dusk, or the day-night cycle as its settings are.
     gRegistry.Set_Screen_Setting(ScreenName(kLighting), enhanced ? 2 : 1);
@@ -1340,6 +1370,7 @@ void Change(Id id, s32 delta)
             {
                 gRegistry.Set_Screen_Setting(ScreenName(kPresetValues[i].mId), PresetTarget(kPresetValues[i], preset));
             }
+            gRegistry.Set_Screen_Setting("gl_preset", preset);
             ApplyRenderOptions();
             break;
         }
