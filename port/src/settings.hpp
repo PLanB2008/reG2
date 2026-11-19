@@ -46,6 +46,7 @@ enum Id
     kRetry,
     kKfRespawn,
     kInfiniteLives,
+    kAmbientOcclusion,
     kCount,
     // Group titles in the pages' lists: the settings after one, up to the next, are under it.
     kSavesGroup,
@@ -91,6 +92,8 @@ void Change(Id id, s32 delta);
 // Car headlight beams, and the other added lights (lights.hpp), with the dusk and pixel lighting.
 bool Headlights();
 bool LightEffects();
+// AMBIENT OCCLUSION (ambient_occlusion.hpp).
+bool AmbientOcclusion();
 
 // LIGHTING's DAY-NIGHT CYCLE (day_night.hpp), its CYCLE LENGTH in minutes and its START TIME, the hour a
 // level starts at.

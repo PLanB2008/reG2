@@ -1,10 +1,12 @@
 #include "MapRenderer.hpp"
 #include "Camera.hpp"
 #if defined(GTA2_PORT)
-// Port: frames between logic steps, the port's lights (headlights, light effects) and the day and night cycle.
+// Port: frames between logic steps, the port's lights (headlights, light effects), the day and night cycle and
+// ambient occlusion.
 #include "../port/src/frame_loop.hpp"
 #include "../port/src/lights.hpp"
 #include "../port/src/day_night.hpp"
+#include "../port/src/ambient_occlusion.hpp"
 #endif
 #include "winmain.hpp"
 #include "gbh_graphics.hpp"
@@ -3580,6 +3582,10 @@ static inline void AddToDrawListByVal(MapRenderer* pThis, s32 x, s32 y)
 MATCH_FUNC(0x4f6a20)
 void MapRenderer::Draw()
 {
+#if defined(GTA2_PORT)
+    // Port: the map's solid blocks for ambient occlusion, kept up to date before the map is drawn.
+    PortAmbientOcclusion::Update();
+#endif
     // set ambient level
     if (gLighting)
     {
