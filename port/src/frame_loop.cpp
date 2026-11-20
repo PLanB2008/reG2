@@ -83,6 +83,7 @@ unsigned long long sStepNs = 33000000;
 u32 sStepsSinceDraw;
 unsigned long long sNextDraw; // timer pacing
 unsigned long long sLastPresent; // vsync pacing
+unsigned long long sDrawDueNs; // when a draw came due that steps still to run were put before; 0: none
 u32 sRepeatsLeft;
 u32 sRefreshesPerFrame;
 f32 sAlpha;
@@ -148,6 +149,26 @@ void Trace(char kind)
     fputc('\n', spTrace);
 }
 
+// Whether a new frame is due now, by the pacing Next uses.
+bool DrawDue(unsigned long long now)
+{
+    if (Original())
+    {
+        return false;
+    }
+    const unsigned long long refreshNs = port_SwapRefreshNs();
+    return refreshNs ? !sRepeatsLeft && now >= sLastPresent + refreshNs / 2 : now >= sNextDraw;
+}
+
+// Where a draw now sits between the last two steps. One that came due while steps ran shows the moment it came due:
+// otherwise the steps' time, a network rollback's few milliseconds, would put it that far ahead of the frames around it.
+f32 AlphaNow(unsigned long long now)
+{
+    const unsigned long long late = sDrawDueNs ? now - sDrawDueNs : 0;
+    sDrawDueNs = 0;
+    return sAccumulated > late ? static_cast<f32>(static_cast<f64>(sAccumulated - late) / sStepNs) : 0.0f;
+}
+
 void Stats(unsigned long long now)
 {
     if (!sStats)
@@ -199,6 +220,7 @@ void Reset()
     sAccumulated = 0;
     sStepsSinceDraw = 0;
     sRepeatsLeft = 0;
+    sDrawDueNs = 0;
     PortInterp::Clear();
     ApplySettings();
 }
@@ -226,6 +248,10 @@ Action Next(s32 stepMs, bool forceStep, bool noDraw)
     {
         if (sStepsSinceDraw < kMaxStepsPerDraw)
         {
+            if (!sDrawDueNs && DrawDue(now))
+            {
+                sDrawDueNs = now;
+            }
             sAccumulated -= sStepNs;
             return kStep;
         }
@@ -258,7 +284,7 @@ Action Next(s32 stepMs, bool forceStep, bool noDraw)
                 return kIdle;
             }
             sRepeatsLeft = sRefreshesPerFrame - 1;
-            sAlpha = static_cast<f32>(static_cast<f64>(sAccumulated) / sStepNs);
+            sAlpha = AlphaNow(now);
             return kDraw;
         }
         if (due < wake)
@@ -273,7 +299,7 @@ Action Next(s32 stepMs, bool forceStep, bool noDraw)
         {
             const unsigned long long interval = sMaxFps ? 1000000000ull / sMaxFps : 0;
             sNextDraw = now - sNextDraw > interval ? now + interval : sNextDraw + interval;
-            sAlpha = static_cast<f32>(static_cast<f64>(sAccumulated) / sStepNs);
+            sAlpha = AlphaNow(now);
             return kDraw;
         }
         if (sNextDraw < wake)
