@@ -1249,12 +1249,12 @@ void port_Haze(f32 texel, f32 worldX, f32 worldY, f32 time, f32 amplitude, f32 r
 }
 
 // RAIN PoC (port/src/rain.cpp): bit 2 wet ground, bit 4 reflections; the camera's eye in blocks.
-void port_RainScene(u32 bits, f32 eyeX, f32 eyeY, f32 eyeZ, f32 time)
+void port_RainScene(u32 bits, f32 eyeX, f32 eyeY, f32 eyeZ, f32 time, f32 ground, f32 glow, f32 puddles)
 {
     gRainWet = (bits & 2) != 0;
     if (gRenderer)
     {
-        gRenderer->SetRain(bits, eyeX, eyeY, eyeZ, time);
+        gRenderer->SetRain(bits, eyeX, eyeY, eyeZ, time, ground, glow, puddles);
     }
 }
 

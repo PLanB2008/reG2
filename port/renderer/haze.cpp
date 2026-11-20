@@ -636,7 +636,7 @@ void GLRenderer::DrawRainReflect(f32 time)
     gl.glBlendEquation(GL_FUNC_ADD);
     gl.glBlendFunc(GL_ONE, GL_ONE);
     gl.glUseProgram(sRainCompose);
-    gl.glUniform1f(sUniGain, 1.6f);
+    gl.glUniform1f(sUniGain, 0.8f * mRainParams[1]);
     gl.glBindTexture(GL_TEXTURE_2D, sHalfTex[0]);
     DrawFullscreen();
     gl.glBindSampler(1, 0);

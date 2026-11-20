@@ -111,7 +111,7 @@ class IRenderer
     // mask DrawHaze distorts over.
     virtual void AddHeat(const RVertex*, s32, RTexture*, f32) {}
     // RAIN PoC: bit 2 wet ground (tiles drawn with lit 1.25), bit 4 lights reflected on it; the camera's eye.
-    virtual void SetRain(u32, f32, f32, f32, f32) {}
+    virtual void SetRain(u32, f32, f32, f32, f32, f32, f32, f32) {}
     virtual void DrawRainReflect(f32) {}
 };
 

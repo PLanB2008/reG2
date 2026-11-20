@@ -8,7 +8,7 @@
 #include <string.h>
 
 #if defined(GTA2_PORT_SDL)
-void port_RainScene(u32 bits, f32 eyeX, f32 eyeY, f32 eyeZ, f32 time);
+void port_RainScene(u32 bits, f32 eyeX, f32 eyeY, f32 eyeZ, f32 time, f32 ground, f32 glow, f32 puddles);
 void port_RainReflect(f32 time);
 void port_DrawParticles(s32 slot, s32 width, s32 height, const u32* pRgba, u32 version, const f32* pCorners, const u32* pColours,
                         s32 count, bool additive);
@@ -82,6 +82,13 @@ f32 GroundZ(f32 x, f32 y)
     return gMap_0x370 ? gMap_0x370->FindGroundZForCoord(Fix16(x), Fix16(y)).ToFloat() : 0.0f;
 }
 
+// GTA2_RAIN_GLOW scales every glow the rain adds, GTA2_RAIN_PUDDLES is the share of flat ground under water.
+f32 EnvFloat(const char* pName, f32 fallback)
+{
+    const char* p = getenv(pName);
+    return p && *p ? static_cast<f32>(atof(p)) : fallback;
+}
+
 // 4x32 streak, tail (top) transparent to head; a 32x32 ring for the splashes.
 const s32 kStreakW = 4, kStreakH = 32, kRing = 32;
 u32 sStreakPixels[kStreakW * kStreakH];
@@ -134,7 +141,8 @@ void BeginDraw()
 #if defined(GTA2_PORT_SDL)
     f32 x, y, z;
     PortView::Eye(&x, &y, &z);
-    port_RainScene((Mode() & (kWet | kReflect)) | (getenv("GTA2_RAIN_DEBUG") ? 8u : 0u) | (getenv("GTA2_RAIN_NOSPRITE") ? 16u : 0u), x, y, z, static_cast<f32>(fmod(PortFrameLoop::WorldSeconds(), 3600.0)));
+    port_RainScene((Mode() & (kWet | kReflect)) | (getenv("GTA2_RAIN_DEBUG") ? 8u : 0u) | (getenv("GTA2_RAIN_NOSPRITE") ? 16u : 0u), x, y, z, static_cast<f32>(fmod(PortFrameLoop::WorldSeconds(), 3600.0)),
+                   GroundZ(x, y), EnvFloat("GTA2_RAIN_GLOW", 1.0f), EnvFloat("GTA2_RAIN_PUDDLES", 0.35f));
 #endif
 }
 
