@@ -41,6 +41,8 @@ void net::engine::DebugPowerUp(int player, int powerUp)
 
 void net::engine::DebugCar(int player, int model)
 {
+    const int damage = model / 1000 * 1000; // model + 1000 * n: the car damaged by n * 1000 (16000: on fire, 25000: burning)
+    model %= 1000;
     Ped* ped = InGamePed(player);
     if (ped && !ped->mCar && gCarManager_6C)
     {
@@ -53,6 +55,10 @@ void net::engine::DebugCar(int player, int model)
         if (car)
         {
             car->IncrementCarStats(car_kind::recycled_1);
+            if (damage)
+            {
+                car->AccumulateDamage((s16)damage, Fix16_Point(0, 0)); // as a hit does, its fire with it
+            }
         }
     }
 }
