@@ -1037,7 +1037,12 @@ void Ped::ManageBurning()
 {
     if (mBf21C.bOnFire)
     {
+#if defined(GTA2_PORT)
+        // Port: a network client's players burn as on the server; their health is the server's.
+        if (PortReactsInvulnerable(mInvulnerability, mPlayer != NULL))
+#else
         if (mInvulnerability > 0)
+#endif
         {
             PutOutFire();
         }

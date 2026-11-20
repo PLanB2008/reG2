@@ -98,6 +98,7 @@ void net::engine::ClientModeFrame()
     gPortKeepWantedPoints = true; // the server's (players' entities, peds' AI state)
     gPortServerKillNotices = true;
     gPortServerKillAwards = true;
+    gPortProtectsPlayers = true;
     bSkip_ambulance = true;
     gPortCarMayExplode = ClientCarMayExplode;
     SeenByAll();

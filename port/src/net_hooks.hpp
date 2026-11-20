@@ -68,6 +68,13 @@ extern bool gPortServerKillNotices;
 // A network client's: a kill's points and bonuses (PlayerScoreTracker::AwardPedKilledScore, with the multi-kill messages
 // and voices) are the server's, whose scores come with its snapshots, not its prediction's
 extern bool gPortServerKillAwards;
+// A network client's: its players are kept at mInvulnerability 2 so that only the server takes their health
+// (ProtectPlayers); how a ped reacts to a car, a blast or fire goes by the invulnerability the server gives
+extern bool gPortProtectsPlayers;
+inline bool PortReactsInvulnerable(s32 invulnerability, bool player)
+{
+    return gPortProtectsPlayers && player ? invulnerability > 2 : invulnerability > 0;
+}
 // A scoring bonus (PlayerScoreTracker: a kill streak, a stunt...) with its voice line (voice_line.hpp): true, and this
 // machine shows its message and plays the voice. NULL: the user's player's, as the original; in a network game the
 // server sends each player its own and a client shows only those
