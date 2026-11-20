@@ -3040,7 +3040,12 @@ s32 __stdcall Car::GetFireExplosionType(u8 fire_level)
 MATCH_FUNC(0x43bbc0)
 void Car::SpawnFire()
 {
+#if defined(GTA2_PORT)
+    // Port: a network client sends no fire engine (the server's come in its snapshots), and its wrecks burn all the same
+    if (gPortNoFireEngines || gFirefighterPool_54->TryDispatchFirefightersToCar(this))
+#else
     if (gFirefighterPool_54->TryDispatchFirefightersToCar(this))
+#endif
     {
         Object* pExplosion =
             gObject_5C->CreateExplosion(mCarSprite->mXy.x, mCarSprite->mXy.y, 4, kAngZero_67791C, explosion_type::car_fire_4, mExploderPedId);

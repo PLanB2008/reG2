@@ -57,6 +57,9 @@ extern bool gPortKeepWantedPoints;
 // A network client's: the HUD's kill notices (Hud_MpMessage::AnnounceKill) are the server's deaths only, not the ones
 // its prediction starts and a restore undoes
 extern bool gPortServerKillNotices;
+// A network client's: it dispatches no fire engines (bSkip_fire_engines), yet a car turned to a wreck burns as one does
+// when a fire engine is sent to it (Car::SpawnFire)
+extern bool gPortNoFireEngines;
 // A network client's "Leave the game? Y / N" is up: a gamepad's A and B answer it as they do the game's quit message
 // (port_QuitMessageShown, compat/src/pad.cpp)
 extern bool gPortLeavePromptShown;

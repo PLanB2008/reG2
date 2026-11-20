@@ -19,4 +19,5 @@ void (*gPortDrawOverlay)();
 bool (*gPortNextNetworkGame)();
 bool gPortKeepWantedPoints;
 bool gPortServerKillNotices;
+bool gPortNoFireEngines;
 bool gPortLeavePromptShown;

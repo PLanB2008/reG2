@@ -51,6 +51,8 @@ void net::engine::ClientModeFrame()
     bSkip_dummies = true; // no ambient peds (PedManager::Dummies)
     bSkip_mission = true; // scripts run on the server only (they set up the level before the first frame)
     bSkip_police = true;
+    bSkip_fire_engines = true; // the server's fire trucks arrive as cars; this game's own would never be removed
+    gPortNoFireEngines = true;
     // With the police off, every ped tick zeroes the wanted points (Ped::PoolUpdate): no cop heads, and the cops chasing a
     // player gave up between snapshots
     gPortKeepWantedPoints = true; // the server's (players' entities, peds' AI state)
