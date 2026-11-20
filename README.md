@@ -48,7 +48,8 @@ A few things differ anyway, whatever you pick:
 ## Extras
 
 **Graphics.** GRAPHICS > PRESET switches between CLASSIC and ENHANCED: true colour, per-pixel lighting,
-car headlights, light from gunfire, explosions and fires, soft shadows, bloom, anti-aliasing.
+car headlights, light from gunfire, explosions and fires, fire effects (heat haze, smoke and embers),
+ambient occlusion, soft shadows, bloom, anti-aliasing.
 
 ![Classic and enhanced graphics](docs/images/pc_compare_graphics.png)
 
