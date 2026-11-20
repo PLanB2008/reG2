@@ -85,7 +85,7 @@ inline float Blocks(int32_t raw)
 void Capture(Snapshot& out);
 // Puts a snapshot's players, cars, peds and pickups into this game
 void Apply(const Snapshot& snap);
-// The scores (frags, points) of a snapshot's players: last, after a resimulation, so the server's count is shown
+// The scores (frags, points) of a snapshot's players: before a resimulation, and after it so the server's count is shown
 void ApplyScores(const Snapshot& snap);
 // How far a snapshot's area reaches: the server sets it per client (the farthest entity it kept), a client removes
 // what is missing only within it (blocks)

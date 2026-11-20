@@ -220,7 +220,8 @@ Health, deaths, weapons and scores are the server's. A death the server had is c
 game's own `Ped::Kill`, credited to the killer, and the deaths carried out are part of the rollback set, so a
 resimulation never repeats one. The HUD's kill notices come from these deaths only, with the server's killer (none for
 the police's), not from the deaths the client's prediction starts. A client goes by the game's death count, which only counts up (the round's, in the
-results, starts again with each round), and takes a player's count as it finds it the first time it sees the player. Scores (with the money and multiplier), power-up timers and the tag game's "it" are set after the resimulation;
+results, starts again with each round), and takes a player's count as it finds it the first time it sees the player. Scores (with the money and multiplier) are set before the resimulation, so its ticks and saves carry the server's
+(the HUD's rolling digits roll towards them), and again after it with power-up timers and the tag game's "it";
 a new round sets them all back to a game's start.
 
 A ped's AI state is applied only while it is on foot on both sides (a driver in the same car gets its objectives but

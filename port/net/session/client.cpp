@@ -392,6 +392,7 @@ void net::Client::Reconcile(const Snapshot& snap)
     engine::RestoreGame(*saved);
     mProbe.AfterRestore(snap);
     engine::Apply(snap);
+    engine::ApplyScores(snap); // the resimulated ticks and their saves carry the server's scores
     mProbe.AfterApply(snap, mTick);
     std::vector<uint32_t> buttons(mRemote);
     for (uint32_t t = s + 1; t <= mTick; t++)
