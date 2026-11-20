@@ -160,8 +160,12 @@ bool net::engine::SetCarState(Car* car, const EntityState& e)
     // on again here after the server had it off
     car->mLightFlags = (char_type)e.f[kCarLights];
     car->mFlashPhaseCounter = (char_type)e.f[kCarFlash];
-    car->mHorn = (u8)e.f[kCarHorn];
-    car->mHornCooldown = (u8)e.f[kCarHornCooldown];
+    // A train's horn is this machine's: it honks when the local player is near (Car::TrainUpdate), the server's slot 0 there
+    if (!car->IsTrainModel())
+    {
+        car->mHorn = (u8)e.f[kCarHorn];
+        car->mHornCooldown = (u8)e.f[kCarHornCooldown];
+    }
     if (e.f[kCarRemap] >= 0 && e.f[kCarRemap] < 256)
     {
         if (car->mCarSprite->mPaletteType != palette_types_enum::car_remaps_3 &&
