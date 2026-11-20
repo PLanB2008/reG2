@@ -9,6 +9,7 @@
 #include "settings.hpp"
 #include "sprite.hpp"
 #include "view.hpp"
+#include "winmain.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -111,9 +112,9 @@ u32 RefreshesPerFrame(unsigned long long refreshNs)
     return n ? n : 1;
 }
 
-Sprite* PlayerSprite()
+Sprite* PlayerSprite(const Player* pPlayer)
 {
-    Ped* pPed = gGame_0x40 && gGame_0x40->mLocalPlayer ? gGame_0x40->mLocalPlayer->mPlayerPed : NULL;
+    Ped* pPed = pPlayer ? pPlayer->mPlayerPed : NULL;
     return pPed && (pPed->mCar || pPed->mGameObject) ? pPed->GetSprite() : NULL;
 }
 
@@ -123,13 +124,25 @@ void Trace(char kind)
     {
         return;
     }
-    const Sprite* pSprite = PlayerSprite();
+    const Sprite* pSprite = PlayerSprite(gGame_0x40 ? gGame_0x40->mLocalPlayer : NULL);
     const Camera* pCamera = gGame_0x40 && gGame_0x40->mDrawPlayer ? &gGame_0x40->mDrawPlayer->mViewCamera : NULL;
-    fprintf(spTrace, "%c %u %.4f cam %d %d %d player %d %d %d %d\n", kind, sStepCount, kind == 'D' ? sAlpha : 1.0f,
+    fprintf(spTrace, "%c %u %.4f cam %d %d %d player %d %d %d %d", kind, sStepCount, kind == 'D' ? sAlpha : 1.0f,
             pCamera ? pCamera->mCurPos.mX.mValue : 0, pCamera ? pCamera->mCurPos.mY.mValue : 0,
             pCamera ? pCamera->mCurPos.mZ.mValue : 0, pSprite ? pSprite->mXy.x.mValue : 0,
             pSprite ? pSprite->mXy.y.mValue : 0, pSprite ? pSprite->mZpos.mValue : 0,
             pSprite ? pSprite->mRotation.rValue : 0);
+    // A network game's other players, by slot.
+    for (s32 i = 0; gGame_0x40 && bStartNetworkGame && i < MAX_PLAYERS; i++)
+    {
+        const Player* pPlayer = gGame_0x40->GetPlayer(static_cast<u8>(i));
+        const Sprite* pOther = pPlayer != gGame_0x40->mLocalPlayer ? PlayerSprite(pPlayer) : NULL;
+        if (pOther)
+        {
+            fprintf(spTrace, " p%d %d %d %d %d", i, pOther->mXy.x.mValue, pOther->mXy.y.mValue, pOther->mZpos.mValue,
+                    pOther->mRotation.rValue);
+        }
+    }
+    fputc('\n', spTrace);
 }
 
 void Stats(unsigned long long now)
