@@ -48,6 +48,7 @@ enum Id
     kInfiniteLives,
     kAmbientOcclusion,
     kFireEffects,
+    kCrosshair,
     kCount,
     // Group titles in the pages' lists: the settings after one, up to the next, are under it.
     kSavesGroup,
@@ -115,6 +116,7 @@ bool TwinStick();
 bool AimCamera();
 // STRAFE ANIMATION: with TWIN STICK, the legs follow the walk rather than the aim.
 bool StrafeAnimation();
+bool Crosshair();
 // VIBRATION: the gamepad shakes as the player is hit, in explosions and in crashes (rumble.hpp).
 bool Vibration();
 

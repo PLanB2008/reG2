@@ -82,7 +82,7 @@ struct Item
     const wchar_t* mTitle; // its group's title above it, in English, NULL if none
 };
 
-const s32 kMaxItems = 18;
+const s32 kMaxItems = 20;
 const wchar_t* const kTitles[kNumPages] = {L"OPTIONS", L"GAME", L"GRAPHICS", L"DISPLAY", L"SOUND", L"CONTROLS", L"STATISTICS",
                                            L"MISSION TRANSCRIPT", L"LOAD GAME", L"LOAD GAME", L"QUIT GAME"};
 
@@ -263,6 +263,7 @@ s32 Items(Page page, Item* pItems)
             pItems[n++] = Item{kSetting, PortSettings::kControls, true};
             pItems[n++] = Item{kSetting, PortSettings::kAimCamera, false};
             pItems[n++] = Item{kSetting, PortSettings::kStrafeAnimation, false};
+            pItems[n++] = Item{kSetting, PortSettings::kCrosshair, false};
             pItems[n++] = Item{kSetting, PortSettings::kVibration, false};
 #endif
             // Under the TWIN STICK settings, or set apart from the bindings.

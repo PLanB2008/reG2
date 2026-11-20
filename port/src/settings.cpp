@@ -70,7 +70,7 @@ namespace
 const wchar_t* const kNames[kCount] = {L"SOUND EFFECTS", L"MUSIC", L"3D SOUND", L"TEXT SPEED", L"LANGUAGE",
                                        L"FULL SCREEN", L"BRIGHTNESS", L"LIGHTING", L"EXPLODING SCORES", L"FRAME LIMIT",
                                        L"TRUE COLOUR", L"BLOOM", L"PIXEL LIGHTING", L"CAR HEADLIGHTS",
-                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"STRAFE ANIMATION", L"VIBRATION", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS", L"FRENZY RESPAWN", L"INFINITE LIVES", L"AMBIENT OCCLUSION", L"FIRE EFFECTS"};
+                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"STRAFE ANIMATION", L"VIBRATION", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS", L"FRENZY RESPAWN", L"INFINITE LIVES", L"AMBIENT OCCLUSION", L"FIRE EFFECTS", L"CROSSHAIR"};
 const wchar_t* const kGroupNames[kGroupsEnd - kCount - 1] = {L"SAVES", L"DIFFICULTY", L"TIME OF DAY", L"LIGHTING", L"IMAGE", L"SCREEN", L"VIEW"};
 
 struct Language
@@ -199,6 +199,11 @@ const Translation kTranslations[] = {
     {L"THE ORIGINAL'S RUN, THE LEGS FACING THE AIM", NULL,
      {L"LA COURSE DE L'ORIGINAL, LES JAMBES VERS LA VISEE", L"DER LAUF DES ORIGINALS, DIE BEINE ZUM ZIEL",
       L"LA CORSA DELL'ORIGINALE, LE GAMBE VERSO LA MIRA", L"LA CARRERA DEL ORIGINAL, LAS PIERNAS HACIA LA MIRA"}},
+    {L"A RING SHOWS WHERE YOU AIM", NULL,
+     {L"UN ANNEAU MONTRE OU VOUS VISEZ", L"EIN RING ZEIGT, WOHIN DU ZIELST", L"UN ANELLO MOSTRA DOVE MIRI", L"UN ANILLO MUESTRA ADONDE APUNTAS"}},
+    {L"NO RING: THE PLAYER FACES WHERE YOU AIM", NULL,
+     {L"PAS D'ANNEAU : LE JOUEUR SE TOURNE VERS LA VISEE", L"KEIN RING: DIE FIGUR SCHAUT ZUM ZIEL", L"NESSUN ANELLO: IL GIOCATORE GUARDA VERSO LA MIRA",
+      L"SIN ANILLO: EL JUGADOR MIRA HACIA DONDE APUNTAS"}},
     {L"THE VIEW STAYS ON THE PLAYER", NULL,
      {L"LA VUE RESTE SUR LE JOUEUR", L"DIE ANSICHT BLEIBT BEIM SPIELER", L"LA VISTA RESTA SUL GIOCATORE",
       L"LA VISTA SE QUEDA EN EL JUGADOR"}},
@@ -342,6 +347,7 @@ const Translation kTranslations[] = {
     {L"CONTROLS", NULL, {L"COMMANDES", L"STEUERUNG", L"COMANDI", L"CONTROLES"}},
     {L"AIM CAMERA", NULL, {L"CAMERA DE VISEE", L"ZIELKAMERA", L"CAMERA DI MIRA", L"CÁMARA DE MIRA"}},
     {L"STRAFE ANIMATION", NULL, {L"ANIMATION DE STRAFE", L"STRAFE-ANIMATION", L"ANIMAZIONE STRAFE", L"ANIMACIÓN DE STRAFE"}},
+    {L"CROSSHAIR", NULL, {L"VISEUR", L"FADENKREUZ", L"MIRINO", L"PUNTO DE MIRA"}},
     {L"VIBRATION", NULL, {L"VIBRATIONS", L"VIBRATION", L"VIBRAZIONE", L"VIBRACIÓN"}},
     {L"TWIN STICK", NULL, {L"DOUBLE STICK", L"TWIN-STICK", L"DOPPIO STICK", L"DOBLE STICK"}},
     {L"DEFAULT KEYS", NULL, {L"CONTROLES PAR DEFAUT", L"STANDARDSTEUERUNG", L"COMANDI PREDEFINITI", L"CONTROLES PREDETERMINADOS"}},
@@ -472,6 +478,8 @@ const char* ScreenName(Id id)
             return "port_aim_camera";
         case kStrafeAnimation:
             return "port_strafe_animation";
+        case kCrosshair:
+            return "port_crosshair";
         case kVibration:
             return "port_vibration";
         case kBlood:
@@ -531,7 +539,7 @@ s32 ScreenDefault(Id id)
     {
         return 1;
     }
-    return id == kLighting || id == kExplodingScores || id == kVsync || id == kClock || id == kAimCamera || id == kStrafeAnimation || id == kBlood || id == kUpdateCheck ? 1 : 0;
+    return id == kLighting || id == kExplodingScores || id == kVsync || id == kClock || id == kAimCamera || id == kStrafeAnimation || id == kCrosshair || id == kBlood || id == kUpdateCheck ? 1 : 0;
 }
 
 s32 Screen(Id id)
@@ -823,7 +831,7 @@ Id Requirement(Id id)
     {
         return kLighting;
     }
-    return id == kAimCamera || id == kStrafeAnimation ? kControls : kCount;
+    return id == kAimCamera || id == kStrafeAnimation || id == kCrosshair ? kControls : kCount;
 }
 
 bool Enabled(Id id)
@@ -871,6 +879,10 @@ bool AimCamera()
 bool StrafeAnimation()
 {
     return TwinStick() && Screen(kStrafeAnimation) != 0;
+}
+bool Crosshair()
+{
+    return Screen(kCrosshair) != 0;
 }
 bool Vibration()
 {
@@ -948,6 +960,8 @@ const wchar_t* Help(Id id)
         case kStrafeAnimation:
             return Screen(id) ? L"EXPERIMENTAL: THE LEGS FOLLOW YOUR MOVE, NOT YOUR AIM"
                               : L"THE ORIGINAL'S RUN, THE LEGS FACING THE AIM";
+        case kCrosshair:
+            return Screen(id) ? L"A RING SHOWS WHERE YOU AIM" : L"NO RING: THE PLAYER FACES WHERE YOU AIM";
         case kVibration:
             return L"THE PAD SHAKES WHEN YOU ARE HIT, IN EXPLOSIONS AND IN CRASHES";
         case kHeadlights:
@@ -1327,6 +1341,7 @@ void Change(Id id, s32 delta)
         case kClock:
         case kAimCamera:
         case kStrafeAnimation:
+        case kCrosshair:
         case kVibration:
         case kShowFps:
         case kAutosave:
