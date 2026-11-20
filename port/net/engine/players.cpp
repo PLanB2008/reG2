@@ -16,6 +16,7 @@
 #include "Source/Player.hpp"
 #include "Source/TrafficLights.hpp"
 #include "Source/Weapon.hpp"
+#include "Source/WeaponManager.hpp"
 #include "Source/char.hpp"
 #include "Source/network_data.hpp"
 #include "Source/rng.hpp"
@@ -140,6 +141,17 @@ void CountDeath(int i, Player* p, Ped* ped)
 // Weapons and ammo are the server's
 void ApplyWeapons(Player* p, const net::EntityState& e)
 {
+    // A car weapon is its car's (WeaponManager::find): one the server's player has and this game's car lacks (the crate
+    // was collected there) is added as collecting it does, else this game never fires it
+    Ped* ped = p->mPlayerPed;
+    Car* car = ped ? ped->mCar : NULL;
+    for (int w = weapon_type::car_bomb; car && car->mDriver == ped && w < kPlayerWeapons; w++)
+    {
+        if (e.f[kPlayerAmmo0 + w] && !p->mWeapons[w] && !gWeapon_8->find(car, w))
+        {
+            gWeapon_8->add_car_weapon(w, 1, car);
+        }
+    }
     // Only to a weapon this game has made for the player (a new map's game: not yet, and the HUD reads it,
     // Hud_PlayerStats::DrawPlayerStats)
     if (e.f[kPlayerWeapon] >= 1 && e.f[kPlayerWeapon] <= kPlayerWeapons && p->mWeapons[e.f[kPlayerWeapon] - 1])

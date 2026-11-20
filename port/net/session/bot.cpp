@@ -71,7 +71,8 @@ class DecidingBot : public net::BotBrain
   public:
     uint32_t Think(const net::BotView& v) override
     {
-        mButtons = Decide(v);
+        static const bool sCarFire = getenv("GTA2_NET_BOTCARFIRE") != NULL; // a test's: car weapons fired while driving
+        mButtons = Decide(v) | (sCarFire && v.car && v.frame / 30 % 3 == 0 ? net::kBtnAttack : 0);
         return mButtons;
     }
 
