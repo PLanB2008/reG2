@@ -174,8 +174,8 @@ const char* kSceneFS =
     "    gSpots = min(spots, vec3(0.6));\n"
     "    return acc + min(spots, vec3(0.6));\n" // kSpotCap in gbh_api.cpp
     "}\n"
-    // RAIN PoC: wet tiles (lit 1.25) facing up are a little darker and take a sheen from the lights: a lobe
-    // round each light's mirror image, stretched toward the camera, only inside the pool the light casts. Puddles are
+    // RAIN PoC: wet tiles (lit 1.25) facing up are a little darker and take a sheen from the lights: a soft pool
+    // under each lamp, a streak along each headlight's beam, only from lights just above the surface. Puddles are
     // glossier, rippled by the rain. gWet tells the screen space reflections how much the pixel mirrors.
     "uniform int uRain;\n"
     "uniform vec4 uRainCam;\n" // eye xyz in blocks, seconds
@@ -203,30 +203,41 @@ const char* kSceneFS =
     "    float rip = mix(1.0, 0.5 + RainNoise(w * 16.0 + vec2(t * 9.0, -t * 7.0)), puddle);\n"
     "    vec2 c = uRainCam.xy;\n"
     "    float H = max(uRainCam.z - vWorld.z, 1.0);\n"
-    "    vec3 sheen = gSpots * 0.8;\n"
+    "    vec3 sheen = gSpots * 0.5;\n"
     "    for (int i = 0; i < uNumLights; i++)\n"
     "    {\n"
     "        vec3 L = uLightPos[i].xyz;\n"
     "        float r = uLightPos[i].w;\n"
     "        vec3 dl = vWorld - L;\n"
     "        float dist = length(dl);\n"
-    "        if (uLightDir[i].w > 0.0 || dist >= r) continue;\n"
+    "        if (dist >= r) continue;\n"
     // Lit by it, and the light not far above this surface (a roof's light leaves the street below alone).
     "        float above = L.z - vWorld.z;\n"
-    "        float pool = (r - dist) / r * smoothstep(-0.3, 0.2, above) * (1.0 - smoothstep(1.2, 2.2, above));\n"
-    "        if (pool <= 0.0) continue;\n"
-    "        float h = max(above, 0.0) + 0.6;\n"
-    "        vec2 m = c + (L.xy - c) * (H / (H + h));\n"
-    "        vec2 d = w - m;\n"
-    "        vec2 a = m - c;\n"
-    "        float la = length(a);\n"
-    "        a = la > 1e-3 ? a / la : vec2(0.0, 1.0);\n"
-    "        float along = dot(d, a), across = dot(d, vec2(-a.y, a.x));\n"
-    "        float sa = 0.5 + 0.25 * la / H, sc = 0.22;\n"
-    "        float k = exp(-along * along / (2.0 * sa * sa) - across * across / (2.0 * sc * sc));\n"
-    "        sheen += uLightCol[i].rgb * pool * (0.1 + 0.4 * k);\n"
+    "        float near = smoothstep(-0.3, 0.2, above) * (1.0 - smoothstep(1.2, 2.2, above));\n"
+    "        if (near <= 0.0) continue;\n"
+    "        vec4 s = uLightDir[i];\n"
+    "        if (s.w > 0.0)\n"
+    "        {\n"
+    // A headlight: a glossy streak on the road ahead along its beam, widening and fading out, rippled lengthways.
+    "            float along = dot(dl.xy, s.xy);\n"
+    "            float across = dot(dl.xy, vec2(-s.y, s.x));\n"
+    "            float wid = 0.05 + 0.16 * max(along, 0.0);\n"
+    "            float k = exp(-across * across / (2.0 * wid * wid)) * smoothstep(-0.05, 0.12, along) * (1.0 - smoothstep(0.25 * r, 0.75 * r, along));\n"
+    "            float wave = 0.6 + 0.8 * RainNoise(vec2(along * 9.0 - t * 2.0, across * 3.0 + float(i) * 7.3));\n"
+    "            sheen += uLightCol[i].rgb * near * k * wave * 1.4;\n"
+    "            continue;\n"
+    "        }\n"
+    // A lamp or a neon: a soft round pool round the point under it, a little longer up and down the screen.
+    "        vec2 d = w - L.xy;\n"
+    "        float rr = 0.6 + 0.1 * max(above, 0.0);\n"
+    "        float k = exp(-(d.x * d.x + d.y * d.y * 0.45) / (2.0 * rr * rr));\n"
+    // Broken up by the wet surface: short vertical streaks that the rain keeps moving.
+    "        k *= 0.35 + 1.1 * RainNoise(vec2(w.x * 7.0, w.y * 1.8 - t * 1.5) + float(i) * 3.1);\n"
+    "        float pool = (r - dist) / r * near;\n"
+    "        sheen += uLightCol[i].rgb * (pool * 0.08 + near * k * 0.28);\n"
     "    }\n"
-    "    return col + sheen * up * (0.55 + 0.9 * puddle) * rip * alpha;\n"
+"    sheen = mix(sheen, vec3(dot(sheen, vec3(0.3, 0.5, 0.2))), 0.3);\n"
+    "    return col + sheen * up * (0.7 + 0.4 * puddle) * rip * alpha;\n"
     "}\n"
     // The texture's alpha averaged over a square of that radius in texels; outside the texture is transparent.
     "float SoftAlpha(vec2 uv, float radius)\n"

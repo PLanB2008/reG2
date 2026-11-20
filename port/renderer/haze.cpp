@@ -462,9 +462,9 @@ bool GLRenderer::HazeProgram()
     return true;
 }
 
-// RAIN PoC: the bright things of the scene drawn so far mirrored on the wet ground, as soft streaks stretched toward
-// the screen's centre (the camera's foot). At half size, a wet pixel gathers what lies outward of it with jittered
-// samples; blurred, then added where the scene shader left the ground wet (the bloom target's alpha, 1 - wet).
+// RAIN PoC: the bright things of the scene drawn so far glow softly on the wet ground round them. At half size, a
+// wet pixel gathers its surroundings with jittered samples; blurred, then added where the scene shader left the
+// ground wet (the bloom target's alpha, 1 - wet).
 namespace
 {
 const char* kRainFS =
@@ -478,33 +478,29 @@ const char* kRainFS =
     "    vec2 p = gl_FragCoord.xy * 2.0;\n"
     "    if (texture(uMask, p / size).a > 0.97) { oColor = vec4(0.0); return; }\n"
     "    vec2 d = p - uRain.xy;\n"
-    // Mostly up and down the screen: the streaks run toward the camera's side of the frame, as on a street seen
-    // from above at a slant, only leaning a little toward the centre.
-    "    vec2 e = vec2(0.25 * d.x, d.y);\n"
-    "    float r = length(e);\n"
-    "    vec2 dir = r > 1.0 ? e / r : vec2(0.0, 1.0);\n"
-    "    vec2 across = vec2(-dir.y, dir.x);\n"
-    "    float len = min(30.0 + 0.16 * r / uRain.w, 120.0) * uRain.w;\n"
+    // A soft round gather, a little taller than wide: bright things glow on the wet ground round them, with no
+    // direction of their own (the headlights' streaks along their beams are the scene shader's).
+    "    float rad = 26.0 * uRain.w;\n"
     // Interleaved gradient noise: every pixel samples between the others' samples, the blur evens it out.
     "    float ign = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));\n"
     "    vec3 acc = vec3(0.0);\n"
     "    float wsum = 0.0;\n"
     "    for (int i = 0; i < 24; i++)\n"
     "    {\n"
-    "        float s = (float(i) + ign) / 24.0;\n"
-    "        float side = fract(ign * 13.7 + float(i) * 0.618) - 0.5;\n"
-    "        vec2 q = (p + dir * len * s + across * side * (1.0 + 3.0 * s) * uRain.w) / size;\n"
+    "        float s = sqrt((float(i) + ign) / 24.0);\n"
+    "        float a = (float(i) + ign) * 2.39996;\n"
+    "        vec2 q = (p + vec2(cos(a), sin(a) * 1.3) * rad * s) / size;\n"
     "        vec4 m = texture(uMask, q);\n"
     "        vec3 c = texture(uTex, q).rgb;\n"
     "        float l = max(c.r, max(c.g, c.b));\n"
     "        float solid = smoothstep(0.9, 0.99, m.a);\n"
-    // What stands out of the water (lamps, lit walls, the cars and their lights), and faintly the brightest lit ground.
-    "        vec3 src = c * mix(1.2 * smoothstep(0.45, 0.95, l), 0.12 + 4.5 * smoothstep(0.6, 1.0, l), solid) + m.rgb;\n"
+    // What stands out of the water (lamps, lit walls, the cars' lights), and faintly the brightest lit ground.
+    "        vec3 src = c * mix(0.35 * smoothstep(0.6, 1.0, l), 0.1 + 2.5 * smoothstep(0.6, 1.0, l), solid) + m.rgb;\n"
     "        float wgt = 1.0 - s;\n"
     "        acc += src * wgt;\n"
     "        wsum += wgt;\n"
     "    }\n"
-    "    oColor = vec4(acc / wsum, 1.0);\n"
+"    oColor = vec4(min(acc / wsum, vec3(0.5)), 1.0);\n"
     "}\n";
 
 const char* kRainBlurFS =
@@ -640,7 +636,7 @@ void GLRenderer::DrawRainReflect(f32 time)
     gl.glBlendEquation(GL_FUNC_ADD);
     gl.glBlendFunc(GL_ONE, GL_ONE);
     gl.glUseProgram(sRainCompose);
-    gl.glUniform1f(sUniGain, 4.5f);
+    gl.glUniform1f(sUniGain, 2.0f);
     gl.glBindTexture(GL_TEXTURE_2D, sHalfTex[0]);
     DrawFullscreen();
     gl.glBindSampler(1, 0);
