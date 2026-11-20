@@ -78,6 +78,16 @@ net::Schema BuildSchema()
     world.fields.push_back(FieldDesc{"ambient", 32, true}); // kWorldAmbient
     world.fields.push_back(FieldDesc{"target_ambient", 32, true});
     world.fields.push_back(FieldDesc{"ambient_step", 32, true});
+    world.fields.push_back(FieldDesc{"police_level", 3, false}); // kWorldPoliceLevel ..
+    world.fields.push_back(FieldDesc{"police_crew_type", 3, false});
+    world.fields.push_back(FieldDesc{"police_crew_onscreen", 1, false});
+    world.fields.push_back(FieldDesc{"police_firing", 32, false});
+    AppendNumbered(world.fields, "pursuit_criminal", 4, 32); // kWorldPursuitCriminal ..
+    AppendNumbered(world.fields, "pursuit_level", 4, 3);
+    AppendNumbered(world.fields, "pursuit_state", 4, 3);
+    AppendNumbered(world.fields, "pursuit_timer", 4, 16);
+    AppendNumbered(world.fields, "pursuit_crews", 4, 3);
+    AppendNumbered(world.fields, "pursuit_chased", 4, 1);
     net::EntityType object = {"object", {{"x", 22, false}, {"y", 22, false}, {"z", 17, false}, {"rot", 11, false}, {"model", 9, false}, {"idx", 8, false},
                                          {"age", 6, false}}};
     net::EntityType train = {"train", {{"x", 22, false}, {"y", 22, false}, {"z", 17, false}, {"rot", 11, false}, {"wagons", 4, false},

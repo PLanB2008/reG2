@@ -88,6 +88,20 @@ enum WorldField
     kWorldAmbient = kWorldMapChoice + kRoundSlots,
     kWorldTargetAmbient,
     kWorldAmbientStep,
+    // The police (Police: its service runs on the server only), what a client's cops, cop cars and HUD read: the highest
+    // wanted level, the strongest crew in a pursuit, a crew ped on screen, the last cop whose shot hit (a ped's net id)
+    kWorldPoliceLevel,
+    kWorldPoliceCrewType,
+    kWorldPoliceCrewOnscreen,
+    kWorldPoliceFiring,
+    // and each pursuit (Police::mPursuitTargets, four): its criminal (net id), level, state, timer, crews
+    // and whether it is chased
+    kWorldPursuitCriminal,
+    kWorldPursuitLevel = kWorldPursuitCriminal + 4,
+    kWorldPursuitState = kWorldPursuitLevel + 4,
+    kWorldPursuitTimer = kWorldPursuitState + 4,
+    kWorldPursuitCrews = kWorldPursuitTimer + 4,
+    kWorldPursuitChased = kWorldPursuitCrews + 4,
 };
 enum CarField
 {
@@ -186,6 +200,8 @@ EntityState Entity(uint32_t id, uint8_t type);
 void PutPosition(EntityState& e, const Sprite* s); // fields 0..3
 bool Near(const Sprite* s, int32_t x, int32_t y, int32_t radius); // within <radius> (raw) on both axes
 const EntityState* FindWorld(const Snapshot& snap);
+uint32_t PedNetId(const Ped* p); // a ped as a field (a player's entity or a ped's), 0 none
+Ped* NetIdPed(uint32_t id); // and back to this game's ped (NULL: none or not here)
 // The area a snapshot covered around the local player, less a margin (blocks): what the snapshot lacks is gone only
 // inside it (beyond, a busy area's snapshot was cut for size). Without a local player, nothing is inside or beyond
 class ReachArea

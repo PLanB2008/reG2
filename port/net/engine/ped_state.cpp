@@ -210,6 +210,11 @@ void net::engine::PedStateRefFields(std::vector<int>* peds, std::vector<int>* ca
     }
 }
 
+uint32_t net::engine::PedNetId(const Ped* p)
+{
+    return PedId(p);
+}
+
 void net::engine::CapturePedState(const Ped* p, EntityState& e)
 {
     CaptureMembers(p, kValues, kValueCount, e, kFirst);
@@ -571,4 +576,10 @@ void net::engine::SetPedKind(Ped* p, const EntityState& e)
 bool net::engine::PassengerThere(const EntityState& e)
 {
     return e.f[kPedCar] && e.f[kFirst + kPassenger];
+}
+
+Ped* net::engine::NetIdPed(uint32_t id)
+{
+    bool resolved;
+    return LocalPed(id, &resolved);
 }
