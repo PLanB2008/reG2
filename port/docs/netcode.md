@@ -220,7 +220,7 @@ the original's.
 | Train (`engine/trains.cpp`, every train in every snapshot) | its lead's place, speed and driver (none, the traffic driver, a ped, a player), its carriages' car ids (the client's train of the same index takes them), which end leads (`Train::ReassignTrainHead`), its state, stop phase and timers, the station it heads for and that station's state, each carriage's damage and explosion timer |
 
 Health, deaths, weapons and scores are the server's. A death the server had is carried out on the client with the
-game's own `Ped::Kill`, credited to the killer, and the deaths carried out are part of the rollback set, so a
+game's own `Ped::Kill` (dead at once, also when a blast has the ped knocked down), credited to the killer, and the deaths carried out are part of the rollback set, so a
 resimulation never repeats one. The HUD's kill notices come from these deaths only, with the server's killer (none for
 the police's), not from the deaths the client's prediction starts. A client goes by the game's death count, which only counts up (the round's, in the
 results, starts again with each round), and takes a player's count as it finds it the first time it sees the player. Scores (with the money and multiplier) are set before the resimulation, so its ticks and saves carry the server's
