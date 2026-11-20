@@ -6750,6 +6750,21 @@ void sound_obj::ProcessType7_Weapon(s32 idx)
     }
 }
 
+#if defined(GTA2_PORT)
+// A car of the car pool's list: the radio's last car may have gone since (or be the last game's)
+static bool IsLiveCar(const Car* pCar)
+{
+    for (const Car* c = gCar_BC_Pool ? gCar_BC_Pool->mPool.mpPrev : NULL; c; c = c->mpNext)
+    {
+        if (c == pCar)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+#endif
+
 MATCH_FUNC(0x57DD50)
 void sound_obj::ProcessType3_CopRadioAndMusic()
 {
@@ -6830,8 +6845,9 @@ void sound_obj::ProcessType3_CopRadioAndMusic()
     if (mbWasInRadioCar == 1)
     {
 #if defined(GTA2_PORT)
-        // Port: 101 and 102 (the police scanner, none) aren't emitters: the original read past mRadioEmitters
-        if (sLastPlayerCar && mActiveEmitterIdx[0] < GTA2_COUNTOF(mRadioEmitters))
+        // Port: 101 and 102 (the police scanner, none) aren't emitters: the original read past mRadioEmitters. And
+        // the car must still be one: a network client's last car can be the last game's, its memory since reused
+        if (sLastPlayerCar && mActiveEmitterIdx[0] < GTA2_COUNTOF(mRadioEmitters) && IsLiveCar(sLastPlayerCar))
 #else
         if (sLastPlayerCar)
 #endif
