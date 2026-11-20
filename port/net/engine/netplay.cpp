@@ -129,6 +129,7 @@ void net::engine::StopNetworkGame()
     bSkip_police = false;
     bSkip_ambulance = false;
     bSkip_fire_engines = false;
+    bSkip_buses = false;
     gPortNoFireEngines = false;
     gPortKeepWantedPoints = false;
     gPortServerKillNotices = false;

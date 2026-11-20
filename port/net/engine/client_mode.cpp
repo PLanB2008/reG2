@@ -52,6 +52,7 @@ void net::engine::ClientModeFrame()
     bSkip_mission = true; // scripts run on the server only (they set up the level before the first frame)
     bSkip_police = true;
     bSkip_fire_engines = true; // the server's fire trucks arrive as cars; this game's own would never be removed
+    bSkip_buses = true; // the server's bus arrives as a car; this game's own went with the next snapshot
     gPortNoFireEngines = true;
     // With the police off, every ped tick zeroes the wanted points (Ped::PoolUpdate): no cop heads, and the cops chasing a
     // player gave up between snapshots
