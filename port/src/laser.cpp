@@ -41,9 +41,9 @@ const u8 kCooldownSteps = 45;
 const s16 kPedDamage = 15;
 const s16 kCarDamage = 1000;
 const f32 kRange = 8.0f;
-// The muzzle in the shooter's sprite, as the electro gun's (DrawElectricArc).
+// The gun's tip in the shooter's sprite, as drawn when holding it.
 const f32 kMuzzleX = -0.03f;
-const f32 kMuzzleY = 0.22f;
+const f32 kMuzzleY = 0.14f;
 // Seconds a pulse is drawn, fading.
 const f32 kLife = 0.09f;
 
