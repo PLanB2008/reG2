@@ -51,7 +51,7 @@ const f32 kWindX = 1.2f, kWindY = 2.6f;
 const f32 kExposure = 0.022f;
 const f32 kTop = 1.5f;
 const f32 kDepth = 9.0f;
-const f32 kSplashLife = 0.28f;
+const f32 kSplashLife = 0.18f;
 const f32 kWidth = 0.018f;
 
 struct Drop
@@ -212,10 +212,11 @@ void Draw()
             const f32 nearEye = fminf(fmaxf((hz - d.mGround) / (top - d.mGround), 0.0f), 1.0f);
             sStreakColours[streaks++] = Colour(0.45f - 0.35f * nearEye, 0xC8D4E0);
         }
-        else if (age - fallTime < kSplashLife)
+        // No splashes on the roofs above the street: seen from above they read as bubbles.
+        else if (age - fallTime < kSplashLife && d.mGround < groundRef + 0.75f)
         {
             const f32 s = (age - fallTime) / kSplashLife;
-            const f32 r = 0.015f + 0.05f * sqrtf(s);
+            const f32 r = 0.012f + 0.032f * sqrtf(s);
             f32* c = &sSplashCorners[splashes * 28];
             const f32 g = d.mGround + 0.01f;
             f32 sx, sy;
@@ -227,7 +228,7 @@ void Draw()
             Corner(c + 14, sx, sy, 1.0f, 1.0f, d.mX + r, d.mY + r, g);
             PortView::GroundToScreen(d.mX - r, d.mY + r, g, &sx, &sy);
             Corner(c + 21, sx, sy, 0.0f, 1.0f, d.mX - r, d.mY + r, g);
-            sSplashColours[splashes++] = Colour(0.4f * (1.0f - s), 0xD8E4F0);
+            sSplashColours[splashes++] = Colour(0.3f * (1.0f - s) * (1.0f - s), 0xD8E4F0);
         }
     }
     if (splashes)

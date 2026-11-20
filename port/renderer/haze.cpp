@@ -462,9 +462,9 @@ bool GLRenderer::HazeProgram()
     return true;
 }
 
-// RAIN PoC: the bright things of the scene drawn so far mirrored on the wet ground, as streaks stretched toward the
-// screen's centre (the camera's foot): a wet pixel gathers the light of what lies outward of it. The scene shader
-// leaves the wetness in the bloom target's alpha (1 - wet).
+// RAIN PoC: the bright things of the scene drawn so far mirrored on the wet ground, as soft streaks stretched toward
+// the screen's centre (the camera's foot). At half size, a wet pixel gathers what lies outward of it with jittered
+// samples; blurred, then added where the scene shader left the ground wet (the bloom target's alpha, 1 - wet).
 namespace
 {
 const char* kRainFS =
@@ -472,40 +472,68 @@ const char* kRainFS =
     "uniform sampler2D uMask;\n"
     "uniform vec4 uRain;\n" // centre in target pixels, seconds, target pixels per logical pixel
     "layout(location = 0) out vec4 oColor;\n"
-    "float Hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n"
     "void main()\n"
     "{\n"
     "    vec2 size = vec2(textureSize(uTex, 0));\n"
-    "    vec2 p = gl_FragCoord.xy;\n"
-    "    float wet = 1.0 - texture(uMask, p / size).a;\n"
-    "    if (wet < 0.03) discard;\n"
+    "    vec2 p = gl_FragCoord.xy * 2.0;\n"
+    "    if (texture(uMask, p / size).a > 0.97) { oColor = vec4(0.0); return; }\n"
     "    vec2 d = p - uRain.xy;\n"
-    "    float r = length(d);\n"
-    "    vec2 dir = r > 1.0 ? d / r : vec2(0.0, 1.0);\n"
+    // Mostly up and down the screen: the streaks run toward the camera's side of the frame, as on a street seen
+    // from above at a slant, only leaning a little toward the centre.
+    "    vec2 e = vec2(0.25 * d.x, d.y);\n"
+    "    float r = length(e);\n"
+    "    vec2 dir = r > 1.0 ? e / r : vec2(0.0, 1.0);\n"
     "    vec2 across = vec2(-dir.y, dir.x);\n"
-    "    float len = (36.0 + 0.22 * r) * uRain.w;\n"
-    // Ripples: the streak wobbles sideways and flickers, in bands across it that the rain keeps changing.
-    "    float band = floor(dot(p, dir) / (3.0 * uRain.w));\n"
-    "    float t = floor(uRain.z * 12.0);\n"
-    "    float wob = (Hash(vec2(band, t)) - 0.5) * 3.0 * uRain.w;\n"
-    "    float flick = 0.55 + 0.9 * Hash(vec2(band * 1.7 + 3.1, t + 7.0));\n"
+    "    float len = min(30.0 + 0.16 * r / uRain.w, 120.0) * uRain.w;\n"
+    // Interleaved gradient noise: every pixel samples between the others' samples, the blur evens it out.
+    "    float ign = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));\n"
     "    vec3 acc = vec3(0.0);\n"
-    "    for (int i = 1; i <= 20; i++)\n"
+    "    float wsum = 0.0;\n"
+    "    for (int i = 0; i < 24; i++)\n"
     "    {\n"
-    "        float s = float(i) / 20.0;\n"
-    "        vec2 q = (p + dir * len * s * s + across * wob * s) / size;\n"
+    "        float s = (float(i) + ign) / 24.0;\n"
+    "        float side = fract(ign * 13.7 + float(i) * 0.618) - 0.5;\n"
+    "        vec2 q = (p + dir * len * s + across * side * (1.0 + 3.0 * s) * uRain.w) / size;\n"
     "        vec4 m = texture(uMask, q);\n"
     "        vec3 c = texture(uTex, q).rgb;\n"
     "        float l = max(c.r, max(c.g, c.b));\n"
-    // Only what stands out of the water: lamps, lit windows, signs, the cars' lights.
-    "        vec3 src = c * (0.15 + 2.0 * smoothstep(0.3, 0.75, l)) * m.a + m.rgb;\n"
-    "        acc += src * (1.0 - s) * (1.0 - s);\n"
+    "        float solid = smoothstep(0.9, 0.99, m.a);\n"
+    // What stands out of the water (lamps, lit walls, the cars and their lights), and faintly the brightest lit ground.
+    "        vec3 src = c * mix(1.2 * smoothstep(0.45, 0.95, l), 0.12 + 4.5 * smoothstep(0.6, 1.0, l), solid) + m.rgb;\n"
+    "        float wgt = 1.0 - s;\n"
+    "        acc += src * wgt;\n"
+    "        wsum += wgt;\n"
     "    }\n"
-    "    oColor = vec4(acc * (5.0 / 20.0) * wet * flick, 1.0);\n"
+    "    oColor = vec4(acc / wsum, 1.0);\n"
     "}\n";
 
-GLuint sRainProgram, sRainFbo, sRainTex[2];
-GLint sUniRain = -1;
+const char* kRainBlurFS =
+    "uniform sampler2D uTex;\n"
+    "layout(location = 0) out vec4 oColor;\n"
+    "void main()\n"
+    "{\n"
+    "    vec2 t = 1.0 / vec2(textureSize(uTex, 0));\n"
+    "    vec2 uv = gl_FragCoord.xy * t;\n"
+    "    vec4 c = texture(uTex, uv) * 0.2;\n"
+    "    c += (texture(uTex, uv + t * vec2(1.5, 0.5)) + texture(uTex, uv + t * vec2(-0.5, 1.5)) + texture(uTex, uv + t * vec2(-1.5, -0.5)) + texture(uTex, uv + t * vec2(0.5, -1.5))) * 0.2;\n"
+    "    oColor = c;\n"
+    "}\n";
+
+const char* kRainComposeFS =
+    "uniform sampler2D uTex;\n"
+    "uniform sampler2D uMask;\n"
+    "uniform float uGain;\n"
+    "layout(location = 0) out vec4 oColor;\n"
+    "void main()\n"
+    "{\n"
+    "    vec2 size = vec2(textureSize(uMask, 0));\n"
+    "    float wet = 1.0 - texture(uMask, gl_FragCoord.xy / size).a;\n"
+    "    if (wet < 0.03) discard;\n"
+    "    oColor = vec4(texture(uTex, gl_FragCoord.xy / size).rgb * wet * uGain, 1.0);\n"
+    "}\n";
+
+GLuint sRainProgram, sRainBlur, sRainCompose, sRainFbo, sRainTex[2], sHalfFbo[2], sHalfTex[2];
+GLint sUniRain = -1, sUniGain = -1;
 s32 sRainW, sRainH;
 GLenum sRainFormat;
 } // namespace
@@ -521,7 +549,9 @@ void GLRenderer::DrawRainReflect(f32 time)
     {
         const char* pError = NULL;
         sRainProgram = CompileProgram(kHazeVS, kRainFS, &pError);
-        if (!sRainProgram)
+        sRainBlur = CompileProgram(kHazeVS, kRainBlurFS, &pError);
+        sRainCompose = CompileProgram(kHazeVS, kRainComposeFS, &pError);
+        if (!sRainProgram || !sRainBlur || !sRainCompose)
         {
             return;
         }
@@ -529,9 +559,18 @@ void GLRenderer::DrawRainReflect(f32 time)
         gl.glUseProgram(sRainProgram);
         gl.glUniform1i(gl.glGetUniformLocation(sRainProgram, "uTex"), 0);
         gl.glUniform1i(gl.glGetUniformLocation(sRainProgram, "uMask"), 1);
+        gl.glUseProgram(sRainBlur);
+        gl.glUniform1i(gl.glGetUniformLocation(sRainBlur, "uTex"), 0);
+        gl.glUseProgram(sRainCompose);
+        gl.glUniform1i(gl.glGetUniformLocation(sRainCompose, "uTex"), 0);
+        gl.glUniform1i(gl.glGetUniformLocation(sRainCompose, "uMask"), 1);
+        sUniGain = gl.glGetUniformLocation(sRainCompose, "uGain");
         gl.glGenFramebuffers(1, &sRainFbo);
         gl.glGenTextures(2, sRainTex);
+        gl.glGenFramebuffers(2, sHalfFbo);
+        gl.glGenTextures(2, sHalfTex);
     }
+    const s32 halfW = (mTargetW + 1) / 2, halfH = (mTargetH + 1) / 2;
     if (sRainW != mTargetW || sRainH != mTargetH || sRainFormat != mColourFormat)
     {
         const bool rgb565 = mColourFormat == GL_RGB565;
@@ -543,11 +582,19 @@ void GLRenderer::DrawRainReflect(f32 time)
         gl.glBindFramebuffer(GL_FRAMEBUFFER, sRainFbo);
         gl.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, sRainTex[0], 0);
         gl.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, sRainTex[1], 0);
+        for (int i = 0; i < 2; i++)
+        {
+            gl.glBindTexture(GL_TEXTURE_2D, sHalfTex[i]);
+            gl.glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, halfW, halfH, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+            gl.glBindFramebuffer(GL_FRAMEBUFFER, sHalfFbo[i]);
+            gl.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, sHalfTex[i], 0);
+        }
         sRainW = mTargetW;
         sRainH = mTargetH;
         sRainFormat = mColourFormat;
     }
     gl.glDisable(GL_SCISSOR_TEST);
+    gl.glDisable(GL_BLEND);
     gl.glBindFramebuffer(GL_READ_FRAMEBUFFER, mTargetsSamples ? mMsFbo : mFbo);
     gl.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, sRainFbo);
     for (int i = 0; i < 2; i++)
@@ -558,12 +605,12 @@ void GLRenderer::DrawRainReflect(f32 time)
         gl.glBlitFramebuffer(0, 0, mTargetW, mTargetH, 0, 0, mTargetW, mTargetH, GL_COLOR_BUFFER_BIT, GL_NEAREST);
     }
     gl.glReadBuffer(GL_COLOR_ATTACHMENT0);
-    BindTarget();
-    const GLenum colour[3] = {GL_COLOR_ATTACHMENT0, GL_NONE, GL_NONE};
-    gl.glDrawBuffers(3, colour);
-    gl.glEnable(GL_BLEND);
-    gl.glBlendEquation(GL_FUNC_ADD);
-    gl.glBlendFunc(GL_ONE, GL_ONE);
+    const GLenum one[1] = {GL_COLOR_ATTACHMENT0};
+
+    // The gather, at half size.
+    gl.glBindFramebuffer(GL_FRAMEBUFFER, sHalfFbo[0]);
+    gl.glDrawBuffers(1, one);
+    gl.glViewport(0, 0, halfW, halfH);
     gl.glUseProgram(sRainProgram);
     gl.glUniform4f(sUniRain, 0.5f * mTargetW, 0.5f * mTargetH, time, (f32)mTargetW / mLogicalW);
     gl.glActiveTexture(GL_TEXTURE1);
@@ -572,6 +619,29 @@ void GLRenderer::DrawRainReflect(f32 time)
     gl.glActiveTexture(GL_TEXTURE0);
     gl.glBindTexture(GL_TEXTURE_2D, sRainTex[0]);
     gl.glBindSampler(0, mSamplerLinear);
+    DrawFullscreen();
+
+    // Two blurs.
+    gl.glUseProgram(sRainBlur);
+    for (int i = 0; i < 2; i++)
+    {
+        gl.glBindFramebuffer(GL_FRAMEBUFFER, sHalfFbo[1 - i]);
+        gl.glDrawBuffers(1, one);
+        gl.glBindTexture(GL_TEXTURE_2D, sHalfTex[i]);
+        DrawFullscreen();
+    }
+
+    // Added over the wet ground.
+    BindTarget();
+    gl.glViewport(0, 0, mTargetW, mTargetH);
+    const GLenum colour[3] = {GL_COLOR_ATTACHMENT0, GL_NONE, GL_NONE};
+    gl.glDrawBuffers(3, colour);
+    gl.glEnable(GL_BLEND);
+    gl.glBlendEquation(GL_FUNC_ADD);
+    gl.glBlendFunc(GL_ONE, GL_ONE);
+    gl.glUseProgram(sRainCompose);
+    gl.glUniform1f(sUniGain, 4.5f);
+    gl.glBindTexture(GL_TEXTURE_2D, sHalfTex[0]);
     DrawFullscreen();
     gl.glBindSampler(1, 0);
     gl.glDisable(GL_BLEND);
