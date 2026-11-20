@@ -6829,7 +6829,12 @@ void sound_obj::ProcessType3_CopRadioAndMusic()
     mbInRadioCar = 0;
     if (mbWasInRadioCar == 1)
     {
+#if defined(GTA2_PORT)
+        // Port: 101 and 102 (the police scanner, none) aren't emitters: the original read past mRadioEmitters
+        if (sLastPlayerCar && mActiveEmitterIdx[0] < GTA2_COUNTOF(mRadioEmitters))
+#else
         if (sLastPlayerCar)
+#endif
         {
             sLastPlayerCar->mEmitterStatus = mRadioEmitters[mActiveEmitterIdx[0]].mStationIdx;
         }
@@ -6876,6 +6881,14 @@ void sound_obj::HandleVocalStreamSwitching(char_type bFastForward)
             gSampManager.CloseVocalStream(0);
             return;
         }
+#if defined(GTA2_PORT)
+        // Port: the police scanner (101) has no emitter to resume from (mRadioEmitters has 5)
+        if (mActiveEmitterIdx[0] >= GTA2_COUNTOF(mRadioEmitters))
+        {
+            pos = 0;
+        }
+        else
+#endif
         pos = static_cast<u32>(mRadioEmitters[mActiveEmitterIdx[0]].mElapsedFrames) * 1000 / mFramesPerSecond + mRadioEmitters[mActiveEmitterIdx[0]].mPosMs;
         if (pos > length)
         {
@@ -6961,6 +6974,14 @@ void sound_obj::HandleVocalStreamSwitching(char_type bFastForward)
     length = gSampManager.GetVocalLengthMs(0);
     if (length > 0)
     {
+#if defined(GTA2_PORT)
+        // Port: the police scanner (101) has no emitter to resume from (mRadioEmitters has 5)
+        if (mActiveEmitterIdx[0] >= GTA2_COUNTOF(mRadioEmitters))
+        {
+            pos = 0;
+        }
+        else
+#endif
         pos = static_cast<u32>(mRadioEmitters[mActiveEmitterIdx[0]].mElapsedFrames) * 1000 / mFramesPerSecond + mRadioEmitters[mActiveEmitterIdx[0]].mPosMs;
         if (pos > length)
         {
@@ -7080,6 +7101,10 @@ void sound_obj::UpdateCarRadioAudio()
             if (mMainVariant == 0)
             {
                 u32 tune_rate = gSampManager.GetPlayBackRate(138);
+#if defined(GTA2_PORT)
+                // Port: no emitter while the police scanner or none plays (mRadioEmitters has 5)
+                if (mActiveEmitterIdx[0] < GTA2_COUNTOF(mRadioEmitters))
+#endif
                 tune_rate += (tune_rate >> 6) * mRadioEmitters[mActiveEmitterIdx[0]].mStationIdx;
                 if (tune_rate > static_cast<u32>(gCarRadioTuneRate + 90))
                 {
