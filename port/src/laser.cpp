@@ -311,6 +311,8 @@ void DrawLayer(s32 layer)
     Beam beams[kMaxShots];
     const s32 count = GetBeams(beams, kMaxShots);
     f32 corners[kMaxShots * 28];
+    f32 glowCorners[kMaxShots * 28];
+    u32 glows[kMaxShots];
     u32 colours[kMaxShots];
     u32 covers[kMaxShots];
     s32 quads = 0;
@@ -336,6 +338,9 @@ void DrawLayer(s32 layer)
         const f32 ny = (bx - ax) / len * half;
         const f32 sx[4] = {ax + nx, bx + nx, bx - nx, ax - nx};
         const f32 sy[4] = {ay + ny, by + ny, by - ny, ay - ny};
+        // A faint wide glow round the halo: the same texture, three times as wide.
+        const f32 gx[4] = {ax + 3.0f * nx, bx + 3.0f * nx, bx - 3.0f * nx, ax - 3.0f * nx};
+        const f32 gy[4] = {ay + 3.0f * ny, by + 3.0f * ny, by - 3.0f * ny, ay - 3.0f * ny};
         const f32 wx[4] = {b.mX0, b.mX1, b.mX1, b.mX0};
         const f32 wy[4] = {b.mY0, b.mY1, b.mY1, b.mY0};
         for (s32 k = 0; k < 4; k++)
@@ -348,9 +353,15 @@ void DrawLayer(s32 layer)
             o[4] = wx[k];
             o[5] = wy[k];
             o[6] = b.mZ;
+            f32* g = &glowCorners[(quads * 4 + k) * 7];
+            memcpy(g, o, 7 * sizeof(f32));
+            g[0] = gx[k];
+            g[1] = gy[k];
         }
         const u32 v = static_cast<u32>(255.0f * b.mFade);
         covers[quads] = static_cast<u32>(200.0f * b.mFade) << 24 | 0xFFFFFFu;
+        const u32 w = static_cast<u32>(70.0f * b.mFade);
+        glows[quads] = 0xFF000000u | w << 16 | w << 8 | w;
         colours[quads++] = 0xFF000000u | v << 16 | v << 8 | v;
     }
     if (!quads)
@@ -363,6 +374,7 @@ void DrawLayer(s32 layer)
         sTextureMade = true;
     }
     port_DrawParticles(2, kTexW, kTexH, sTexture, 1, corners, covers, quads, false);
+    port_DrawParticles(2, kTexW, kTexH, sTexture, 1, glowCorners, glows, quads, true);
     port_DrawParticles(2, kTexW, kTexH, sTexture, 1, corners, colours, quads, true);
 #else
     (void)layer;
