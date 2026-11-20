@@ -379,9 +379,9 @@ void net::Client::Reconcile(const Snapshot& snap)
         mProbe.CompareAlone(snap, saved, *mSaves[mTick % kSaves]);
         return;
     }
-    if (!saved || !saved->valid || saved->tick != s)
+    if (!saved || !saved->valid || saved->tick != s || !engine::Restorable(*saved))
     {
-        engine::Apply(snap); // too old (or too new) to reconcile: take it as it is
+        engine::Apply(snap); // too old (or too new, or saved with another rollback set) to reconcile: take it as it is
         mProbe.AfterPlainApply(snap);
         engine::ApplyScores(snap);
         return;

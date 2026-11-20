@@ -190,6 +190,7 @@ class SavedWorld
 };
 void SaveGame(SavedWorld& out, uint32_t tick);
 void RestoreGame(const SavedWorld& in);
+bool Restorable(const SavedWorld& in); // saved with the rollback set as it is now
 // One tick without drawing or sound, with every player's buttons (count: players)
 void ResimTick(const uint32_t* buttons, int count);
 

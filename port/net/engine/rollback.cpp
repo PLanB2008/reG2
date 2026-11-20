@@ -26,10 +26,13 @@ struct net::engine::SavedWorld::Impl
 {
     std::vector<unsigned char> bytes;
     ReplicaState* replicas = NULL;
+    unsigned set = 0; // the rollback set it was saved with (gSet)
 };
 
 namespace
 {
+unsigned gSet; // which rollback set: taken again, its blocks lie elsewhere in a saved world (Restorable)
+
 // The rollback set, asked once per game (its pointees are fixed once a map is loaded)
 const std::vector<net::engine::Block>& RollbackSet()
 {
@@ -43,11 +46,18 @@ const std::vector<net::engine::Block>& RollbackSet()
         sGlobals != net::engine::RegisteredGlobals()) // a function's static came: at the end (WorldBlocks)
     {
         sBlocks = net::engine::WorldBlocks();
+        gSet++;
         sFor = gGame_0x40;
         sGeneration = net::engine::GameGeneration();
         sGlobals = net::engine::RegisteredGlobals();
         if (net::engine::Debug().checkGrid)
         {
+            size_t bytes = 0;
+            for (const net::engine::Block& b : sBlocks)
+            {
+                bytes += b.size;
+            }
+            printf("net: the rollback set taken (set %u): %zu blocks, %zu bytes\n", gSet, sBlocks.size(), bytes);
             // GTA2_NET_CHECKGRID: a block that runs past the start of the next into memory beyond it (one inside another,
             // a camera inside its player, is fine). A pointee bigger than what its pointer points to is restored over
             // whatever lies after it
@@ -102,9 +112,18 @@ net::engine::SavedWorld::~SavedWorld()
 void net::engine::SaveGame(SavedWorld& out, uint32_t tick)
 {
     SaveWorld(RollbackSet(), out.mImpl->bytes);
+    out.mImpl->set = gSet;
     out.mImpl->replicas = SaveReplicas(out.mImpl->replicas);
     out.tick = tick;
     out.valid = true;
+}
+
+// A world saved with another set (taken again since: a function's static registered, or a pool a global points to
+// allocated, puts a block in the middle) would be copied into the wrong blocks: a pool's list from another's bytes
+bool net::engine::Restorable(const SavedWorld& in)
+{
+    RollbackSet();
+    return in.mImpl->set == gSet;
 }
 
 void net::engine::RestoreGame(const SavedWorld& in)
