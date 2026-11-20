@@ -11524,7 +11524,14 @@ void Ped::UpdateStatsForKiller()
                     pGroup = this->mPedKiller->mPedGroup;
                     if (pGroup)
                     {
+#if defined(GTA2_PORT)
+                        // Port: in a network game the group's own player (its leader), not the server's first slot
+                        Ped* pLocalPed = !bStartNetworkGame ? gGame_0x40->mLocalPlayer->mPlayerPed
+                                         : pGroup->mPedLeader && pGroup->mPedLeader->mPlayer ? pGroup->mPedLeader
+                                                                                             : NULL;
+#else
                         Ped* pLocalPed = gGame_0x40->mLocalPlayer->mPlayerPed;
+#endif
                         if (pLocalPed)
                         {
                             if (pGroup == pLocalPed->mPedGroup)
