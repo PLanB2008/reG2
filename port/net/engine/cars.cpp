@@ -58,6 +58,28 @@ bool net::engine::CarHasPhysics(const EntityState& e)
 int net::engine::gExplosionsCarried, net::engine::gWrecksReplaced;
 net::engine::CarStateDiffs net::engine::gCarStateDiffs;
 
+namespace
+{
+bool gServerExplosion; // SetCarState blowing a car up as the server's did
+} // namespace
+
+// gPortCarMayExplode on a client: a car the server sends only when the server's blew up (SetCarState), its own others
+bool net::engine::ClientCarMayExplode(Car* car)
+{
+    if (gServerExplosion)
+    {
+        return true;
+    }
+    for (const auto& r : ReplicaCars())
+    {
+        if (r.second == car)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 void net::engine::CarPhysicsFields(std::vector<FieldDesc>& out)
 {
     AppendFields(kPhysics, kPhysicsCount, out);
@@ -137,7 +159,8 @@ void net::engine::SetCarPhysics(Car* car, const EntityState& e)
 
 bool net::engine::IsWrecked(const Car* car)
 {
-    return car->mWreckCountdown || car->mDamage >= 32000 || car->mEngineStatus == car_engine_status::destroyed_6;
+    // 32000 alone isn't one: a client's car whose explosion waits for the server's (Car::HandleCarExplosion sets 32001)
+    return car->mWreckCountdown || car->mDamage > 32000 || car->mEngineStatus == car_engine_status::destroyed_6;
 }
 
 // The fire a car's damage makes (Car::AccumulateDamage: its flames as the damage crosses 16000, then 25000)
@@ -162,7 +185,9 @@ bool net::engine::SetCarState(Car* car, const EntityState& e)
     }
     if (there && !here)
     {
+        gServerExplosion = true;
         car->HandleCarExplosion(explosion_type::item_19); // as a car blows up from its damage (Car::AddDamage)
+        gServerExplosion = false;
         gExplosionsCarried++;
         return true;
     }

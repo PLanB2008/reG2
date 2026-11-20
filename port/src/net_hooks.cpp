@@ -12,6 +12,7 @@ s32 gPortTrafficCap = 16;
 s32 gPortSpawnPlayers = 1;
 void (*gPortAfterPlayersHook)();
 bool (*gPortWorldStill)();
+bool (*gPortCarMayExplode)(Car* pCar);
 void (*gPortFrontendSetup)(Frontend* pFrontend);
 bool (*gPortFrontendInput)(Frontend* pFrontend);
 int (*gPortLeaveNetworkGame)();

@@ -132,6 +132,7 @@ void net::engine::StopNetworkGame()
     gPortNoFireEngines = false;
     gPortKeepWantedPoints = false;
     gPortServerKillNotices = false;
+    gPortCarMayExplode = NULL;
     ClearRandOwners();
     ResetForNewGame();
     gGeneration++;

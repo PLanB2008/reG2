@@ -3572,6 +3572,13 @@ void Car::TriggerExplosion(s32 type)
 MATCH_FUNC(0x43d840)
 void Car::HandleCarExplosion(s32 type)
 {
+#if defined(GTA2_PORT)
+    // Port: a network client's car blows up as the server's does, not when its own prediction says so
+    if (gPortCarMayExplode && !gPortCarMayExplode(this))
+    {
+        return;
+    }
+#endif
     bool bOcc2 = false;
     if (mpChaseTask)
     {

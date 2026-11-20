@@ -252,6 +252,7 @@ struct CarStateDiffs
 };
 extern CarStateDiffs gCarStateDiffs;
 int FireLevel(int32_t damage); // Car::mDamageLevel for that damage
+bool ClientCarMayExplode(Car* car); // gPortCarMayExplode on a client
 void CarAiFields(std::vector<FieldDesc>& out); // after the physics
 void CaptureCarAi(const Car* car, EntityState& e);
 void ApplyCarAi(Car* car, const EntityState& e);

@@ -4,6 +4,7 @@
 #pragma once
 #include "types.hpp"
 
+class Car;
 class Sprite;
 struct Frontend;
 
@@ -40,6 +41,9 @@ extern void (*gPortAfterPlayersHook)();
 // Asked in Game::UpdateGame after the players' tick: true, and nothing else runs this tick but the HUD (a network
 // game's results: the world stands still, the chat goes on)
 extern bool (*gPortWorldStill)();
+// Asked as a car would blow up (Car::HandleCarExplosion): false, and it doesn't. NULL but on a network client, whose cars
+// the server sends blow up when the server's do (a prediction can't be taken back)
+extern bool (*gPortCarMayExplode)(Car* pCar);
 // The frontend's network page (port/net/menu.cpp): set up after the game's own (SetupMenuStringsOptionsElements),
 // and its input taken first (UpdatePageFromUserInput: true, the game's handling is skipped)
 extern void (*gPortFrontendSetup)(Frontend* pFrontend);
