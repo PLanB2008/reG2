@@ -8832,7 +8832,12 @@ void Ped::FireAtPlayer()
         return;
     }
 
+#if defined(GTA2_PORT)
+    // Port: the tank aims at the nearest wanted player, in a network game not always the server's first slot
+    Ped* pPlayerPed = gGame_0x40->PortNearestPlayerPed(mCar->GetX(), mCar->GetY(), true);
+#else
     Ped* pPlayerPed = gGame_0x40->mLocalPlayer->mPlayerPed;
+#endif
     if (!pPlayerPed->IsInvisibleOnFoot_433DA0())
     {
         Sprite* pCannonSprite = mCar->mAttachments.GetSpriteForModel(objects::tank_cannon_148)->mpSprite;
