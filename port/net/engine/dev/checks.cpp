@@ -735,6 +735,23 @@ void net::engine::DebugSoundChannels(uint32_t frame)
             }
         }
     }
+    // The car radio: the local player's car, the station and its variant, and how many other players are in cars
+    static std::string sRadioLast;
+    const u8 e = gSound_obj.mActiveEmitterIdx[0];
+    Car* car = gGame_0x40 && gGame_0x40->mLocalPlayer ? gGame_0x40->mLocalPlayer->GetPlayerCar() : NULL;
+    int others = 0;
+    for (int i = 0; gGame_0x40 && i < gGame_0x40->mNumPlayers; i++)
+    {
+        Player* p = gGame_0x40->mPlayers[i];
+        others += p && p != gGame_0x40->mLocalPlayer && p->GetPlayerCar();
+    }
+    snprintf(buf, sizeof(buf), "car %d, in %d, station %d%s, others in cars %d", car ? car->mCarId : -1, gSound_obj.mbInRadioCar,
+             e < 5 ? gSound_obj.mRadioEmitters[e].mStationIdx : -1, gSound_obj.mMainVariant ? "" : "A", others);
+    if (sRadioLast != buf)
+    {
+        printf("net: frame %u, radio: %s\n", frame, buf);
+        sRadioLast = buf;
+    }
     if (line != sLast)
     {
         printf("net: frame %u, sound channels:%s (init %d)\n", frame, line.c_str(), gSound_obj.mbSoundInitialized);

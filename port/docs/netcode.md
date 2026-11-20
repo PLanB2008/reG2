@@ -250,8 +250,9 @@ objects, the light grid, and the netcode's own (the deaths carried out, the rand
 pool). `SoundPosEntry` comes from a pool in the set (`engine/sound_pool.cpp`) instead of the heap, so a restore can't
 bring back freed sound entries. Left out: the frame loop's own globals around the tick (input buffers, counters,
 pacing, the keyboard recorder), the audio driver and DirectInput devices, and `file.cpp`'s open file, which a
-resimulation doesn't run or which are freed while the game goes on. The sound's channel bookkeeping and the radio stay
-as they are over a restore: they mirror the mixer, which isn't rolled back. The set is made again for every game (a new map's pools are elsewhere), and leaves
+resimulation doesn't run or which are freed while the game goes on. The sound's channel bookkeeping and the radios (the car
+radio's station and in-car state, the police radio's calls) stay as they are over a restore: they mirror the mixer and
+the radio's stream, which aren't rolled back, and a resimulation runs no sound to bring them up to date. The set is made again for every game (a new map's pools are elsewhere), and leaves
 out what the game's scratch pointers point to (they point into a freed map after a map change). A function's static
 registers when the function first runs; one that comes after the set was taken goes at its end and the set is taken
 again, so a world saved before is the start of the new one. The whole world is about 3.2 MB; saving or restoring it
@@ -463,7 +464,7 @@ off by default:
 | `GTA2_NET_CORRLOG=1` | client | corrections over half a block or 45 degrees |
 | `GTA2_NET_JERKLOG=1\|2` | both | how jerky what is shown moves (2: and each jump) |
 | `GTA2_NET_MARKER=1` | client | a square where the newest snapshot has the local player |
-| `GTA2_NET_INPUTLOG=1`, `_ANIMLOG=1`, `_SELFLOG=1`, `_SOUNDLOG=1` | client | the input, the other players' animation, the local player around a death, the sound's channels |
+| `GTA2_NET_INPUTLOG=1`, `_ANIMLOG=1`, `_SELFLOG=1`, `_SOUNDLOG=1` | client | the input, the other players' animation, the local player around a death, the sound's channels and the car radio |
 | `GTA2_NET_CARDIFF=1` | client | where the prediction of the local player's car differs from the snapshot |
 | `GTA2_NET_GANGLOG=1` | both | player 0's group every 15 ticks, by the server's ids |
 | `GTA2_NET_STACKLOG=1` | both | two cars in one place (under 0.4 blocks apart), once per pair: a car the client kept that the server dropped |

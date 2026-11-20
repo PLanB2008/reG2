@@ -117,10 +117,11 @@ void net::engine::RestoreGame(const SavedWorld& in)
     unsigned char* channels = (unsigned char*)&gSound_obj + from;
     memcpy(sLive, channels, to - from);
     const u8 active = gSound_obj.mnActiveSamples;
-    // So does the police radio and the car radio (from field_5504 on): restored, the stars it last called out went
-    // back too, and every correction started its call again over the one it was saying
-    const size_t radio = offsetof(sound_obj, mRadioStationChangeMode);
-    static unsigned char sRadio[sizeof(sound_obj) - offsetof(sound_obj, mRadioStationChangeMode)];
+    // So do the radios, from the car radio's stations (mRadioEmitters) on: a resimulation runs no sound, so the saves
+    // would hold the radio's state from before the player got in, and the car radio would start again on another station
+    // every tick; and every correction would start the police radio's call again over itself
+    const size_t radio = offsetof(sound_obj, mRadioEmitters);
+    static unsigned char sRadio[sizeof(sound_obj) - offsetof(sound_obj, mRadioEmitters)];
     memcpy(sRadio, (unsigned char*)&gSound_obj + radio, sizeof(sRadio));
     // The window's size is this machine's, not the world's: a resize since the save (its cameras' screen size, set only
     // on a change) would otherwise go back to the old one for good
