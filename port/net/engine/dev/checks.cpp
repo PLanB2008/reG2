@@ -20,6 +20,7 @@
 #include "Source/SoundObject.hpp"
 #include "Source/SpriteGrid.hpp"
 #include "Source/Weapon.hpp"
+#include "Source/WeaponManager.hpp"
 #include "Source/char.hpp"
 #include "Source/collide.hpp"
 #include "Source/gbh_graphics.hpp"
@@ -40,6 +41,7 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <set>
+#include <unordered_map>
 #include <string.h>
 #include <string>
 #include <unordered_map>
@@ -351,6 +353,100 @@ void net::engine::DebugCheckDrivers(const char* where, uint32_t snapTick)
         }
     }
     sWrong.swap(now);
+}
+
+void net::engine::DebugCheckWeapons(const char* where, uint32_t snapTick)
+{
+    static std::set<std::pair<const void*, std::string>> sWrong; // each wrong holder or list reported once
+    static int sReported;
+    Game* g = gGame_0x40;
+    if (!Debug().checkGrid || !gWeapon_30_Pool || !gPedPool || !g || sReported >= 40)
+    {
+        return;
+    }
+    auto report = [&](const void* key, const std::string& what, const Weapon* w, const Ped* p)
+    {
+        if (!sWrong.insert(std::make_pair(key, what)).second || sReported++ >= 40)
+        {
+            return;
+        }
+        printf("net: CHECK frame %u tick %u %s (snapshot %u): weapon %p (type %d, car %p, ped %p, ammo %d) %s", gDebugFrame,
+               (uint32_t)gpRng->get_cur_rng(), where, snapTick, (const void*)w, w ? w->mWeaponType : -1,
+               w ? (const void*)w->mCar : NULL, w ? (const void*)w->mpPed : NULL, w ? (int)w->mAmmo : -1, what.c_str());
+        if (p)
+        {
+            printf(": ped %u (id %d, player %d, type %d, states %d/%d)", PedNetId(p), (int)p->mId,
+                   p->mPlayer ? (int)p->mPlayer->mPlayerIdx : -1, (int)p->mPedType, (int)p->mPedState1, (int)p->mPedState2);
+        }
+        printf("\n");
+    };
+    // The pool's two lists, walked at most once round (a list that loops is what this looks for)
+    const Pool<Weapon, 255>& pool = gWeapon_30_Pool->mPool;
+    std::unordered_map<const Weapon*, int> on; // 1: the used list, 2: the free list
+    for (Weapon* w = pool.mpPrev; w; w = w->mpNext)
+    {
+        if (on.count(w))
+        {
+            report(&pool, "is on the list of used weapons twice: it loops", w, NULL);
+            break;
+        }
+        on[w] = 1;
+    }
+    for (Weapon* w = pool.mpStart; w; w = w->mpNext)
+    {
+        const int was = on.count(w) ? on[w] : 0;
+        if (was)
+        {
+            report(&pool, was == 1 ? "is on both lists, used and free" : "is on the free list twice: it loops", w, NULL);
+            break;
+        }
+        on[w] = 2;
+    }
+    // A player's weapons are its slot's (its ped and corpse clone may hold them); any other ped frees what it holds
+    std::unordered_map<const Weapon*, const Player*> slotOf;
+    for (int i = 0; i < (int)g->mNumPlayers; i++)
+    {
+        const Player* pl = g->mPlayers[i];
+        for (int w = 0; pl && w < kPlayerWeapons; w++)
+        {
+            if (const Weapon* x = pl->mWeapons[w])
+            {
+                if (on.count(x) && on[x] == 2)
+                {
+                    report(x, "of a player's slot is on the free list", x, pl->mPlayerPed);
+                }
+                slotOf[x] = pl;
+            }
+        }
+    }
+    std::unordered_map<const Weapon*, const Ped*> heldBy;
+    for (Ped* p = gPedPool->mPool.mpPrev; p; p = p->mpNext)
+    {
+        for (const Weapon* w : {p->mSelectedWeapon, p->mpWeapon})
+        {
+            if (!w)
+            {
+                continue;
+            }
+            if (on.count(w) && on[w] == 2)
+            {
+                report(p, "held by a ped is on the free list", w, p);
+                continue;
+            }
+            const Player* slot = slotOf.count(w) ? slotOf[w] : NULL;
+            const bool players = p->mPlayer && (slot == p->mPlayer || (w->mCar && on.count(w)));
+            if (!players && (slot || w->mCar || w->mpPed != p))
+            {
+                report(p, slot ? "of a player's slot held by another ped" : w->mCar ? "of a car held by a ped" : "of another ped held by a ped", w, p);
+            }
+            if (!players && heldBy.count(w) && heldBy[w] != p)
+            {
+                report(p, "held by two peds (the other below)", w, p);
+                report(heldBy[w], "held by two peds (the first)", w, heldBy[w]);
+            }
+            heldBy[w] = p;
+        }
+    }
 }
 
 // Whether a car or ped is on its pool's list, allocating nothing (malloc can hang after a heap corruption); a bounded

@@ -80,6 +80,8 @@ std::string DebugPlayerCar(int player, const Snapshot& snap); // for the logs: i
 bool DebugCheckPlayerCars(const char* where); // every in-game player's car is a live car; prints the first time not
 // GTA2_NET_CHECKGRID: every ped driving a car is its driver and leaves it through it; each one wrong printed when it goes wrong
 void DebugCheckDrivers(const char* where, uint32_t snapTick);
+// GTA2_NET_CHECKGRID: the weapon pool's lists don't loop or share a weapon, and no ped holds a weapon it would free wrongly
+void DebugCheckWeapons(const char* where, uint32_t snapTick);
 void DebugOnCrash(); // from the crash handler (port/compat/src/main.cpp): the local player's ped, car and camera
 void DebugSetFrame(uint32_t frame); // the client's frame, for the debug checks' messages
 // GTA2_NET_MARKER: a square drawn where the newest snapshot has the local player (raw Fix16), over the frame
