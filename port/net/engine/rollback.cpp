@@ -14,6 +14,7 @@
 #include "Source/sound_obj.hpp"
 #include "Source/Ped.hpp"
 #include "Source/SoundObject.hpp"
+#include "Source/TagGame.hpp"
 #include "port/src/net_hooks.hpp"
 #include <algorithm>
 #include <stddef.h>
@@ -179,6 +180,7 @@ void net::engine::ResimTick(const uint32_t* buttons, int count)
     {
         g->UpdateGame(); // the tick without the sound service (Game::ExecuteGame without sound)
     }
+    gTagGame.ExecuteGamemodeTick(); // a network game's frame runs it after the tick (do_network_and_local_inputs)
     gPortNoRumble = noRumble;
     GuardPeds(); // after it too: the live tick follows the last one without a frame in between
     // What the sound service takes from the sim each tick, taken here as it doesn't run: a resimulated sound was heard
