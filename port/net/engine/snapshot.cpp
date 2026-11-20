@@ -280,7 +280,9 @@ void net::engine::Apply(const Snapshot& snap)
     {
         ApplyWorld(*w);
     }
+    const s16 zoneTurn = ZoneTurn(); // the server's: a player put in the game here takes a restart zone in its turn
     ApplySlots(snap);
+    ZoneTurn() = zoneTurn;
     for (const EntityState& e : snap.entities)
     {
         if (e.type == kEntityPlayer)
