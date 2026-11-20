@@ -1120,7 +1120,7 @@ void net::Client::Step()
         TakeSnapshot();
         AnnounceRound();
     }
-    mProbe.Jerk(mFrame, mSlot, mSynced);
+    mProbe.Jerk(mFrame, mSlot, mSynced, mReceived[mLatestTick % kRing], mReceived[(mLatestTick - 1) % kRing]);
     engine::SetTickMs(mReplay ? 1 : PacedTickMs()); // every frame: a restore brings back the game's tick length too (a replay: no waiting)
     SetNextInputs(local);
     if (mSynced)

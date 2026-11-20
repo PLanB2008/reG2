@@ -486,7 +486,7 @@ off by default:
 | `GTA2_NET_COMPARE=1` | client | the comparison check |
 | `GTA2_NET_DIVERGE=<tick>[:<ticks>]` | client | the divergence check |
 | `GTA2_NET_CORRLOG=1` | client | corrections over half a block or 45 degrees |
-| `GTA2_NET_JERKLOG=1\|2` | both | how jerky what is shown moves (2: and each jump) |
+| `GTA2_NET_JERKLOG=1\|2` | both | how jerky what is shown moves (2: and each jump), and how far its way is from its facing and how fast it turns (on a client also where the newest snapshots have the two agree) |
 | `GTA2_NET_MARKER=1` | client | a square where the newest snapshot has the local player |
 | `GTA2_NET_INPUTLOG=1`, `_ANIMLOG=1`, `_SELFLOG=1`, `_SOUNDLOG=1` | client | the input, the other players' animation, the local player around a death, the sound's channels and the car radio |
 | `GTA2_NET_CARDIFF=1` | client | where the prediction of the local player's car differs from the snapshot |
