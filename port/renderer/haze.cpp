@@ -461,3 +461,120 @@ bool GLRenderer::HazeProgram()
     }
     return true;
 }
+
+// RAIN PoC: the bright things of the scene drawn so far mirrored on the wet ground, as streaks stretched toward the
+// screen's centre (the camera's foot): a wet pixel gathers the light of what lies outward of it. The scene shader
+// leaves the wetness in the bloom target's alpha (1 - wet).
+namespace
+{
+const char* kRainFS =
+    "uniform sampler2D uTex;\n"
+    "uniform sampler2D uMask;\n"
+    "uniform vec4 uRain;\n" // centre in target pixels, seconds, target pixels per logical pixel
+    "layout(location = 0) out vec4 oColor;\n"
+    "float Hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n"
+    "void main()\n"
+    "{\n"
+    "    vec2 size = vec2(textureSize(uTex, 0));\n"
+    "    vec2 p = gl_FragCoord.xy;\n"
+    "    float wet = 1.0 - texture(uMask, p / size).a;\n"
+    "    if (wet < 0.03) discard;\n"
+    "    vec2 d = p - uRain.xy;\n"
+    "    float r = length(d);\n"
+    "    vec2 dir = r > 1.0 ? d / r : vec2(0.0, 1.0);\n"
+    "    vec2 across = vec2(-dir.y, dir.x);\n"
+    "    float len = (36.0 + 0.22 * r) * uRain.w;\n"
+    // Ripples: the streak wobbles sideways and flickers, in bands across it that the rain keeps changing.
+    "    float band = floor(dot(p, dir) / (3.0 * uRain.w));\n"
+    "    float t = floor(uRain.z * 12.0);\n"
+    "    float wob = (Hash(vec2(band, t)) - 0.5) * 3.0 * uRain.w;\n"
+    "    float flick = 0.55 + 0.9 * Hash(vec2(band * 1.7 + 3.1, t + 7.0));\n"
+    "    vec3 acc = vec3(0.0);\n"
+    "    for (int i = 1; i <= 20; i++)\n"
+    "    {\n"
+    "        float s = float(i) / 20.0;\n"
+    "        vec2 q = (p + dir * len * s * s + across * wob * s) / size;\n"
+    "        vec4 m = texture(uMask, q);\n"
+    "        vec3 c = texture(uTex, q).rgb;\n"
+    "        float l = max(c.r, max(c.g, c.b));\n"
+    // Only what stands out of the water: lamps, lit windows, signs, the cars' lights.
+    "        vec3 src = c * (0.15 + 2.0 * smoothstep(0.3, 0.75, l)) * m.a + m.rgb;\n"
+    "        acc += src * (1.0 - s) * (1.0 - s);\n"
+    "    }\n"
+    "    oColor = vec4(acc * (5.0 / 20.0) * wet * flick, 1.0);\n"
+    "}\n";
+
+GLuint sRainProgram, sRainFbo, sRainTex[2];
+GLint sUniRain = -1;
+s32 sRainW, sRainH;
+GLenum sRainFormat;
+} // namespace
+
+void GLRenderer::DrawRainReflect(f32 time)
+{
+    if (!mReady || !mTargetsBloom)
+    {
+        return;
+    }
+    Flush();
+    if (!sRainProgram)
+    {
+        const char* pError = NULL;
+        sRainProgram = CompileProgram(kHazeVS, kRainFS, &pError);
+        if (!sRainProgram)
+        {
+            return;
+        }
+        sUniRain = gl.glGetUniformLocation(sRainProgram, "uRain");
+        gl.glUseProgram(sRainProgram);
+        gl.glUniform1i(gl.glGetUniformLocation(sRainProgram, "uTex"), 0);
+        gl.glUniform1i(gl.glGetUniformLocation(sRainProgram, "uMask"), 1);
+        gl.glGenFramebuffers(1, &sRainFbo);
+        gl.glGenTextures(2, sRainTex);
+    }
+    if (sRainW != mTargetW || sRainH != mTargetH || sRainFormat != mColourFormat)
+    {
+        const bool rgb565 = mColourFormat == GL_RGB565;
+        gl.glBindTexture(GL_TEXTURE_2D, sRainTex[0]);
+        gl.glTexImage2D(GL_TEXTURE_2D, 0, mColourFormat, mTargetW, mTargetH, 0, rgb565 ? GL_RGB : GL_RGBA,
+                        rgb565 ? GL_UNSIGNED_SHORT_5_6_5 : GL_UNSIGNED_BYTE, NULL);
+        gl.glBindTexture(GL_TEXTURE_2D, sRainTex[1]);
+        gl.glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, mTargetW, mTargetH, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        gl.glBindFramebuffer(GL_FRAMEBUFFER, sRainFbo);
+        gl.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, sRainTex[0], 0);
+        gl.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, sRainTex[1], 0);
+        sRainW = mTargetW;
+        sRainH = mTargetH;
+        sRainFormat = mColourFormat;
+    }
+    gl.glDisable(GL_SCISSOR_TEST);
+    gl.glBindFramebuffer(GL_READ_FRAMEBUFFER, mTargetsSamples ? mMsFbo : mFbo);
+    gl.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, sRainFbo);
+    for (int i = 0; i < 2; i++)
+    {
+        const GLenum bufs[2] = {i == 0 ? (GLenum)GL_COLOR_ATTACHMENT0 : (GLenum)GL_NONE, i == 1 ? (GLenum)GL_COLOR_ATTACHMENT1 : (GLenum)GL_NONE};
+        gl.glReadBuffer(GL_COLOR_ATTACHMENT0 + i);
+        gl.glDrawBuffers(2, bufs);
+        gl.glBlitFramebuffer(0, 0, mTargetW, mTargetH, 0, 0, mTargetW, mTargetH, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    }
+    gl.glReadBuffer(GL_COLOR_ATTACHMENT0);
+    BindTarget();
+    const GLenum colour[3] = {GL_COLOR_ATTACHMENT0, GL_NONE, GL_NONE};
+    gl.glDrawBuffers(3, colour);
+    gl.glEnable(GL_BLEND);
+    gl.glBlendEquation(GL_FUNC_ADD);
+    gl.glBlendFunc(GL_ONE, GL_ONE);
+    gl.glUseProgram(sRainProgram);
+    gl.glUniform4f(sUniRain, 0.5f * mTargetW, 0.5f * mTargetH, time, (f32)mTargetW / mLogicalW);
+    gl.glActiveTexture(GL_TEXTURE1);
+    gl.glBindTexture(GL_TEXTURE_2D, sRainTex[1]);
+    gl.glBindSampler(1, mSamplerLinear);
+    gl.glActiveTexture(GL_TEXTURE0);
+    gl.glBindTexture(GL_TEXTURE_2D, sRainTex[0]);
+    gl.glBindSampler(0, mSamplerLinear);
+    DrawFullscreen();
+    gl.glBindSampler(1, 0);
+    gl.glDisable(GL_BLEND);
+    SetDrawBuffers();
+    mStateValid = false;
+}

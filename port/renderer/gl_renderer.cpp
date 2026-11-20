@@ -116,6 +116,8 @@ const char* kSceneFS =
     "uniform int uNumLights;\n"
     "uniform vec3 uAmbient;\n"
     "vec3 gHaze;\n"
+    "vec3 gSpots;\n"
+    "float gWet = 0.0;\n"
     "uniform float uUnlitAmbient;\n"
     "uniform int uShadow;\n"
     "layout(std140) uniform Lights\n"
@@ -169,7 +171,56 @@ const char* kSceneFS =
     "            else if (att > 0.0) acc += uLightCol[i].rgb * att * below;\n"
     "        }\n"
     "    }\n"
+    "    gSpots = min(spots, vec3(0.6));\n"
     "    return acc + min(spots, vec3(0.6));\n" // kSpotCap in gbh_api.cpp
+    "}\n"
+    // RAIN PoC: wet tiles (lit 1.25) facing up are darker, puddles darker still, and with bit 4 the lights are
+    // mirrored in them as streaks stretched away from the camera, broken up by the rain's ripples.
+    "uniform int uRain;\n"
+    "uniform vec4 uRainCam;\n" // eye xyz in blocks, seconds
+    "float RainHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n"
+    "float RainNoise(vec2 p)\n"
+    "{\n"
+    "    vec2 i = floor(p), f = fract(p);\n"
+    "    f = f * f * (3.0 - 2.0 * f);\n"
+    "    return mix(mix(RainHash(i), RainHash(i + vec2(1.0, 0.0)), f.x), mix(RainHash(i + vec2(0.0, 1.0)), RainHash(i + vec2(1.0, 1.0)), f.x), f.y);\n"
+    "}\n"
+    "vec3 RainShade(vec3 col, vec3 worldDx, vec3 worldDy, float alpha)\n"
+    "{\n"
+    "    vec3 n = cross(worldDx, worldDy);\n"
+    "    if (dot(n, n) < 1e-24) return col;\n"
+    "    float up = smoothstep(0.8, 0.98, abs(normalize(n).z));\n"
+    "    vec2 w = vWorld.xy;\n"
+    "    float puddle = smoothstep(0.55, 0.8, RainNoise(w * 0.9) * 0.75 + RainNoise(w * 3.7) * 0.25);\n"
+    "    float wet = up * (0.7 + 0.3 * puddle);\n"
+    "    gWet = up * (0.45 + 0.55 * puddle);\n"
+    "    col *= 1.0 - 0.4 * wet;\n"
+    "    float t = uRainCam.w;\n"
+    // Rain hitting the water: fine ripples that flicker.
+    "    float rip = RainNoise(w * 14.0 + vec2(t * 7.0, -t * 5.0)) * RainNoise(w * 9.0 - vec2(t * 4.0, t * 6.0));\n"
+    "    float gloss = up * (0.5 + 0.5 * puddle);\n"
+    // The headlights' pools shine on wet asphalt.
+    "    vec3 refl = gSpots * 0.35;\n"
+    "    if ((uRain & 4) == 0) return col + refl * gloss * (0.45 + 1.1 * rip) * alpha;\n"
+    "    vec2 c = uRainCam.xy;\n"
+    "    float H = max(uRainCam.z - vWorld.z, 1.0);\n"
+    "    for (int i = 0; i < uNumLights; i++)\n"
+    "    {\n"
+    "        vec3 L = uLightPos[i].xyz;\n"
+    "        bool beam = uLightDir[i].w > 0.0;\n"
+    "        float h = max(L.z - vWorld.z, 0.0) + (beam ? 0.3 : 0.8);\n"
+    "        vec2 m = c + (L.xy - c) * (H / (H + h));\n" // the light's mirror image seen on the ground
+    "        vec2 d = w - m;\n"
+    "        if (dot(d, d) > 9.0) continue;\n"
+    "        vec2 a = m - c;\n"
+    "        float la = length(a);\n"
+    "        a = la > 1e-3 ? a / la : vec2(0.0, 1.0);\n"
+    "        float along = dot(d, a), across = dot(d, vec2(-a.y, a.x));\n"
+    "        float sa = beam ? 0.35 : 0.75, sc = beam ? 0.07 : 0.13;\n"
+    "        float k = exp(-along * along / (2.0 * sa * sa) - across * across / (2.0 * sc * sc));\n"
+    "        refl += uLightCol[i].rgb * k * (beam ? 0.6 : 0.45);\n"
+    "    }\n"
+    "    return col + refl * gloss * (0.45 + 1.1 * rip) * alpha;\n"
     "}\n"
     // The texture's alpha averaged over a square of that radius in texels; outside the texture is transparent.
     "float SoftAlpha(vec2 uv, float radius)\n"
@@ -250,6 +301,7 @@ const char* kSceneFS =
     "        c.rgb *= 1.0 - (1.0 - ao) * vAo;\n"
     "    }\n"
     "    oColor = t * c;\n"
+    "    if (uRain != 0 && uPerPixel != 0 && vLit > 1.1 && vLit < 1.4) oColor.rgb = RainShade(oColor.rgb, worldDx, worldDy, t.a);\n"
     "    if (uAoDebug != 0 && vAo > 0.0) oColor.rgb = vec3(ao) * t.a;\n"
     "    if (uPerPixel != 0 && vLit > 0.5) oColor.rgb += min(gHaze, vec3(0.3)) * t.a;\n"
     "    oShadow = vec4(0.0, 0.0, 0.0, oColor.a);\n"
@@ -261,6 +313,7 @@ const char* kSceneFS =
     "        oColor.a = 0.0;\n"
     "    }\n"
     "    oBloom = uAdditive != 0 ? oColor : vec4(0.0, 0.0, 0.0, oColor.a);\n"
+    "    if ((uRain & 4) != 0 && uPerPixel != 0 && vLit > 1.1 && vLit < 1.4) oBloom.a = oColor.a * (1.0 - gWet);\n"
     "}\n";
 
 // Fullscreen triangle; also composites the CPU surface (alpha 0 where the game did not write).
@@ -562,6 +615,8 @@ bool GLRenderer::Init(GLFuncs::Loader loader, const char** ppError)
     mUniAoGrid = gl.glGetUniformLocation(mProgram, "uAoGrid");
     mUniAo = gl.glGetUniformLocation(mProgram, "uAo");
     mUniAoDebug = gl.glGetUniformLocation(mProgram, "uAoDebug");
+    mUniRain = gl.glGetUniformLocation(mProgram, "uRain");
+    mUniRainCam = gl.glGetUniformLocation(mProgram, "uRainCam");
     GLuint posts[4] = {mPresentProgram, mDownProgram, mBlurProgram, mComposeProgram};
     for (int i = 0; i < 4; i++)
     {
@@ -1187,6 +1242,18 @@ void GLRenderer::SetOcclusion(const u8* pCells, s32 width, s32 height, s32 depth
     BindTarget();
 }
 
+void GLRenderer::SetRain(u32 bits, f32 eyeX, f32 eyeY, f32 eyeZ, f32 time)
+{
+    if (!mReady)
+    {
+        return;
+    }
+    Flush();
+    mRainBits = bits;
+    mRainCam[0] = eyeX, mRainCam[1] = eyeY, mRainCam[2] = eyeZ, mRainCam[3] = time;
+    mStateValid = false;
+}
+
 void GLRenderer::ApplyState(u32 state)
 {
     if (mStateValid && state == mAppliedState)
@@ -1224,6 +1291,8 @@ void GLRenderer::ApplyState(u32 state)
         gl.glUniform1f(mUniAo, mAoStrength);
         gl.glUniform1i(mUniAoDebug, sAoDebug && atoi(sAoDebug) ? 1 : 0);
         gl.glUniform3f(mUniAoGrid, (f32)mAoGrid[0], (f32)mAoGrid[1], (f32)mAoGrid[2]);
+        gl.glUniform1i(mUniRain, (GLint)mRainBits);
+        gl.glUniform4f(mUniRainCam, mRainCam[0], mRainCam[1], mRainCam[2], mRainCam[3]);
     }
     gl.glBindSampler(0, (state & kStateMipmap) ? mSamplerMip : (state & RS_FILTER_LINEAR) ? mSamplerLinear : mSamplerNearest);
     if (state & RS_PIXEL_EXACT)

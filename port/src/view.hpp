@@ -12,3 +12,9 @@ void BeginDraw();
 void GroundToScreen(f32 x, f32 y, f32 z, f32* pX, f32* pY);
 void ScreenToGround(f32 x, f32 y, f32 z, f32* pX, f32* pY);
 } // namespace PortView
+
+namespace PortView
+{
+// The drawn camera's eye in blocks (RAIN PoC).
+void Eye(f32* pX, f32* pY, f32* pZ);
+} // namespace PortView
