@@ -58,6 +58,7 @@ void net::engine::ClientModeFrame()
     // player gave up between snapshots
     gPortKeepWantedPoints = true; // the server's (players' entities, peds' AI state)
     gPortServerKillNotices = true;
+    gPortServerKillAwards = true;
     bSkip_ambulance = true;
     gPortCarMayExplode = ClientCarMayExplode;
     SeenByAll();

@@ -27,6 +27,9 @@
 #include "root_sound.hpp"
 #include "TextTable.hpp"
 #include "Ped.inl"
+#if defined(GTA2_PORT)
+#include "../port/src/net_hooks.hpp" // the network game's hooks (port/docs/netcode.md)
+#endif
 #include <string.h>
 
 EXTERN_GLOBAL(s32, bStartNetworkGame);
@@ -423,6 +426,13 @@ void PlayerScoreTracker::AddCash(s32 cash)
 MATCH_FUNC(0x592660)
 void PlayerScoreTracker::AwardPedKilledScore(Ped* pVictim, Ped* pKiller)
 {
+#if defined(GTA2_PORT)
+    // Port: a network client's kills score nothing; the server's scores come with its snapshots.
+    if (gPortServerKillAwards)
+    {
+        return;
+    }
+#endif
     const s32 multiplier = mPlayer->get_multiplier();
     gmp_map_zone* pZone = gMap_0x370->GetFirstZoneAtPos(pKiller->get_cam_x().ToInt(), pKiller->get_cam_y().ToInt());
 

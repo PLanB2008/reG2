@@ -61,6 +61,9 @@ extern bool gPortKeepWantedPoints;
 // A network client's: the HUD's kill notices (Hud_MpMessage::AnnounceKill) are the server's deaths only, not the ones
 // its prediction starts and a restore undoes
 extern bool gPortServerKillNotices;
+// A network client's: a kill's points and bonuses (PlayerScoreTracker::AwardPedKilledScore, with the multi-kill messages
+// and voices) are the server's, whose scores come with its snapshots, not its prediction's
+extern bool gPortServerKillAwards;
 // A network client's: it dispatches no fire engines (bSkip_fire_engines), yet a car turned to a wreck burns as one does
 // when a fire engine is sent to it (Car::SpawnFire)
 extern bool gPortNoFireEngines;
