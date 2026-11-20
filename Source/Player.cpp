@@ -532,16 +532,16 @@ void Player::CleanupEmptyAmmoWeapons()
     {
         if (mWeapons[i])
         {
+#if defined(GTA2_PORT)
+            // Port: the ped's current weapon stays this one until its next ManageWeapon (never, while dead): freed
+            // here or with its car, peds read it (Weapon::CountsAsArmedAttack on its NULL mpPed) or it is allocated again
+            if (mPlayerPed && mPlayerPed->mSelectedWeapon == mWeapons[i])
+            {
+                mPlayerPed->mSelectedWeapon = NULL;
+            }
+#endif
             if (!mWeapons[i]->mAmmo)
             {
-#if defined(GTA2_PORT)
-                // Port: until its next ManageWeapon the ped's current weapon is this one: peds updated before it read
-                // the freed weapon (Weapon::CountsAsArmedAttack on its NULL mpPed), often on a resimulating client
-                if (mPlayerPed && mPlayerPed->mSelectedWeapon == mWeapons[i])
-                {
-                    mPlayerPed->mSelectedWeapon = NULL;
-                }
-#endif
                 gWeapon_30_Pool->DeAllocate(mWeapons[i]);
             }
         }
