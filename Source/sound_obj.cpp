@@ -1612,6 +1612,14 @@ void sound_obj::HandleTrainCabRollingFrictionSound(Sound_Params* pParams)
 MATCH_FUNC(0x4145E0)
 bool sound_obj::GetCar(s32 idx, Car** ppOut) const
 {
+#if defined(GTA2_PORT)
+    // Port: a queued car sample can outlive its entity (a network client's rollback restores the entities, not the
+    // queues): the slot may hold another kind of object now, whose mpAny isn't a sprite
+    if (mAudioEntities[idx].mbUsed && mAudioEntities[idx].mpObj->mObjectType != SoundObjectTypeEnum::Sprite_1)
+    {
+        return false;
+    }
+#endif
     if (mAudioEntities[idx].mbUsed)
     {
         Sprite* pSprite = mAudioEntities[idx].mpObj->mpAny.pSprite;
