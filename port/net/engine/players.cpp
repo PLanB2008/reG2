@@ -156,7 +156,7 @@ void ApplyWeapons(Player* p, const net::EntityState& e)
 }
 
 // Power-ups too (one collected here in a prediction the server didn't have ends here), with what they switch on the
-// ped (Player::CollectPowerUp, tick_down_powerups); invulnerability is the client's anyway
+// ped (Player::CollectPowerUp, tick_down_powerups)
 void ApplyPowerUps(Player* p, Ped* ped, const net::EntityState& e)
 {
     for (int k = 0; k < kPowerUps; k++)
@@ -171,6 +171,10 @@ void ApplyPowerUps(Player* p, Ped* ped, const net::EntityState& e)
             else if (k == power_up_indices::Invisibility_11)
             {
                 now ? ped->SetInvisible() : ped->SetVisible();
+            }
+            else if (k == power_up_indices::Invulnerability_6)
+            {
+                now ? ped->SetInvulnerable() : ped->ClearInvulnerable(); // ProtectPlayers keeps it above 0 after
             }
         }
         p->mPowerUpTimers[k] = now;
