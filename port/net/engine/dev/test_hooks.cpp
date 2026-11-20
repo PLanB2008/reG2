@@ -14,8 +14,7 @@
 
 void net::engine::DebugKill(int victim, int killer)
 {
-    Player* p = GetPlayer(victim);
-    Ped* ped = p ? p->mPlayerPed : NULL;
+    Ped* ped = InGamePed(victim);
     if (ped && !ped->isDead())
     {
         KillCredited(ped, killer);
@@ -24,8 +23,7 @@ void net::engine::DebugKill(int victim, int killer)
 
 void net::engine::DebugWanted(int player, int points)
 {
-    Player* p = GetPlayer(player);
-    Ped* ped = p ? p->mPlayerPed : NULL;
+    Ped* ped = InGamePed(player);
     if (ped && !ped->isDead() && ped->mWantedPoints < points)
     {
         ped->mWantedPoints = (s16)points;
@@ -35,7 +33,7 @@ void net::engine::DebugWanted(int player, int points)
 void net::engine::DebugPowerUp(int player, int powerUp)
 {
     Player* p = GetPlayer(player);
-    if (p && p->mPlayerPed && powerUp >= 0 && powerUp < kPowerUps)
+    if (p && InGamePed(player) && powerUp >= 0 && powerUp < kPowerUps)
     {
         p->CollectPowerUp(powerUp);
     }
@@ -43,8 +41,7 @@ void net::engine::DebugPowerUp(int player, int powerUp)
 
 void net::engine::DebugCar(int player, int model)
 {
-    Player* p = GetPlayer(player);
-    Ped* ped = p ? p->mPlayerPed : NULL;
+    Ped* ped = InGamePed(player);
     if (ped && !ped->mCar && gCarManager_6C)
     {
         // Beside the player, as the debug menu spawns one (ImGuiDebug.cpp): scale 1, counted as recycled
@@ -63,7 +60,7 @@ void net::engine::DebugCar(int player, int model)
 void net::engine::DebugTrain(int player, int train)
 {
     Player* p = GetPlayer(player);
-    Ped* ped = p ? p->mPlayerPed : NULL;
+    Ped* ped = InGamePed(player);
     const int i = train % 10;
     Train* t = gPublicTransport_181C && train >= 0 && train < 30 ? &gPublicTransport_181C->mTrainArray[i] : NULL;
     if (!t || t->mAllocState != 2 || !t->mCarriages[0] || !t->mCarriages[0]->mDriver)
@@ -112,7 +109,7 @@ void net::engine::DebugTrain(int player, int train)
 void net::engine::DebugArm(int player, int weapon, int ammo)
 {
     Player* p = GetPlayer(player);
-    if (p && p->mPlayerPed && weapon >= 0 && weapon < kPlayerWeapons && p->mWeapons[weapon] &&
+    if (p && InGamePed(player) && weapon >= 0 && weapon < kPlayerWeapons && p->mWeapons[weapon] &&
         p->mWeapons[weapon]->mAmmo == 0)
     {
         p->AddWeaponWithAmmo(weapon, (u8)ammo);
