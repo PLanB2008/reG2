@@ -5,6 +5,7 @@
 #include "members.hpp"
 #include "Source/Car.hpp"
 #include "Source/CarPhysics.hpp"
+#include "Source/Object_3C.hpp"
 #include "Source/SpriteGrid.hpp"
 #include "Source/explosion_type.hpp"
 #include "Source/gtx_0x106C.hpp"
@@ -173,6 +174,19 @@ bool net::engine::SetCarState(Car* car, const EntityState& e)
     {
         car->mDamage = (s16)e.f[kCarDamage];
         car->mDamagedAreas.m_var = (u32)e.f[kCarAreas];
+        // And its fire, which only crossing a threshold here starts: a car the server set on fire burnt only where its
+        // damage was predicted, and one that burnt here alone burnt on to a wreck the server didn't have
+        const int level = FireLevel(car->mDamage);
+        if (car->mDamageLevel != level)
+        {
+            car->mAttachments.ExpireAttachedFlames();
+            if (level)
+            {
+                const Fix16_Point atDefault(0, 0); // where the game puts its flames when no hit position is given
+                car->SpawnDamageFireEffect(level == 4 ? 2 : 1, &atDefault);
+            }
+            car->mDamageLevel = (u8)level;
+        }
     }
     // Its lights and horn: a siren switched with the horn key (Car::HandleSpecialInput counts the horn down) came
     // on again here after the server had it off
