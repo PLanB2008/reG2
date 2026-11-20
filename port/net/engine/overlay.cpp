@@ -203,9 +203,8 @@ void net::engine::DrawOverlay()
     {
         return;
     }
-    // In the HUD's 640-wide units (DrawStringScaled scales them as it does the HUD's)
-    const float scale = cam->mUiScale.ToFloat() > 0 ? cam->mUiScale.ToFloat() : 1.0f;
-    const s32 w = (s32)(cam->mScreenPxWidth / scale), h = (s32)(cam->mScreenPxHeight / scale);
+    // In the HUD's 640x480 layout: DrawStringScaled scales it and keeps a text near an edge at the screen's edge
+    const s32 w = 640, h = 480;
     if (gStatusCorner[0])
     {
         DrawStringScaled(gStatusCorner, w - 8 - Frontend::GetMaxTextWidth(gStatusCorner, gStyleTextFont), h - 24, gStyleTextFont);
