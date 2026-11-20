@@ -287,7 +287,21 @@ void ApplyCar(Pass& a, const EntityState& e)
     }
     SetCarPhysics(car, e); // a player's car too: its place came with the player
     ApplyCarAi(car, e);
-    if (!SetCarState(car, e) && !a.playerIn.count(car) && !a.referenced.count(car) && !car->IsTrainModel())
+    const bool wreckHereOnly = !SetCarState(car, e);
+    if (wreckHereOnly && a.playerIn.count(car) && !a.referenced.count(car) && !car->IsTrainModel())
+    {
+        // A player in it gets out first: driven on, the wreck has lost its roof turret (Car::HandleRoofTurretRotation
+        // finds none). The car goes below, the next snapshot makes it again and puts the player back in (players.cpp)
+        for (int i = 0; i < PlayerCount(); i++)
+        {
+            Ped* ped = InGamePed(i);
+            if (ped && ped->mCar == car && !ped->isDead() && !InCarTransition(ped))
+            {
+                ForceOutBesideCar(ped, car);
+            }
+        }
+    }
+    if (wreckHereOnly && (!a.playerIn.count(car) || !car->mDriver) && !a.referenced.count(car) && !car->IsTrainModel())
     {
         // A wreck here that isn't one on the server can't be unexploded: it goes, and the next snapshot makes the car
         // again as the server has it
