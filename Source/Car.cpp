@@ -7349,6 +7349,14 @@ bool TrafficSpawner::SpawnTrafficCar(s32 spawn_type, s32 arrow_direction, s32 bl
                     {
                         return false;
                     }
+#if defined(GTA2_PORT)
+                    // Port: not where another player sees it. The original spawns 5 blocks beyond this camera's edge,
+                    // which can be inside a nearby player's view (its lockstep network game did the same)
+                    if (gGame_0x40->IsRectVisibleToAnyPlayer(mRect))
+                    {
+                        return false;
+                    }
+#endif
 
                     s32 car_model;
                     u16 traffic_category;
