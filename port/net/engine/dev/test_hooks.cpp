@@ -127,3 +127,12 @@ void net::engine::DebugArm(int player, int weapon, int ammo)
         p->AddWeaponWithAmmo(weapon, (u8)ammo);
     }
 }
+
+void net::engine::DebugStreak(int player)
+{
+    Player* p = GetPlayer(player);
+    if (p && InGamePed(player))
+    {
+        p->mScores.mExecutionCount = 20; // its next PlayerScoreTracker::Service gives the bonus
+    }
+}

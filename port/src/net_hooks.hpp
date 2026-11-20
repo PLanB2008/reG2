@@ -5,6 +5,7 @@
 #include "types.hpp"
 
 class Car;
+class Player;
 class Sprite;
 struct Frontend;
 
@@ -67,6 +68,10 @@ extern bool gPortServerKillNotices;
 // A network client's: a kill's points and bonuses (PlayerScoreTracker::AwardPedKilledScore, with the multi-kill messages
 // and voices) are the server's, whose scores come with its snapshots, not its prediction's
 extern bool gPortServerKillAwards;
+// A scoring bonus (PlayerScoreTracker: a kill streak, a stunt...) with its voice line (voice_line.hpp): true, and this
+// machine shows its message and plays the voice. NULL: the user's player's, as the original; in a network game the
+// server sends each player its own and a client shows only those
+extern bool (*gPortScoreBonusHook)(Player* pPlayer, s32 voice);
 // A network client's: it dispatches no fire engines (bSkip_fire_engines), yet a car turned to a wreck burns as one does
 // when a fire engine is sent to it (Car::SpawnFire)
 extern bool gPortNoFireEngines;

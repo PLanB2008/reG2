@@ -14,7 +14,9 @@
 #include "Source/Hud.hpp"
 #include "Source/Ped.hpp"
 #include "Source/Player.hpp"
+#include "Source/TextTable.hpp"
 #include "Source/TrafficLights.hpp"
+#include "Source/root_sound.hpp"
 #include "Source/Weapon.hpp"
 #include "Source/WeaponManager.hpp"
 #include "Source/char.hpp"
@@ -47,6 +49,32 @@ struct
     uint8_t mDone[MAX_PLAYERS];
     bool mKnown[MAX_PLAYERS];
 } gNetDeaths;
+
+// The scoring bonuses (gPortScoreBonusHook): a server counts each player's and sends the last one's voice line, a client
+// shows its own player's once each, as the server has them (-1: the count not seen yet, none shown for it)
+uint8_t gBonusCount[MAX_PLAYERS];
+uint8_t gBonusVoice[MAX_PLAYERS];
+int gBonusSeen = -1;
+const int kBonusVoices = 12;
+const char* const kBonusText[kBonusVoices] = {NULL, "fly_car", "stl_all", "dst_all", "excutin", "gencide", "copkill", "carjaka",
+                                              "elvis_d", "accurcy", "wrngway", "em_dest"}; // by voice_line
+
+// The server's bonus for our player: its message over the frame (the HUD's message line is rolled back), and its voice
+void ShowBonus(int voice)
+{
+    const wchar_t* text = voice > 0 && voice < kBonusVoices && gText_0x14 ? gText_0x14->Find(kBonusText[voice]) : NULL;
+    std::string line;
+    for (int k = 0; text && text[k] && k < 64; k++)
+    {
+        line += text[k] < 128 ? (char)text[k] : '?';
+    }
+    if (!line.empty())
+    {
+        ShowHudMessage(line.c_str());
+        gRoot_sound.PlayVoice(voice);
+        printf("net: the server's bonus for us: %s (voice %d)\n", line.c_str(), voice);
+    }
+}
 
 int PlayerIndexOfPed(s32 pedId)
 {
@@ -347,6 +375,7 @@ void net::engine::CapturePlayer(int i, Snapshot& out)
     CountDeath(i, p, ped);
     e.f[kPlayerDeaths] = i < MAX_PLAYERS ? gDeaths[i] : 0;
     e.f[kPlayerDeathEvents] = i < MAX_PLAYERS ? gDeathEvents[i] : 0;
+    e.f[kPlayerBonus] = i < MAX_PLAYERS ? gBonusCount[i] << 4 | gBonusVoice[i] : 0;
     e.f[kPlayerKiller] = i < MAX_PLAYERS ? gKiller[i] : 0;
     e.f[kPlayerWeapon] = p->mCurrWeaponIdx + 1;
     e.f[kPlayerFrags] = gGameSession.mFragsList[i];
@@ -415,6 +444,20 @@ void net::engine::ApplyPlayer(const EntityState& e)
     if (i != LocalPlayer())
     {
         UnpackChat(p, e); // the others' typing; ours is this game's (TakeLocalChat, PutLocalChat)
+    }
+    else
+    {
+        // Only a newer count: snapshots can come out of order
+        const int count = e.f[kPlayerBonus] >> 4;
+        const uint8_t ahead = (uint8_t)(count - gBonusSeen);
+        if (gBonusSeen < 0 || (ahead && ahead < 128))
+        {
+            if (gBonusSeen >= 0)
+            {
+                ShowBonus(e.f[kPlayerBonus] & 15);
+            }
+            gBonusSeen = count;
+        }
     }
     if (CarryOutDeath(i, p, ped, e))
     {
@@ -590,7 +633,20 @@ void net::engine::ResetDeathEvents()
     {
         gDeathEvents[i] = 0;
         gNetDeaths.mKnown[i] = false; // a client takes the new game's counts as it finds them
+        gBonusCount[i] = 0;
     }
+    gBonusSeen = -1;
+}
+
+bool net::engine::ScoreBonus(Player* p, s32 voice)
+{
+    const int i = p->mPlayerIdx;
+    if (!gPortServerKillAwards && i >= 0 && i < MAX_PLAYERS && voice > 0 && voice < kBonusVoices)
+    {
+        gBonusCount[i]++; // a server's: sent with the player (a client shows the server's only)
+        gBonusVoice[i] = (uint8_t)voice;
+    }
+    return false;
 }
 
 net::engine::LocalChat net::engine::TakeLocalChat()

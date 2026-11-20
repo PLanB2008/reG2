@@ -22,5 +22,6 @@ bool (*gPortNextNetworkGame)();
 bool gPortKeepWantedPoints;
 bool gPortServerKillNotices;
 bool gPortServerKillAwards;
+bool (*gPortScoreBonusHook)(Player* pPlayer, s32 voice);
 bool gPortNoFireEngines;
 bool gPortLeavePromptShown;

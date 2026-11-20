@@ -52,6 +52,7 @@ enum PlayerField
     kPlayerMoney, // the money on the HUD (Player::mScores; in a points game the score players see)
     kPlayerMultiplier, // and its multiplier (Player::mMultipliers)
     kPlayerDeathEvents, // how often it died this game (wraps at 256): what a client carries out (kPlayerDeaths: the round's)
+    kPlayerBonus, // its scoring bonuses this game (wraps at 256) << 4 | the last one's voice line (ScoreBonus)
 };
 enum PlayerState
 {
@@ -244,7 +245,8 @@ void KillCredited(Ped* ped, int killerSlot); // the game's own death, credited t
 void KillNow(Ped* ped); // the game's own death (Ped::Kill), dead at once even when knocked down
 void SnapCamera(Player* p); // the camera at its ped at once, not panning there
 void ResetDeaths(int slot); // the round's death count the snapshots carry (a new round)
-void ResetDeathEvents(); // and the game's, which a client carries out (a new game)
+void ResetDeathEvents(); // and the game's, which a client carries out (a new game), and the scoring bonuses
+bool ScoreBonus(Player* p, s32 voice); // gPortScoreBonusHook: a server counts it for the player, nobody shows it there
 void ResetHudScores(Player* p); // the HUD's money, frags and multiplier as at a game's start (slots.cpp)
 
 // A client's game (client_mode.cpp)
