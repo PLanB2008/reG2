@@ -539,6 +539,8 @@ s32 Screen(Id id)
     return gRegistry.Get_Screen_Setting(ScreenName(id), ScreenDefault(id));
 }
 
+const s32 kMaxBloom = 5;
+
 // Steps of the camera zoom: 0 is the original's, each step closer magnifies by kZoomStep.
 const s32 kMinZoom = -5;
 const s32 kMaxZoom = 5;
@@ -639,7 +641,7 @@ struct PresetValue
     Id mId;
     s32 mValue[2];
 };
-const PresetValue kPresetValues[] = {{kTrueColour, {0, 1}},   {kBloom, {0, 3}},        {kPerPixelLighting, {0, 1}},
+const PresetValue kPresetValues[] = {{kTrueColour, {0, 1}},   {kBloom, {0, 2}},        {kPerPixelLighting, {0, 1}},
                                      {kTextureFilter, {0, 2}}, {kAntiAliasing, {0, 4}}, {kShadows, {0, 1}},
                                      {kHeadlights, {0, 1}},    {kLightEffects, {0, 1}}, {kAmbientOcclusion, {0, 1}},
                                      {kFireEffects, {0, 1}}};
@@ -655,7 +657,7 @@ s32 PresetSetting(Id id)
         case kTextureFilter:
             return Clamp(Screen(id), 0, kNumTextureFilters - 1);
         case kBloom:
-            return Clamp(Screen(id), 0, 10);
+            return Clamp(Screen(id), 0, kMaxBloom);
         default:
             return Screen(id) != 0;
     }
@@ -666,11 +668,12 @@ s32 PresetTarget(const PresetValue& value, s32 preset)
     return value.mId == kAntiAliasing ? kMsaaValues[MsaaIndex(value.mValue[preset])] : value.mValue[preset];
 }
 
+// Leaves out the settings added to ENHANCED, or changed in it, since setups were first made.
 bool OtherPresetValuesEnhanced()
 {
     for (s32 i = 0; i < kNumPresetValues; i++)
     {
-        if (kPresetValues[i].mId != kAmbientOcclusion && kPresetValues[i].mId != kFireEffects && PresetSetting(kPresetValues[i].mId) != PresetTarget(kPresetValues[i], kEnhanced))
+        if (kPresetValues[i].mId != kAmbientOcclusion && kPresetValues[i].mId != kFireEffects && kPresetValues[i].mId != kBloom && PresetSetting(kPresetValues[i].mId) != PresetTarget(kPresetValues[i], kEnhanced))
         {
             return false;
         }
@@ -1050,8 +1053,8 @@ bool Range(Id id, s32* pMin, s32* pMax, s32* pValue)
             return true;
         case kBloom:
             *pMin = 0;
-            *pMax = 10;
-            *pValue = Clamp(Screen(id), 0, 10);
+            *pMax = kMaxBloom;
+            *pValue = Clamp(Screen(id), 0, kMaxBloom);
             return true;
         case kZoom:
             *pMin = kMinZoom;
@@ -1086,7 +1089,7 @@ bool Range(Id id, s32* pMin, s32* pMax, s32* pValue)
 void ApplyRenderOptions()
 {
 #if defined(GTA2_PORT_SDL)
-    port_SetRenderOptions(Screen(kTrueColour) != 0, Screen(kBloom), Screen(kPerPixelLighting) != 0,
+    port_SetRenderOptions(Screen(kTrueColour) != 0, Clamp(Screen(kBloom), 0, kMaxBloom), Screen(kPerPixelLighting) != 0,
                           Clamp(Screen(kTextureFilter), 0, kNumTextureFilters - 1), kMsaaValues[MsaaIndex()], Screen(kShadows) != 0);
 #endif
 }
@@ -1316,7 +1319,7 @@ void Change(Id id, s32 delta)
             break;
         }
         case kBloom:
-            gRegistry.Set_Screen_Setting(ScreenName(id), Clamp(Screen(id) + delta, 0, 10));
+            gRegistry.Set_Screen_Setting(ScreenName(id), Clamp(Screen(id) + delta, 0, kMaxBloom));
             ApplyRenderOptions();
             break;
         case kHeadlights:
