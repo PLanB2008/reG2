@@ -134,7 +134,7 @@ void BeginDraw()
 #if defined(GTA2_PORT_SDL)
     f32 x, y, z;
     PortView::Eye(&x, &y, &z);
-    port_RainScene(Mode() & (kWet | kReflect), x, y, z, static_cast<f32>(fmod(PortFrameLoop::WorldSeconds(), 3600.0)));
+    port_RainScene((Mode() & (kWet | kReflect)) | (getenv("GTA2_RAIN_DEBUG") ? 8u : 0u) | (getenv("GTA2_RAIN_NOSPRITE") ? 16u : 0u), x, y, z, static_cast<f32>(fmod(PortFrameLoop::WorldSeconds(), 3600.0)));
 #endif
 }
 

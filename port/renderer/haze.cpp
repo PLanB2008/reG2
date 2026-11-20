@@ -495,7 +495,7 @@ const char* kRainFS =
     "        float l = max(c.r, max(c.g, c.b));\n"
     "        float solid = smoothstep(0.9, 0.99, m.a);\n"
     // What stands out of the water (lamps, lit walls, the cars' lights), and faintly the brightest lit ground.
-    "        vec3 src = c * mix(0.35 * smoothstep(0.6, 1.0, l), 0.1 + 2.5 * smoothstep(0.6, 1.0, l), solid) + m.rgb;\n"
+    "        vec3 src = c * mix(0.15 * smoothstep(0.6, 1.0, l), 0.1 + 2.5 * smoothstep(0.6, 1.0, l), solid) + m.rgb;\n"
     "        float wgt = 1.0 - s;\n"
     "        acc += src * wgt;\n"
     "        wsum += wgt;\n"
@@ -636,7 +636,7 @@ void GLRenderer::DrawRainReflect(f32 time)
     gl.glBlendEquation(GL_FUNC_ADD);
     gl.glBlendFunc(GL_ONE, GL_ONE);
     gl.glUseProgram(sRainCompose);
-    gl.glUniform1f(sUniGain, 2.0f);
+    gl.glUniform1f(sUniGain, 1.6f);
     gl.glBindTexture(GL_TEXTURE_2D, sHalfTex[0]);
     DrawFullscreen();
     gl.glBindSampler(1, 0);
