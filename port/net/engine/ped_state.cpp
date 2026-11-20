@@ -470,7 +470,7 @@ bool net::engine::ApplyPedState(Ped* p, const EntityState& e)
         {
             ForceOutOfCar(p, Raw(e.f[kPedX]), Raw(e.f[kPedY]), Raw(e.f[kPedZ]), Angle(e.f[kPedRot]));
         }
-        p->Kill(); // the server's death, the game's own way (as a player's, snapshot.cpp)
+        KillNow(p); // the server's death, the game's own way (as a player's, snapshot.cpp)
         return true;
     }
     if (deadHere && !deadThere)

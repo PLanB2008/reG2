@@ -241,6 +241,7 @@ void ApplyWorld(const EntityState& w);
 void ApplySlots(const Snapshot& snap); // the slots in the game: the snapshot's
 void ApplyPlayer(const EntityState& e);
 void KillCredited(Ped* ped, int killerSlot); // the game's own death, credited to a player (-1: nobody)
+void KillNow(Ped* ped); // the game's own death (Ped::Kill), dead at once even when knocked down
 void SnapCamera(Player* p); // the camera at its ped at once, not panning there
 void ResetDeaths(int slot); // the round's death count the snapshots carry (a new round)
 void ResetDeathEvents(); // and the game's, which a client carries out (a new game)

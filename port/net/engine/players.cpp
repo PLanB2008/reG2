@@ -455,7 +455,19 @@ void net::engine::KillCredited(Ped* ped, int killerSlot)
     Player* killer = GetPlayer(killerSlot);
     ped->mKillerId = killer && killer->mPlayerPed ? killer->mPlayerPed->mId : 0;
     ped->mInvulnerability = 0;
+    KillNow(ped);
+}
+
+void net::engine::KillNow(Ped* ped)
+{
     ped->Kill();
+    // Knocked down (a blast threw it), the game keeps the ped's state until it gets up (Ped::ChangeNextPedState1), so
+    // the server's death didn't take and the next snapshot carried it out again: its cry, its killer's points
+    if (!ped->isDead())
+    {
+        ped->mPedState1 = ped_state_1::dead_9;
+        ped->mPedState2 = ped_state_2::ped2_dead_15;
+    }
 }
 
 void net::engine::SnapCamera(Player* p)
