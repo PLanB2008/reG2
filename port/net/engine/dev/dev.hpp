@@ -84,6 +84,8 @@ void DebugCheckDrivers(const char* where, uint32_t snapTick);
 void DebugCheckWeapons(const char* where, uint32_t snapTick);
 // GTA2_NET_CHECKGRID: every tank, fire truck and gun jeep has its roof turret (Car::HandleRoofTurretRotation needs it)
 void DebugCheckTurrets(const char* where, uint32_t snapTick);
+// GTA2_NET_CHECKGRID: every collision grid row a sorted list of cells and links from their pools
+void DebugCheckGridLists(const char* where, uint32_t snapTick);
 void DebugOnCrash(); // from the crash handler (port/compat/src/main.cpp): the local player's ped, car and camera
 void DebugSetFrame(uint32_t frame); // the client's frame, for the debug checks' messages
 // GTA2_NET_MARKER: a square drawn where the newest snapshot has the local player (raw Fix16), over the frame

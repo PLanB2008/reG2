@@ -450,6 +450,56 @@ void net::engine::DebugCheckWeapons(const char* where, uint32_t snapTick)
     }
 }
 
+EXTERN_GLOBAL(GridCell_Pool*, gGridCell_Pool); // defined in collide.cpp, declared in SpriteGrid.cpp only
+EXTERN_GLOBAL(GridSpriteLink_Pool*, gGridSpriteLink_Pool);
+
+void net::engine::DebugCheckGridLists(const char* where, uint32_t snapTick)
+{
+    static int sSaid;
+    if (!Debug().checkGrid || !gGridCell_Pool || !gGridSpriteLink_Pool || sSaid >= 5)
+    {
+        return;
+    }
+    const GridCell* cells = gGridCell_Pool->mPool;
+    const GridSpriteLink* links = gGridSpriteLink_Pool->mPool;
+    auto cellOk = [&](const GridCell* c)
+    {
+        const size_t off = (size_t)((const char*)c - (const char*)cells);
+        return (const char*)c >= (const char*)cells && off < sizeof(gGridCell_Pool->mPool) && off % sizeof(GridCell) == 0;
+    };
+    auto linkOk = [&](const GridSpriteLink* l)
+    {
+        const size_t off = (size_t)((const char*)l - (const char*)links);
+        return (const char*)l >= (const char*)links && off < sizeof(gGridSpriteLink_Pool->mPool) && off % sizeof(GridSpriteLink) == 0;
+    };
+    const SpriteGrid* grids[] = {gSpriteGrid_1, gSpriteGrid_2, gSpriteGrid_3};
+    for (int gi = 0; gi < 3; gi++)
+    {
+        // Its rows, the grid's only member (private, at offset 0)
+        const GridCell* const* rows = reinterpret_cast<const GridCell* const*>(grids[gi]);
+        for (int y = 0; rows && y < 256; y++)
+        {
+            int n = 0, lastX = -1;
+            for (const GridCell* c = rows[y]; c; c = c->mpNext)
+            {
+                const char* wrong = !cellOk(c) ? "a cell outside the cell pool" : (int)c->mX <= lastX ? "cells out of order" : ++n > 256 ? "a row that loops" : NULL;
+                for (const GridSpriteLink* l = wrong ? NULL : c->mpSpriteLinks; l && !wrong; l = l->mpNext)
+                {
+                    wrong = !linkOk(l) ? "a link outside the link pool" : !l->mpSprite ? "a link without a sprite" : NULL;
+                }
+                if (wrong)
+                {
+                    sSaid++;
+                    printf("net: CHECK frame %u tick %u %s (snapshot %u): grid %d row %d: %s (%p)\n", gDebugFrame,
+                           (uint32_t)gpRng->get_cur_rng(), where, snapTick, gi + 1, y, wrong, (const void*)c);
+                    return;
+                }
+                lastX = c->mX;
+            }
+        }
+    }
+}
+
 void net::engine::DebugCheckTurrets(const char* where, uint32_t snapTick)
 {
     static std::set<const Car*> sSaid; // each car once (a pool slot reused for another car is said again only once)
