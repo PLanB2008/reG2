@@ -145,6 +145,7 @@ void net::engine::MovePed(Ped* ped, const Fix16& x, const Fix16& y, const Fix16&
     }
     gSpriteGrid_1->RemoveFromRegionBuckets(s);
     s->set_xyz_lazy(x, y, z);
+    s->set_ang_lazy(rot); // what is drawn: the char's own rotation only reaches its sprite in its next update
     ped->SetRotation(rot);
     gSpriteGrid_1->AddToRegionBuckets(s);
     ped->mCam.x = x;

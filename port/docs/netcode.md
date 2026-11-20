@@ -178,7 +178,7 @@ original's frame path in `winmain.cpp` (a step, then a frame): a server draws no
 - **Prediction** (`engine/rollback.cpp`): the client saves the game after every tick. On a snapshot of tick S it
   restores S, applies the server's state, and runs the ticks up to its own with its own inputs; other players repeat
   their last input. Everything else moves on by the game's own simulation in those ticks.
-- **The blend**: what is shown moves a part of the way to the corrected state each tick (`GTA2_NET_BLEND`, 0.2);
+- **The blend**: what is shown, place and facing alike, moves a part of the way to the corrected state each tick (`GTA2_NET_BLEND`, 0.2);
   more than 2 blocks off (a respawn, a car entered) jumps.
 - **What a client runs** (`engine/client_mode.cpp`): a client simulates what moves, not what decides. The game's own
   debug switches turn the rest off, set again every frame:
