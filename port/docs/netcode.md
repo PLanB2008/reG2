@@ -177,6 +177,8 @@ command, applies snapshots and rolls back. Between frames both poll the network 
   | traffic and ambient ped spawning, despawning | off | only the server creates and removes entities |
   | scripts, police, ambulance, fire engines, buses | off | they create entities; the results arrive as state |
   | generators, the garage, emergency crews | run, idle | scripts switch generators on and park cars in the garage (a client's generators make nothing: measured on mp1-6p), the police and the ambulance send crews |
+  | the map script's level start | its look and sound only | its shading level, ambient light and sounds (`gPortScriptCommandRuns`); the rest is stepped over |
+  | scripts after the level start, police, ambulance, firefighters, emergency crews, generators, garages | off | they create entities; the results arrive as state |
   | doors, cranes, crushers, trains, traffic lights | runs | predicted, corrected by snapshots (the lights' phase is in the world entity, each train has one of its own) |
   | particles, tile animations, lights, HUD, sound | runs | cosmetic; a resimulated tick runs without the sound service, then takes what it left (shots, impacts, voice lines, sound events, radio reports), so a restore doesn't play them again; what no live tick played (a snapshot's death, another player's shot the prediction missed, by ammo) is given to the next live tick |
 
@@ -381,6 +383,7 @@ The netcode's hooks, declared in `port/src/net_hooks.hpp`; those in `Source/` ar
 | `port/compat/src` | `gPortIdleHook`, `gPortNoAudio`, `gPortCrashHook` | polling while a frame waits (`window.cpp`), no sound on a server (`miles.cpp`), the crash report (`main.cpp`) |
 | `Ped.cpp` | `gPortKeepWantedPoints` | a client keeps the server's wanted points with its police off |
 | `Car.cpp` | `gPortNoFireEngines` | a client sends no fire engines (`bSkip_fire_engines`), and its wrecks burn all the same (`Car::SpawnFire`) |
+| `ScriptThread.cpp` | `gPortScriptCommandRuns` | a client runs the level start's look and sound commands, and steps over the rest |
 | `Car.cpp` | `gPortCarMayExplode` | a client's car the server sends blows up when a snapshot says the server's did, not on its own prediction |
 | `Car.cpp` | `Car::TryHonkHorn` | a train's lead without a driver (a player got out of a carriage that stood still) doesn't read it |
 | `Hud.cpp` | `port_TypedChar` (`port/compat/src/dinput.cpp`) | the chat types the keyboard layout's characters |

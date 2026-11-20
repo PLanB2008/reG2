@@ -13,6 +13,7 @@ s32 gPortSpawnPlayers = 1;
 void (*gPortAfterPlayersHook)();
 bool (*gPortWorldStill)();
 bool (*gPortCarMayExplode)(Car* pCar);
+bool (*gPortScriptCommandRuns)(u16 type);
 void (*gPortFrontendSetup)(Frontend* pFrontend);
 bool (*gPortFrontendInput)(Frontend* pFrontend);
 int (*gPortLeaveNetworkGame)();

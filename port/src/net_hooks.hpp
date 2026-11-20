@@ -44,6 +44,9 @@ extern bool (*gPortWorldStill)();
 // Asked as a car would blow up (Car::HandleCarExplosion): false, and it doesn't. NULL but on a network client, whose cars
 // the server sends blow up when the server's do (a prediction can't be taken back)
 extern bool (*gPortCarMayExplode)(Car* pCar);
+// Asked for each command a script thread runs (ScriptThread::PreExecOpCode): false, and it is stepped over. NULL but on a
+// network client, which runs its map script's level start for what only shows or sounds here (the server runs the rest)
+extern bool (*gPortScriptCommandRuns)(u16 type);
 // The frontend's network page (port/net/menu.cpp): set up after the game's own (SetupMenuStringsOptionsElements),
 // and its input taken first (UpdatePageFromUserInput: true, the game's handling is skipped)
 extern void (*gPortFrontendSetup)(Frontend* pFrontend);
