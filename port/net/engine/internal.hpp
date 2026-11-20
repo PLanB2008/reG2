@@ -245,6 +245,13 @@ void SetCarPhysics(Car* car, const EntityState& e); // the physics the snapshot 
 bool IsWrecked(const Car* car);
 bool SetCarState(Car* car, const EntityState& e);
 extern int gExplosionsCarried, gWrecksReplaced; // for the log
+// For the log: how each car's state here compared with the snapshot's, before it was applied
+struct CarStateDiffs
+{
+    int cars, damage, fireAbove, fireBelow, wreckHereOnly, wreckThereOnly;
+};
+extern CarStateDiffs gCarStateDiffs;
+int FireLevel(int32_t damage); // Car::mDamageLevel for that damage
 void CarAiFields(std::vector<FieldDesc>& out); // after the physics
 void CaptureCarAi(const Car* car, EntityState& e);
 void ApplyCarAi(Car* car, const EntityState& e);

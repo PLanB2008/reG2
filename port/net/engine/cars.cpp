@@ -55,6 +55,7 @@ bool net::engine::CarHasPhysics(const EntityState& e)
 }
 
 int net::engine::gExplosionsCarried, net::engine::gWrecksReplaced;
+net::engine::CarStateDiffs net::engine::gCarStateDiffs;
 
 void net::engine::CarPhysicsFields(std::vector<FieldDesc>& out)
 {
@@ -138,9 +139,26 @@ bool net::engine::IsWrecked(const Car* car)
     return car->mWreckCountdown || car->mDamage >= 32000 || car->mEngineStatus == car_engine_status::destroyed_6;
 }
 
+// The fire a car's damage makes (Car::AccumulateDamage: its flames as the damage crosses 16000, then 25000)
+int net::engine::FireLevel(int32_t damage)
+{
+    return damage >= 25000 ? 4 : damage >= 16000 ? 3 : 0;
+}
+
 bool net::engine::SetCarState(Car* car, const EntityState& e)
 {
     const bool there = e.f[kCarWrecked] != 0, here = IsWrecked(car);
+    CarStateDiffs& d = gCarStateDiffs;
+    d.cars++;
+    d.wreckHereOnly += here && !there;
+    d.wreckThereOnly += there && !here;
+    if (!here && !there)
+    {
+        d.damage += car->mDamage != e.f[kCarDamage];
+        const int level = FireLevel(e.f[kCarDamage]);
+        d.fireAbove += car->mDamageLevel > level;
+        d.fireBelow += car->mDamageLevel < level;
+    }
     if (there && !here)
     {
         car->HandleCarExplosion(explosion_type::item_19); // as a car blows up from its damage (Car::AddDamage)

@@ -562,6 +562,13 @@ void net::engine::PrintReplicaLog()
         printf("net: %d explosions the server had carried out, %d wrecks of this game's own made again\n", gExplosionsCarried, gWrecksReplaced);
         gExplosionsCarried = gWrecksReplaced = 0;
     }
+    const CarStateDiffs& d = gCarStateDiffs;
+    if (d.damage + d.fireAbove + d.fireBelow + d.wreckHereOnly + d.wreckThereOnly)
+    {
+        printf("net: cars against the snapshots: %d compared, damage differed %d, fire here above the server's %d, below %d, "
+               "wrecked here only %d, there only %d\n", d.cars, d.damage, d.fireAbove, d.fireBelow, d.wreckHereOnly, d.wreckThereOnly);
+    }
+    gCarStateDiffs = CarStateDiffs();
     if (gPickupsMade + gPickupsRemoved)
     {
         printf("net: %d pickups made as the server's, %d removed\n", gPickupsMade, gPickupsRemoved);
