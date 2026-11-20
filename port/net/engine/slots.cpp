@@ -48,19 +48,26 @@ void net::engine::TakeOutOfGame(int slot)
             ForceOutBesideCar(ped, ped->mCar);
         }
     }
-    // The slot's weapons stay the slot's: the pedestrian it leaves holds none, as its Deallocate would free them into
-    // the pool while the slot keeps them (as Player.cpp clears a corpse clone's)
+    // The pedestrian it leaves keeps only weapons of its own, as its Deallocate frees them into the pool: not the slot's
+    // (the slot keeps them, as Player.cpp clears a corpse clone's), nor a car's (a player ped's current weapon while it
+    // drives a car that has one: still on the pool's list of used weapons, which loops once it is allocated again), nor
+    // one freed already (its car's, emptied as it got out)
     for (Ped* ped : {p->mPlayerPed, p->mAuxPed})
     {
-        for (int w = 0; ped && w < kPlayerWeapons; w++)
+        for (Weapon** held : {ped ? &ped->mSelectedWeapon : NULL, ped ? &ped->mpWeapon : NULL})
         {
-            if (p->mWeapons[w] && ped->mSelectedWeapon == p->mWeapons[w])
+            if (!held || !*held)
             {
-                ped->mSelectedWeapon = NULL;
+                continue;
             }
-            if (p->mWeapons[w] && ped->mpWeapon == p->mWeapons[w])
+            bool own = (*held)->mpPed == ped && !(*held)->mCar;
+            for (int w = 0; own && w < kPlayerWeapons; w++)
             {
-                ped->mpWeapon = NULL;
+                own = p->mWeapons[w] != *held;
+            }
+            if (!own)
+            {
+                *held = NULL;
             }
         }
     }
