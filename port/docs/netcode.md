@@ -155,6 +155,10 @@ command, applies snapshots and rolls back. Between frames both poll the network 
   game, and the first players' cameras took them all. A server allows the limits times its players, up to 3 players'
   worth (its traffic has drivers of its own: more ran the ped pool out). Before anything spawns, each client's camera
   bounds grow ahead along its motion by that client's lead, so nothing appears inside what it already shows.
+- **One view for everyone**: every player sees the same, 16:9 at the game's own zoom. CAMERA ZOOM doesn't apply in a
+  network game (`PortCameraZoom`), a wider screen shows bars at its sides (`ReadScreenSettings` keeps the game's screen
+  16:9 at most, the renderer its aspect) and a narrower one sees less width. The server gives every player's cameras
+  that view, so peds and cars spawn and go out of everyone's sight.
 - **Joining and leaving** (`engine/slots.cpp`): a slot without a client is out of the game the way the game handles a
   player who left (its ped walks on as a pedestrian). A joining client gets a new player ped at the next restart zone
   and an empty score. Snapshots carry the slots in the game, and clients mirror them.
