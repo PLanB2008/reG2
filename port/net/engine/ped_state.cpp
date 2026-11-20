@@ -56,8 +56,9 @@ const int kType = net::engine::MemberIndex(kValues, kValueCount, offsetof(Ped, m
 const int kOccupation = net::engine::MemberIndex(kValues, kValueCount, offsetof(Ped, mOccupation));
 
 // The flags that are the ped's own behaviour; the others say where it is in this game's structures (active, scheduled for
-// removal, in the pathfinder's list, on fire with a flame object of this game's)
-const u32 kFlagsSent = ~((1u << 0) | (1u << 10) | (1u << 14) | (1u << 24));
+// removal, in the pathfinder's list, on fire with a flame object of this game's: sent, and applied as the game sets it)
+const u32 kOnFire = 1u << 24;
+const u32 kFlagsSent = ~((1u << 0) | (1u << 10) | (1u << 14) | kOnFire);
 
 // Its states (Ped::mPedState1 ..): set only when both sides have it on foot and alive; in, into and out of cars and
 // deaths go their own ways (replica.cpp, below)
@@ -220,7 +221,7 @@ void net::engine::CapturePedState(const Ped* p, EntityState& e)
     CaptureMembers(p, kValues, kValueCount, e, kFirst);
     u32 flags;
     memcpy(&flags, &p->mBf21C, sizeof(flags));
-    e.f[kFlags] = (int32_t)(flags & kFlagsSent);
+    e.f[kFlags] = (int32_t)(flags & (kFlagsSent | kOnFire));
     e.f[kHealth] = p->mHealth;
     e.f[kStates + kState1] = p->mPedState1;
     e.f[kStates + kState2] = p->mPedState2;
@@ -482,6 +483,7 @@ bool net::engine::ApplyPedState(Ped* p, const EntityState& e)
         return true; // a corpse on both sides
     }
     ApplyWeapons(p, e);
+    ApplyFire(p, (e.f[kFlags] & kOnFire) != 0);
 
     // Sitting in the same car on both sides (a driver), its AI goes too, but not its states (in and out of cars are
     // replica.cpp's): a chasing driver followed its own objectives here
@@ -582,4 +584,18 @@ Ped* net::engine::NetIdPed(uint32_t id)
 {
     bool resolved;
     return LocalPed(id, &resolved);
+}
+
+// On fire as the server has it, the game's own way (flames on its char, a scream): on foot only, burning in a car blows
+// the car up (Ped::ManageBurning)
+void net::engine::ApplyFire(Ped* p, bool onFire)
+{
+    if (onFire && !p->mBf21C.bOnFire && p->mGameObject && !p->mCar)
+    {
+        p->SetOnFire();
+    }
+    else if (!onFire && p->mBf21C.bOnFire)
+    {
+        p->PutOutFire();
+    }
 }

@@ -136,3 +136,11 @@ void net::engine::DebugStreak(int player)
         p->mScores.mExecutionCount = 20; // its next PlayerScoreTracker::Service gives the bonus
     }
 }
+
+void net::engine::DebugFire(int player)
+{
+    if (Ped* ped = InGamePed(player))
+    {
+        ped->SetOnFire();
+    }
+}

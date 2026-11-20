@@ -385,7 +385,8 @@ void net::engine::CapturePlayer(int i, Snapshot& out)
         e.f[kPlayerAmmo0 + w] = p->mWeapons[w] ? p->mWeapons[w]->mAmmo : 0;
     }
     e.f[kPlayerCar] = CarRef(ped->mCar);
-    e.f[kPlayerState] = (InCarTransition(ped) ? kPlayerTransition : 0) | (ped->isDead() ? kPlayerDead : 0) | (LeavingCar(ped) ? kPlayerLeaving : 0);
+    e.f[kPlayerState] = (InCarTransition(ped) ? kPlayerTransition : 0) | (ped->isDead() ? kPlayerDead : 0) | (LeavingCar(ped) ? kPlayerLeaving : 0) |
+                         (ped->mBf21C.bOnFire ? kPlayerOnFire : 0);
     e.f[kPlayerTarget] = ped->get_objective() == objectives_enum::enter_car_as_driver_35 ? CarRef(ped->mTargetObjectiveCar) : 0;
     PackName(p, e);
     PackChat(p, e);
@@ -439,6 +440,7 @@ void net::engine::ApplyPlayer(const EntityState& e)
     }
     ApplyWeapons(p, e);
     ApplyPowerUps(p, ped, e);
+    ApplyFire(ped, (e.f[kPlayerState] & kPlayerOnFire) != 0);
     // Its wanted points, the server's: the HUD's cop heads, and the cops' AI here, which gave up the chase at 0 stars
     ped->mWantedPoints = (s16)e.f[kPlayerWanted];
     if (i != LocalPlayer())

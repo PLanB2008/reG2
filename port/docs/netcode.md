@@ -13,7 +13,7 @@ DirectPlay sat (`NetPlay`), and the few changes to `Source/` are port-only hooks
 
 What works: 1-6 players on the game's multiplayer maps, frags, points and tag games, police, traffic, trains and ambient peds,
 joining and leaving mid-game, rounds with warmup, results and votes, map rotations, chat with commands, reconnecting,
-a frontend page to join, bots (scripted and trained), recordings that replay without a server. Protocol 20.
+a frontend page to join, bots (scripted and trained), recordings that replay without a server. Protocol 21.
 
 ## Running
 
@@ -489,6 +489,7 @@ off by default:
 | `GTA2_NET_NAVDUMP=<file.pgm>` | client bot | the bots' map as a picture |
 | `GTA2_NET_TESTKILL=<tick>:<victim>:<killer>,...` | server | a player killed by the game's own death |
 | `GTA2_NET_TESTPOWERUP=<tick>:<player>:<power-up>,...` | server | a power-up (12: an instant gang) |
+| `GTA2_NET_TESTFIRE=<tick>:<player>,...` | server | the player set on fire |
 | `GTA2_NET_TESTSTREAK=<tick>:<player>,...` | server | a kill streak's bonus, as the 20th kill in a row gives it |
 | `GTA2_NET_TESTCAR=<tick>:<player>:<model>,...` | server | a car beside the player (11: a bus); model + 1000 * n: damaged by n * 1000 (16: on fire, 26: burning) |
 | `GTA2_NET_TESTTRAIN=<tick>:<player>:<train>,...` | server | the player at the wheel of a train; train + 10: that train into reverse; train + 20: the player on the platform of the station it stops at next |

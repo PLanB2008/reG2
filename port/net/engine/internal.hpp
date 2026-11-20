@@ -39,7 +39,7 @@ enum PlayerField
     kPlayerPoints,
     kPlayerAmmo0, // each weapon's ammo
     kPlayerCar = kPlayerAmmo0 + kPlayerWeapons, // the car it drives (CarRef)
-    kPlayerState, // kPlayerTransition | kPlayerDead | kPlayerLeaving
+    kPlayerState, // kPlayerTransition | kPlayerDead | kPlayerLeaving | kPlayerOnFire
     kPlayerTarget, // the car it is going to get into (Ped::mTargetObjectiveCar, CarRef)
     kPlayerName, // its name (Player::mPlayerName), 4 characters a field
     kPlayerNameEnd = kPlayerName + 4,
@@ -59,6 +59,7 @@ enum PlayerState
     kPlayerTransition = 1, // getting into or out of a car (InCarTransition)
     kPlayerDead = 2,
     kPlayerLeaving = 4, // getting out of one (LeavingCar)
+    kPlayerOnFire = 8, // burning (Ped::mBf21C.bOnFire)
 };
 enum WorldField
 {
@@ -242,7 +243,8 @@ void ApplyWorld(const EntityState& w);
 void ApplySlots(const Snapshot& snap); // the slots in the game: the snapshot's
 void ApplyPlayer(const EntityState& e);
 void KillCredited(Ped* ped, int killerSlot); // the game's own death, credited to a player (-1: nobody)
-void KillNow(Ped* ped); // the game's own death (Ped::Kill), dead at once even when knocked down
+void KillNow(Ped* ped);
+void ApplyFire(Ped* p, bool onFire); // on fire or not as the server has it, the game's own way // the game's own death (Ped::Kill), dead at once even when knocked down
 void SnapCamera(Player* p); // the camera at its ped at once, not panning there
 void ResetDeaths(int slot); // the round's death count the snapshots carry (a new round)
 void ResetDeathEvents(); // and the game's, which a client carries out (a new game), and the scoring bonuses
