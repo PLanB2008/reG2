@@ -153,6 +153,13 @@ class Client
     uint32_t mRtt = 0; // the round trip as the transport sees it (or the recording says)
     uint32_t mPingMs = 0; // the network's round trip: a ping to its pong, both answered between frames (a link conditioner's delay too)
     uint32_t mPingShown = 0;
+    // GTA2_NET_STATS: the connection over the last second, shown with the ping
+    struct LinkStats
+    {
+        uint32_t fromTick = 0, snapshots = 0, rollbacks = 0, resimTicks = 0;
+    };
+    LinkStats mLink;
+    std::string mLinkShown;
     long long mPingShownMs = 0, mLastSnapshotMs = 0, mReconnectMs = 0, mPingSentMs = 0;
     std::vector<TransportEvent> mPending; // what Idle polled, for the next frame
     int mReconnects = 0; // attempts since the connection dropped

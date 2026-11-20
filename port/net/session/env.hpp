@@ -12,6 +12,7 @@ struct SessionEnv
     bool marker; // the server's position of the local player drawn
     bool corrLog, animLog, inputLog;
     bool compare; // the comparison check: the prediction against each snapshot, field by field
+    bool stats; // GTA2_NET_STATS: a client shows its loss, snapshot rate, lead and resimulation with the ping
     bool snapCheck; // GTA2_NET_SNAPCHECK: the server adds each entity's hash to its snapshots, a client checks them
     int replayOn; // GTA2_NET_REPLAYON=<frames>: a replay runs on that long after the recording, nothing arriving
     uint32_t divergeTick, divergeTicks; // the divergence check: from that server tick on this game alone, for that many ticks

@@ -302,6 +302,7 @@ void net::Client::OnSnapshot(BitReader& r)
     snap.tick = h.tick;
     mReceived[h.tick % kRing] = snap;
     mLatestTick = h.tick;
+    mLink.snapshots++;
     mSlack = (int)h.lastCmdTick - (int)(h.tick + 1);
     mSlackKnown = mSynced && h.lastCmdTick > mJumpTick; // it has heard of the ticks since our last jump
     mNewSnapshot = true;
@@ -403,9 +404,11 @@ void net::Client::Reconcile(const Snapshot& snap)
         mProbe.AfterResim();
         engine::SaveGame(*mSaves[t % kSaves], t);
         mStats.resimTicks++;
+        mLink.resimTicks++;
     }
     engine::PutLocalChat(chat);
     mStats.rollbacks++;
+    mLink.rollbacks++;
     engine::ApplyScores(snap);
     Blend(before);
 }
@@ -982,6 +985,18 @@ void net::Client::ShowStatus()
     {
         mPingShown = mPingMs;
         mPingShownMs = now;
+        if (Env().stats)
+        {
+            // The server sends a snapshot every tick: the ones missing since the last second are lost (or came too late)
+            const uint32_t sent = mLink.fromTick && mLatestTick > mLink.fromTick ? mLatestTick - mLink.fromTick : 0;
+            const uint32_t lost = sent > mLink.snapshots ? sent - mLink.snapshots : 0;
+            char text[64];
+            snprintf(text, sizeof(text), "loss %u%%  snap %u/s  ahead %d  resim %.1f", sent ? (lost * 100 + sent / 2) / sent : 0,
+                     mLink.snapshots, (int)(mTick - mLatestTick), mLink.rollbacks ? (float)mLink.resimTicks / mLink.rollbacks : 0.0f);
+            mLinkShown = std::string(text) + "\n";
+            mLink = LinkStats();
+            mLink.fromTick = mLatestTick;
+        }
     }
     std::string centre;
     if (mLeft)
@@ -1000,7 +1015,7 @@ void net::Client::ShowStatus()
     {
         centre = "Connection interrupted";
     }
-    engine::SetNetStatus(mConnected && mPingShown ? "ping " + std::to_string(mPingShown) : "", centre);
+    engine::SetNetStatus(mConnected && mPingShown ? mLinkShown + "ping " + std::to_string(mPingShown) : "", centre);
 }
 
 void net::Client::SendLeave(const std::string& why)

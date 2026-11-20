@@ -205,9 +205,24 @@ void net::engine::DrawOverlay()
     }
     // In the HUD's 640x480 layout: DrawStringScaled scales it and keeps a text near an edge at the screen's edge
     const s32 w = 640, h = 480;
-    if (gStatusCorner[0])
+    // The corner's lines, right-aligned, the last one at the bottom
+    s32 cornerY = h - 24;
+    wchar_t* cornerEnd = gStatusCorner;
+    while (*cornerEnd)
     {
-        DrawStringScaled(gStatusCorner, w - 8 - Frontend::GetMaxTextWidth(gStatusCorner, gStyleTextFont), h - 24, gStyleTextFont);
+        cornerEnd++;
+    }
+    for (wchar_t* end = cornerEnd; end > gStatusCorner; cornerY -= 16)
+    {
+        wchar_t* start = end;
+        while (start > gStatusCorner && start[-1] != '\n')
+        {
+            start--;
+        }
+        std::vector<wchar_t> line(start, end);
+        line.push_back(0);
+        DrawStringScaled(line.data(), w - 8 - Frontend::GetMaxTextWidth(line.data(), gStyleTextFont), cornerY, gStyleTextFont);
+        end = start > gStatusCorner ? start - 1 : start;
     }
     // The panel near the top (the HUD's score and wanted level are above it), the announcement under it
     const s32 kLine = 16;
