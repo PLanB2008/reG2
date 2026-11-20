@@ -17,4 +17,6 @@ namespace PortView
 {
 // The drawn camera's eye in blocks (RAIN PoC).
 void Eye(f32* pX, f32* pY, f32* pZ);
+// The game's screen size in pixels.
+void ScreenSize(f32* pW, f32* pH);
 } // namespace PortView

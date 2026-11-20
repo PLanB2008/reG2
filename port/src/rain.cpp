@@ -45,7 +45,8 @@ u32 Mode()
 
 // All in blocks and seconds. Drops fall from kTop blocks under the eye down to the ground, pushed by the wind; a
 // streak is where a drop went during kExposure.
-const s32 kDrops = 900;
+// 900 drops on a 1280x720 screen, as many per pixel on larger ones.
+const s32 kDrops = 4096;
 const f32 kFall = 18.0f;
 const f32 kWindX = 1.2f, kWindY = 2.6f;
 const f32 kExposure = 0.022f;
@@ -172,13 +173,15 @@ void Draw()
     PortView::Eye(&eyeX, &eyeY, &eyeZ);
     const f32 groundRef = GroundZ(eyeX, eyeY);
     // The ground seen, with a margin for the wind and the tall drops' paths.
-    f32 x0, y0, x1, y1;
+    f32 x0, y0, x1, y1, sw, sh;
+    PortView::ScreenSize(&sw, &sh);
     PortView::ScreenToGround(-120.0f, -120.0f, groundRef, &x0, &y0);
-    PortView::ScreenToGround(1400.0f, 840.0f, groundRef, &x1, &y1);
+    PortView::ScreenToGround(sw + 120.0f, sh + 120.0f, groundRef, &x1, &y1);
     const f32 top = eyeZ - kTop;
     const f32 period = kDepth / kFall;
     s32 streaks = 0, splashes = 0;
-    for (s32 i = 0; i < kDrops; i++)
+    const s32 drops = static_cast<s32>(fminf(900.0f * sw * sh / (1280.0f * 720.0f), kDrops));
+    for (s32 i = 0; i < drops; i++)
     {
         Drop& d = sDrops[i];
         const f32 t = now / period + Rand(i, 0x51);
@@ -205,7 +208,7 @@ void Draw()
             PortView::GroundToScreen(hx + kWidth, hy, hz, &wx1, &wy1);
             f32 dx = sx1 - sx0, dy = sy1 - sy0;
             const f32 len = sqrtf(dx * dx + dy * dy);
-            if (len < 0.5f || sx1 < -50.0f || sy1 < -50.0f || sx1 > 1350.0f || sy1 > 790.0f)
+            if (len < 0.5f || sx1 < -50.0f || sy1 < -50.0f || sx1 > sw + 50.0f || sy1 > sh + 50.0f)
             {
                 continue;
             }

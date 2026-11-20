@@ -53,4 +53,10 @@ void Eye(f32* pX, f32* pY, f32* pZ)
     *pY = sProj.mY;
     *pZ = sProj.mZ + 8.0f;
 }
+
+void ScreenSize(f32* pW, f32* pH)
+{
+    *pW = 2.0f * sProj.mCx;
+    *pH = 2.0f * sProj.mCy;
+}
 } // namespace PortView
