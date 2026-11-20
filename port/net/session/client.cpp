@@ -354,7 +354,10 @@ void net::Client::TakePlayerStates(const Snapshot& snap)
         {
             continue;
         }
-        mRemote[player] = buttons;
+        // A turn is repeated only once held: a tap repeated would turn the ped far past the server's
+        const uint32_t turn = kBtnLeft | kBtnRight;
+        mRemote[player] = (buttons & ~turn) | (buttons & mRemoteSeen[player] & turn);
+        mRemoteSeen[player] = buttons;
         if (player == mSlot)
         {
             mProbe.Marker(e);
@@ -756,6 +759,7 @@ void net::Client::StartOver()
         p = Parts();
     }
     std::fill(mRemote.begin(), mRemote.end(), 0u);
+    std::fill(mRemoteSeen.begin(), mRemoteSeen.end(), 0u);
     mBot.reset(); // and its map of the old one
     mNavMap.reset();
     printf("net: frame %u, a new game\n", mFrame);
@@ -1090,6 +1094,7 @@ void net::Client::Step()
             mSaves.emplace_back(new engine::SavedWorld());
         }
         mRemote.assign(engine::PlayerCount(), 0);
+        mRemoteSeen.assign(engine::PlayerCount(), 0);
     }
     CountTestStats();
     mProbe.AfterTick();

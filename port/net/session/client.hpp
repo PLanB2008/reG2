@@ -146,6 +146,7 @@ class Client
     std::vector<std::unique_ptr<engine::SavedWorld>> mSaves;
     TickRecord mHist[kRing];
     std::vector<uint32_t> mRemote; // other players' last inputs, from snapshots
+    std::vector<uint32_t> mRemoteSeen; // and as the newest snapshot had them
 
     std::unique_ptr<BotBrain> mBot;
     std::unique_ptr<ClientRecorder> mRecorder;
