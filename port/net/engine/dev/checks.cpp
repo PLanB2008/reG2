@@ -13,6 +13,7 @@
 #include "Source/Char_Pool.hpp"
 #include "Source/Game.hpp"
 #include "Source/ObjectDefinitions.hpp"
+#include "Source/Object_3C.hpp"
 #include "Source/Object_5C.hpp"
 #include "Source/ObjectPool.hpp"
 #include "Source/Ped.hpp"
@@ -446,6 +447,32 @@ void net::engine::DebugCheckWeapons(const char* where, uint32_t snapTick)
             }
             heldBy[w] = p;
         }
+    }
+}
+
+void net::engine::DebugCheckTurrets(const char* where, uint32_t snapTick)
+{
+    static std::set<const Car*> sSaid; // each car once (a pool slot reused for another car is said again only once)
+    if (!Debug().checkGrid || !gCar_BC_Pool || sSaid.size() >= 20)
+    {
+        return;
+    }
+    for (Car* c = gCar_BC_Pool->mPool.mpPrev; c; c = c->mpNext)
+    {
+        const int model = c->IsFireTruck() ? objects::water_cannon_114 : c->IsTank() ? objects::tank_cannon_148 : c->IsGunJeep() ? 248 : -1;
+        // A wreck has none (Car::HandleCarExplosion), unless a player drives it: it turns the turret
+        if (model < 0 || !c->mCarSprite || c->mAttachments.GetSpriteForModel(model) || sSaid.count(c) ||
+            (IsWrecked(c) && !(c->mDriver && c->mDriver->mPlayer)))
+        {
+            continue;
+        }
+        sSaid.insert(c);
+        const Ped* d = c->mDriver;
+        printf("net: CHECK frame %u tick %u %s (snapshot %u): car %u (id %d, model %d) has no roof turret: damage %d, wreck countdown %d, "
+               "engine %d, wrecked %d, driver %p (player %d)\n",
+               gDebugFrame, (uint32_t)gpRng->get_cur_rng(), where, snapTick, MappedId(c), (int)c->mCarId, (int)c->mCarInfoIdx,
+               (int)c->mDamage, (int)c->mWreckCountdown, (int)c->mEngineStatus, (int)IsWrecked(c), (const void*)d,
+               d && d->mPlayer ? (int)d->mPlayer->mPlayerIdx : -1);
     }
 }
 
