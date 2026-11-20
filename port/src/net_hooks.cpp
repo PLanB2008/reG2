@@ -5,6 +5,7 @@
 void (*gPortCrashHook)();
 void (*gPortSpriteMovedHook)(Sprite*);
 void (*gPortIdleHook)();
+bool gPortNetFrameLoop;
 
 bool gPortNoAudio;
 bool gPortNoRumble;

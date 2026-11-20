@@ -133,11 +133,18 @@ that wasn't ending.
 
 ### The game loop
 
-Every network frame `RunGameFrame` runs the tick, then `NetPlay::SendToAll`, where the original sent
-its inputs. The port's `NetPlay` (`engine/netplay.cpp`) makes that the netcode's frame hook: after tick T, before the
-frame is drawn. There the server reads its clients and sets every player's input for T+1; the client sends its
-command, applies snapshots and rolls back. Between frames both poll the network about every millisecond
-(`gPortIdleHook`) for pings, so neither the tick nor the frame adds to the ping.
+Every network step runs the tick, then `NetPlay::SendToAll`, where the original sent its inputs. The port's `NetPlay`
+(`engine/netplay.cpp`) makes that the netcode's frame hook, once per tick: after tick T, before anything is drawn.
+There the server reads its clients and sets every player's input for T+1; the client sends its command, applies
+snapshots and rolls back. Between steps both poll the network about every millisecond (`gPortIdleHook`) for pings, so
+neither the tick nor the frame adds to the ping.
+
+A client runs reG2's frame loop (`port/src/frame_loop.cpp`, `gPortNetFrameLoop`), as single player does: ticks at the
+game's rate, frames at the FRAME LIMIT, each drawn between the last two ticks (`port/src/interpolation.cpp`), SHOW FPS.
+The step is the tick and the hook together, so a draw only ever sees the state after a hook: the interpolation goes
+from what the frames before showed (the state before the tick, after the last hook's blend) to the state after this
+one's rollback and blend, and a correction is spread over the frames of a tick. A server and a replay run the
+original's frame path in `winmain.cpp` (a step, then a frame): a server draws nothing, a replay runs as fast as it can.
 
 ### The server
 
@@ -171,7 +178,7 @@ command, applies snapshots and rolls back. Between frames both poll the network 
 - **Prediction** (`engine/rollback.cpp`): the client saves the game after every tick. On a snapshot of tick S it
   restores S, applies the server's state, and runs the ticks up to its own with its own inputs; other players repeat
   their last input. Everything else moves on by the game's own simulation in those ticks.
-- **The blend**: what is shown moves a part of the way to the corrected state each frame (`GTA2_NET_BLEND`, 0.2);
+- **The blend**: what is shown moves a part of the way to the corrected state each tick (`GTA2_NET_BLEND`, 0.2);
   more than 2 blocks off (a respawn, a car entered) jumps.
 - **What a client runs** (`engine/client_mode.cpp`): a client simulates what moves, not what decides. The game's own
   debug switches turn the rest off, set again every frame:
@@ -381,7 +388,7 @@ The netcode's hooks, declared in `port/src/net_hooks.hpp`; those in `Source/` ar
 | `Game.cpp` | `gPortDrawOverlay` | drawn last: the status, the round's panel, chat completion |
 | `Car.cpp`, `Char_Pool.cpp` | `PortTrafficLimit()`, `gPortSpawnPlayers` | the spawn limits times the players |
 | `port/src/options_menu.cpp` | `gPortFrontendSetup`, `gPortFrontendInput` | the network page, beside reG2's options |
-| `winmain.cpp` | `gPortNextNetworkGame`, `gPortLeaveNetworkGame` | a map change goes to the next game; a client that left goes to the network page |
+| `winmain.cpp` | `gPortNextNetworkGame`, `gPortLeaveNetworkGame`, `gPortNetFrameLoop` | a map change goes to the next game; a client that left goes to the network page; a client runs reG2's frame loop |
 | `map_0x370.cpp` | a file static in port builds | the restart zones' turn, a function's static in the original: registered from the start, so rolled back and sent |
 | `sprite.cpp` | `gPortSpriteMovedHook` | a sprite moved: the grid check (`GTA2_NET_CHECKGRID`) |
 | `port/src/game_hooks.cpp` | `gPortLeavePromptShown` | the leave prompt is up: a gamepad's A and B answer it |
@@ -414,8 +421,7 @@ mouse aim, the turret's aim, the pad's analog driving and the aim camera (`port/
 player's day and night (`day_night.cpp`) and the pause menu (`pause_menu.cpp`). AUTOSAVE, RETRY JOBS and FRENZY RESPAWN
 (`autosave.cpp`, `retry.cpp`) are for single player only, and INFINITE LIVES goes with the debug flags a network game
 clears (`InitializeGame`). Vibration is the local player's, from the ticks a client predicts (`gPortNoRumble`). A
-network game runs the original's frame path in `winmain.cpp` (a step, then a frame), without reG2's frame limit and
-interpolation.
+client runs reG2's frame loop and interpolation ("The game loop").
 
 ## Checks
 
@@ -482,7 +488,7 @@ off by default:
 | `GTA2_NET_RECORD=<file>\|off` | client | the recording's file (default `recordings/session-<n>.rec`) |
 | `GTA2_NET_REPLAYON=<frames>` | replay | the game runs on that many frames after the recording ends, nothing arriving |
 | `GTA2_NET_STATS=1` | client | the connection beside the ping, over the last second: the snapshots lost (the server sends one a tick), received per second, the ticks the game runs ahead of the newest, and the ticks resimulated per rollback |
-| `GTA2_NET_BLEND=<0..1>` | client | how far a correction is blended in each frame (0.2; 1: at once) |
+| `GTA2_NET_BLEND=<0..1>` | client | how far a correction is blended in each tick (0.2; 1: at once) |
 | `GTA2_NET_COMPARE=1` | client | the comparison check |
 | `GTA2_NET_DIVERGE=<tick>[:<ticks>]` | client | the divergence check |
 | `GTA2_NET_CORRLOG=1` | client | corrections over half a block or 45 degrees |
@@ -535,8 +541,10 @@ own (`single`) and rollback in scenes with explosions (`explode`).
 
 ## Open
 
-- **reG2's frame loop in a network game**: steps and frames go the original's way (a step, then a frame), so no frame
-  limit above 30, no interpolation and no SHOW FPS. Interpolating would need the netcode's frame hook on reG2's steps.
+- **A server's spawn area is its own screen's**: the bounds where it spawns and removes traffic and peds come from its
+  cameras' screen size and ZOOM, widened by each client's lead, not from each client's screen. A widescreen or
+  zoomed-out client can see cars and peds appear at its sides. Next: the client's screen size and zoom in its hello,
+  applied to that player's cameras on the server.
 - **Typing on the network page with a gamepad**: the address and name take the keyboard only.
 - **Other players at car doors**: most of the remaining large corrections of other players are with the server at a
   door. Next: a remote player the server has at a door put there at once instead of walked there by its predicted

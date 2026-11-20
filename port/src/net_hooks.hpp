@@ -19,6 +19,9 @@ extern void (*gPortSpriteMovedHook)(Sprite*);
 // While the game waits for its next step: the netcode's polling, so a ping is answered at once and neither a step nor
 // a frame wait adds to the round trip
 extern void (*gPortIdleHook)();
+// A network client's: reG2's frame loop runs its game (winmain.cpp), the netcode's frame hook after each step and
+// frames drawn in between; a server and a replay run the original's, a step then a frame
+extern bool gPortNetFrameLoop;
 
 // No audio device for the game: sound_obj then doesn't run at all. A network server's: nobody hears it, and its
 // listener follows slot 0's camera, whose ped (once that player left) can be any ped's, in any car

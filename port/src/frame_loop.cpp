@@ -6,6 +6,7 @@
 #include "Player.hpp"
 #include "Ped.hpp"
 #include "interpolation.hpp"
+#include "net_hooks.hpp"
 #include "settings.hpp"
 #include "sprite.hpp"
 #include "view.hpp"
@@ -72,6 +73,8 @@ namespace
 const u32 kMaxStepsPerDraw = 4;
 // Nearer than this, the next step or frame is waited for by polling the message loop.
 const unsigned long long kMinDelayNs = 200000;
+// The longest wait while the netcode polls the network from the message loop (gPortIdleHook), so pings stay timed.
+const unsigned long long kMaxIdleDelayNs = 1000000;
 
 bool sStarted;
 unsigned long long sLast;
@@ -280,7 +283,8 @@ Action Next(s32 stepMs, bool forceStep, bool noDraw)
     }
     if (wake > now + kMinDelayNs)
     {
-        port_DelayNs(wake - now - kMinDelayNs / 2);
+        const unsigned long long delay = wake - now - kMinDelayNs / 2;
+        port_DelayNs(gPortIdleHook && delay > kMaxIdleDelayNs ? kMaxIdleDelayNs : delay);
     }
     return kIdle;
 }

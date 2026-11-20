@@ -119,6 +119,7 @@ void StartClientGame(const net::engine::NetworkGame& game)
     net::engine::StartNetworkGame(game);
     gTickMs = game.tickMs;
     net::engine::SetFrameHook(OnFrame, NULL);
+    gPortNetFrameLoop = true; // frames at the display's rate, interpolated between the ticks
 }
 
 net::ClientConfig gMenuConfig; // the command line's client options (--name, --lag...), for a join from the frontend
@@ -141,6 +142,7 @@ int LeaveNetworkGame()
     gClient = NULL;
     gPortIdleHook = NULL;
     gPortDrawOverlay = NULL;
+    gPortNetFrameLoop = false;
     gTickSet = false;
     PortRand::SetSoundSeparate(false);
     PortRand::SetParticleSeparate(false);
