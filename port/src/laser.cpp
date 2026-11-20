@@ -155,10 +155,10 @@ f32 Trace(Ped* pPed, Fix16 x, Fix16 y, Fix16 z, Ang16 aim, bool effects)
     return (i + 1) * 0.1f;
 }
 
-// The beam across its width: a bright core in a red glow, premultiplied for additive drawing; its alpha covers
+// The beam across its width: a white-hot core in a red glow, premultiplied for additive drawing; its alpha covers
 // what is under the beam, so that it stays red on a bright ground.
 const s32 kTexW = 2;
-const s32 kTexH = 16;
+const s32 kTexH = 32;
 u32 sTexture[kTexW * kTexH];
 
 void MakeTexture()
@@ -167,13 +167,14 @@ void MakeTexture()
     {
         const f32 d = fabsf((v + 0.5f) / kTexH - 0.5f) * 2.0f;
         const f32 glow = (1.0f - d) * (1.0f - d);
-        const f32 core = d < 0.15f ? 1.0f : (d < 0.35f ? (0.35f - d) / 0.2f : 0.0f);
-        const u32 r = static_cast<u32>(fminf(255.0f, 230.0f * glow + 255.0f * core));
-        const u32 g = static_cast<u32>(fminf(255.0f, 4.0f * glow + 40.0f * core));
-        const u32 b = static_cast<u32>(fminf(255.0f, 4.0f * glow + 34.0f * core));
+        const f32 core = d < 0.08f ? 1.0f : (d < 0.28f ? (0.28f - d) / 0.2f : 0.0f);
+        const u32 r = static_cast<u32>(fminf(255.0f, 255.0f * glow + 255.0f * core));
+        const u32 g = static_cast<u32>(fminf(255.0f, 10.0f * glow + 235.0f * core * core));
+        const u32 b = static_cast<u32>(fminf(255.0f, 10.0f * glow + 225.0f * core * core));
+        const u32 a = static_cast<u32>(fminf(255.0f, 340.0f * glow + 255.0f * core));
         for (s32 u = 0; u < kTexW; u++)
         {
-            sTexture[v * kTexW + u] = r | g << 8 | b << 16 | static_cast<u32>(fminf(255.0f, 300.0f * glow)) << 24;
+            sTexture[v * kTexW + u] = r | g << 8 | b << 16 | a << 24;
         }
     }
 }
@@ -329,8 +330,8 @@ void DrawLayer(s32 layer)
         {
             continue;
         }
-        // Six of the game's texels wide (a block is 64), as many screen pixels as they cover.
-        const f32 half = fmaxf((ex - ax) * 3.0f / 64.0f, 1.5f);
+        // Twelve of the game's texels wide (a block is 64), as many screen pixels as they cover.
+        const f32 half = fmaxf((ex - ax) * 6.0f / 64.0f, 3.0f);
         const f32 nx = -(by - ay) / len * half;
         const f32 ny = (bx - ax) / len * half;
         const f32 sx[4] = {ax + nx, bx + nx, bx - nx, ax - nx};
