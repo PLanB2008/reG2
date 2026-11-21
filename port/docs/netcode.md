@@ -55,8 +55,8 @@ a join is turned away otherwise, with what differs on the network page (and prin
 
 On a LAN nobody forwards anything: the others join at the host's LAN address (`ip addr`, `ipconfig`: 192.168.x.y), the
 host's firewall still letting UDP 27920 in. A player whose name is taken, empty or longer than 15 characters plays under
-one the server gives ("PLAYER 2"). A server that is stopped and started again starts a new game: its players go back to
-the network page and join again.
+one the server gives ("PLAYER 2"). A server that ends (its window closed, Ctrl-C, a stop signal) tells its players, who go back to the network page
+with "the server closed"; one started again starts a new game, which they join again.
 
 ## Playing
 

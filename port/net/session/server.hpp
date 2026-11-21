@@ -43,6 +43,7 @@ class Server
     bool Start(const ServerConfig& config, std::string* error);
     void Frame();
     void Idle(); // between frames: a ping answered at once, the rest kept for the frame
+    void Shutdown(); // the server ends: its clients told so (else they wait for the timeout, then try to reconnect)
 
   private:
     struct Slot

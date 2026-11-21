@@ -47,12 +47,16 @@ void OnFrame(void*)
 }
 
 // A client that quits, or is stopped, leaves the server at once: else its slot stays taken until the server's timeout
-// (5-10 s), and a player joining meanwhile finds the server full
+// (5-10 s), and a player joining meanwhile finds the server full. A server that ends tells its clients
 void LeaveServer()
 {
     if (gClient)
     {
         gClient->Leave();
+    }
+    if (gServer)
+    {
+        gServer->Shutdown();
     }
 }
 
@@ -252,7 +256,13 @@ int NetMain_Init(std::vector<std::string>& args)
         }
         net::engine::StartNetworkGame(sc.game);
         gTickMs = sc.game.tickMs;
-        gPortIdleHook = [] { gServer->Idle(); net::engine::IdleWait(); }; // pings answered at once
+        gPortIdleHook = [] { StopIfRequested(); gServer->Idle(); net::engine::IdleWait(); }; // pings answered at once
+        atexit(LeaveServer);
+        signal(SIGTERM, OnStopSignal);
+        signal(SIGINT, OnStopSignal);
+#if !defined(_WIN32)
+        signal(SIGHUP, OnStopSignal);
+#endif
     }
     else if (!o.replay.empty())
     {

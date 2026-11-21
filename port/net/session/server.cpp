@@ -4,11 +4,13 @@
 #include "server.hpp"
 #include "env.hpp"
 #include <algorithm>
+#include <chrono>
 #include <math.h>
 #include <random>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <thread>
 
 namespace
 {
@@ -877,6 +879,40 @@ void net::Server::ChangeToMap(int map)
     // The round flow showed the results already: half a second for the clients to hear of it. Without it (an arena's
     // rotation) the pause shows the winner
     engine::ChangeMap(m.gmp, m.sty, m.scr, mConfig.rules.enabled ? 15 : 90);
+}
+
+void net::Server::Shutdown()
+{
+    if (!mTransport)
+    {
+        return;
+    }
+    BitWriter w;
+    Reject reject;
+    reject.reason = "the server closed";
+    WriteReject(w, reject);
+    int left = 0;
+    for (const Slot& s : mSlots)
+    {
+        if (s.used && s.peer != kArenaPeer)
+        {
+            mTransport->Send(s.peer, kChannelReliable, w.Data().data(), w.ByteCount(), true);
+            mTransport->Disconnect(s.peer); // once the reject is through: an abrupt one drops what came with it
+            left++;
+        }
+    }
+    mTransport->Flush();
+    TransportEvent e;
+    for (const auto until = std::chrono::steady_clock::now() + std::chrono::milliseconds(500); left > 0 && std::chrono::steady_clock::now() < until;)
+    {
+        while (left > 0 && mTransport->Poll(e))
+        {
+            left -= e.type == TransportEvent::kDisconnect;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    mTransport.reset();
+    printf("net: server closed\n");
 }
 
 void net::Server::StartOver()
