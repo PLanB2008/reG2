@@ -52,6 +52,7 @@ void net::Client::Welcomed(const Welcome& welcome, engine::NetworkGame* pGame)
     pGame->tickMs = welcome.tickMs;
     mTickMs = welcome.tickMs ? welcome.tickMs : 33;
     mGameType = welcome.gameType;
+    mFragLimit = (int)welcome.fragLimit;
     pGame->police = welcome.police;
     pGame->gmp = welcome.gmp;
     pGame->sty = welcome.sty;
@@ -1212,6 +1213,28 @@ void net::Client::Rejoined(const Welcome& welcome)
     }
 }
 
+// While a round is played: its clock and goal ("9:42   FIRST TO 10"), a line of its own; empty otherwise
+std::string net::Client::RoundCorner() const
+{
+    const engine::Round& r = engine::CurrentRound();
+    if (r.phase != kPhasePlaying || !mConnected || mLeft)
+    {
+        return "";
+    }
+    std::string line;
+    if (r.secondsLeft > 0)
+    {
+        char clock[16];
+        snprintf(clock, sizeof(clock), "%d:%02d", r.secondsLeft / 60, r.secondsLeft % 60);
+        line = clock;
+    }
+    if (mFragLimit > 0 && mGameType != 3)
+    {
+        line += (line.empty() ? "" : "   ") + std::string("FIRST TO ") + (mGameType == 2 ? "$" : "") + std::to_string(mFragLimit);
+    }
+    return line.empty() ? line : line + "\n";
+}
+
 void net::Client::ShowStatus()
 {
     const long long now = NowMs();
@@ -1249,7 +1272,7 @@ void net::Client::ShowStatus()
     {
         centre = "Connection interrupted";
     }
-    engine::SetNetStatus(mConnected && mPingShown ? mLinkShown + "ping " + std::to_string(mPingShown) : "", centre);
+    engine::SetNetStatus(RoundCorner() + (mConnected && mPingShown ? mLinkShown + "ping " + std::to_string(mPingShown) : ""), centre);
 }
 
 void net::Client::SendLeave(const std::string& why)
@@ -1511,7 +1534,7 @@ void net::Client::ShowRound()
         uint32_t b = 0;
         if (engine::PlayerOf(e, &p, &b))
         {
-            rows.push_back(ScoreRow{p, engine::PlayerFrags(e), engine::PlayerDeaths(e), engine::TagSeconds(p)});
+            rows.push_back(ScoreRow{p, engine::PlayerFrags(e), engine::PlayerDeaths(e), engine::TagSeconds(p), engine::PlayerPoints(e)});
         }
     }
     // The results show the scores the round ended with: the game goes on meanwhile, and so do the frags
@@ -1572,13 +1595,17 @@ void net::Client::ShowRound()
         lines.push_back("Round " + std::to_string(r.number - 1) + ": " + (r.winner ? engine::PlayerName(r.winner - 1) + " wins" : std::string("a draw")));
         std::vector<ScoreRow> board = mResultsRows;
         const bool tag = mGameType == 3; // the longest "it" wins
-        std::sort(board.begin(), board.end(), [tag](const ScoreRow& a, const ScoreRow& b) { return tag ? a.tag > b.tag : a.frags > b.frags; });
+        const bool points = mGameType == 2; // the most money wins
+        std::sort(board.begin(), board.end(), [tag, points](const ScoreRow& a, const ScoreRow& b) {
+            return tag ? a.tag > b.tag : points ? a.points > b.points : a.frags > b.frags;
+        });
         lines.push_back("");
-        lines.push_back(tag ? "Player\tIt (s)\tFrags\tDeaths" : "Player\tFrags\tDeaths"); // tables: the overlay lines up rows with tabs
+        // tables: the overlay lines up rows with tabs
+        lines.push_back(tag ? "Player\tIt (s)\tFrags\tDeaths" : points ? "Player\tPoints\tFrags\tDeaths" : "Player\tFrags\tDeaths");
         for (const ScoreRow& row : board)
         {
-            lines.push_back(engine::PlayerName(row.slot) + "\t" + (tag ? std::to_string(row.tag) + "\t" : "") + std::to_string(row.frags) + "\t" +
-                            std::to_string(row.deaths));
+            const std::string first = tag ? std::to_string(row.tag) + "\t" : points ? std::to_string(row.points) + "\t" : "";
+            lines.push_back(engine::PlayerName(row.slot) + "\t" + first + std::to_string(row.frags) + "\t" + std::to_string(row.deaths));
         }
         lines.push_back("");
         lines.push_back("The next round in " + std::to_string(r.phaseLeft) + " s");

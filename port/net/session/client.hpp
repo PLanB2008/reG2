@@ -156,6 +156,7 @@ class Client
     void WatchChat(); // a chat line typed to its end that starts with '/' goes as a command
     void KeepChatLines(); // the lines players ended, kept over the frame for a while (the game shows them while typed)
     void ShowRound(); // the warmup, countdown, results and an open vote over the frame
+    std::string RoundCorner() const;
     void BotRound(); // a bot readies up and votes
     uint32_t BotMapChoice() const; // the map a bot votes for in the results (1-based)
     bool TakePong(const TransportEvent& e); // a pong (the ping's round trip measured): not for the frame
@@ -167,6 +168,7 @@ class Client
     int mSlot = 0;
     int mTickMs = 33;
     int mGameType = 1; // the welcome's: 1 frags, 2 points, 3 tag
+    int mFragLimit = 0; // the welcome's: frags, or a points game's money (0: none)
     uint32_t mFrame = 0;
 
     // Snapshots by tick % kRing: the baselines
@@ -226,7 +228,7 @@ class Client
     std::vector<std::string> mMaps; // what a map vote chooses from (the welcome's)
     struct ScoreRow
     {
-        int slot, frags, deaths, tag; // tag: the seconds "it" in a tag game
+        int slot, frags, deaths, tag, points; // tag: the seconds "it" in a tag game
     };
     std::vector<ScoreRow> mResultsRows; // the scores as the results began
     bool mWasChatting = false;
