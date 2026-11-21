@@ -474,7 +474,7 @@ int port_DefaultAltBinding(int control)
 
 bool port_AltKeyInGame(DWORD dik)
 {
-    if (!port_GameRunning() || port_QuitMessageShown())
+    if (!port_GameRunning() || port_QuitMessageShown() || port_ChatTyping())
     {
         return false;
     }
@@ -709,6 +709,7 @@ void port_UpdatePad()
         sMenuBlocked = anyDown;
     }
     const bool quitShown = inGame && port_QuitMessageShown();
+    const bool chatting = inGame && port_ChatTyping(); // W, A, S, D and F type: they are no controls' second keys then
     const int twin = inGame && !quitShown ? port_TwinStick() : 0;
     sAccelHeld = CodeDown(11) && (sAccelHeld || port_Driving() || port_EnteringCar());
     // The vehicle's triggers, unless FORWARD or BACKWARD has a pad input of the player's choice.
@@ -736,7 +737,7 @@ void port_UpdatePad()
         const bool move = twin == 1 && i < 4;
         const bool pad = (car ? CarPadDown(i, code, l3Free) : CodeDown(code) && !(twin == 1 && (code == 11 || (code == 10 && lt)))) &&
             !(rbFires && code == 5);
-        const bool down = !move && (pad || AltDown(i) || (twin == 1 && i == 4 && CodeDown(11) && !sAccelHeld) || (rbFires && i == 4 && CodeDown(5)));
+        const bool down = !move && (pad || (AltDown(i) && !chatting) || (twin == 1 && i == 4 && CodeDown(11) && !sAccelHeld) || (rbFires && i == 4 && CodeDown(5)));
         Press(i, inGame && !quitShown && down);
     }
     if (inGame)
