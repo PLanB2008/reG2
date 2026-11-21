@@ -149,6 +149,7 @@ class Client
     void LeaveToMenu(const char* why); // off the server, and the game back to the frontend's network page
     void SendLeave(const std::string& why); // tells the server why we go (before Leave)
     void ShowStatus(); // the ping, and an outage, over the frame
+    std::string NoAnswer() const; // a join's error when the server never answered
     // The round flow (session/round_flow.cpp), a client's part: its commands to the server, its keys, the panel
     void SendCommand(const std::string& text);
     void RoundKeys(uint32_t& local, uint32_t key); // F1 ready in the warmup, Y / N on an open vote

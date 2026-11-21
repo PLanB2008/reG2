@@ -92,6 +92,13 @@ bool net::Client::BeginConnect(const ClientConfig& config, std::string* error)
     return true;
 }
 
+// With what to check: the port is written out, as a forgotten ":port" is a common cause
+std::string net::Client::NoAnswer() const
+{
+    const std::string port = std::to_string(mConfig.port);
+    return "no answer from " + mConfig.host + ":" + port + ": is the server running, is UDP " + port + " open?";
+}
+
 // The connection, our hello, the server's welcome: 1 welcomed (the game to start is in <pGame>), 0 not yet, -1 failed
 int net::Client::PollConnect(engine::NetworkGame* pGame, std::string* error)
 {
@@ -100,7 +107,7 @@ int net::Client::PollConnect(engine::NetworkGame* pGame, std::string* error)
     {
         if (e.type == TransportEvent::kDisconnect)
         {
-            *error = mHelloSent ? "the server closed the connection" : "no answer from " + mConfig.host;
+            *error = mHelloSent ? "the server closed the connection" : NoAnswer();
             return -1;
         }
         if (e.type == TransportEvent::kConnect && !mHelloSent)
@@ -123,7 +130,7 @@ int net::Client::PollConnect(engine::NetworkGame* pGame, std::string* error)
     }
     if (NowMs() - mJoinWaitMs > 6000)
     {
-        *error = mHelloSent ? "the server didn't welcome us" : "no answer from " + mConfig.host;
+        *error = mHelloSent ? "the server didn't welcome us" : NoAnswer();
         return -1;
     }
     return 0;
