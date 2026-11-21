@@ -93,6 +93,13 @@ void Gather(Pass& a)
     std::vector<Car*> carriages; // a train's wagons aren't in the pool's list
     TrainCars(carriages);
     a.liveCars.insert(carriages.begin(), carriages.end());
+    for (Car* c = gCar_BC_Pool->mPool.mpPrev; c; c = c->mpNext)
+    {
+        if (Car* trailer = TowedTrailer(c)) // nor a towed trailer (Car::AttachTrailer)
+        {
+            a.liveCars.insert(trailer);
+        }
+    }
     for (Ped* p = gPedPool->mPool.mpPrev; p; p = p->mpNext)
     {
         a.livePeds.insert(p);
@@ -551,6 +558,14 @@ void net::engine::ApplyCarsAndPeds(const Snapshot& snap)
         }
     }
     ApplyGroups(snap);
+    for (const EntityState& e : snap.entities) // once both cars are here
+    {
+        Car* cab = e.type == kEntityCar && !EntityAge(e) ? ReplicaCar(e.id) : NULL;
+        if (cab && !cab->IsTrainModel())
+        {
+            ApplyTrailer(cab, e);
+        }
+    }
     RemoveUnsent(a, snap);
 }
 

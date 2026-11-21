@@ -47,7 +47,8 @@ net::Schema BuildSchema()
     net::EntityType car = {"car", {{"x", 22, false}, {"y", 22, false}, {"z", 17, false}, {"rot", 11, false}, {"model", 8, false},
                                    {"driver", 2, false}, {"damage", 16, false}, {"areas", 32, false}, {"wrecked", 1, false},
                                    {"lights", 8, false}, {"flash", 8, false}, {"horn", 8, false}, {"horn_cooldown", 8, false}, {"remap", 16, true},
-                                   {"turret", 11, false}, {"flags", 16, false}}};
+                                   {"turret", 11, false}, {"trailer", 25, false},
+                                   {"flags", 16, false}}};
     CarPhysicsFields(car.fields);
     CarAiFields(car.fields);
     net::EntityType ped = {"ped", {{"x", 22, false}, {"y", 22, false}, {"z", 17, false}, {"rot", 11, false}, {"remap", 8, false},

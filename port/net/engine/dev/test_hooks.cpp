@@ -52,6 +52,12 @@ void net::engine::DebugCar(int player, int model)
         scale.mValue = 0x4000;
         Fix16 off;
         off.FromInt(2);
+        // A truck cab comes with a container trailer (CarManager::SpawnCabAndTrailer, as the map's parked trucks)
+        if (model == car_model_enum::TRUKCAB1 || model == car_model_enum::TRUKCAB2)
+        {
+            gCarManager_6C->SpawnCabAndTrailer(ped->get_cam_x() + off, ped->get_cam_y(), 0, model, car_model_enum::TRUKCONT);
+            return;
+        }
         Car* car = gCarManager_6C->SpawnCarAt(ped->get_cam_x() + off, ped->get_cam_y(), ped->get_cam_z(), 0, model, scale);
         if (car)
         {

@@ -119,6 +119,7 @@ void net::engine::CaptureCar(Car* c, Snapshot& out)
     e.f[kCarRemap] = c->mCarSprite->mPaletteType == palette_types_enum::car_remaps_3 ? c->mCarSprite->get_remap() : -1;
     const AttachedSprite* turret = RoofTurret(c);
     e.f[kCarTurret] = turret ? turret->mOffsetRot.rValue : 0;
+    e.f[kCarTrailer] = CarRef(TowedTrailer(c));
     e.f[kCarFlags] = c->mFlags & kCarFlagsSent;
     CaptureCarAi(c, e);
     if (const CarPhysics* m = c->mPhysics)
@@ -290,5 +291,30 @@ void net::engine::DebugCarDiff(Car* car, const EntityState& e, uint32_t tick)
     if (n)
     {
         printf("net: tick %u, our car predicted (here/server):%s\n", tick, line);
+    }
+}
+
+Car* net::engine::TowedTrailer(const Car* cab)
+{
+    return cab->mpTrailer && cab->mpTrailer->mTruckCab == cab ? cab->mpTrailer->mTrailerCar : NULL;
+}
+
+// Hitched or not as the server has it: a cab hitches a trailer it backs onto (Car::TryHitchTrailer), on each side by its
+// own prediction
+void net::engine::ApplyTrailer(Car* cab, const EntityState& e)
+{
+    Car* want = RefCar(e.f[kCarTrailer]);
+    Car* have = TowedTrailer(cab);
+    if (want == have)
+    {
+        return;
+    }
+    if (have)
+    {
+        cab->DetachTrailer();
+    }
+    if (want && !want->mpTrailer && want != cab)
+    {
+        cab->AttachTrailer(want);
     }
 }

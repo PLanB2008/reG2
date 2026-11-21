@@ -248,6 +248,10 @@ void net::engine::Capture(Snapshot& out)
         if (c->mCarSprite)
         {
             CaptureCar(c, out);
+            if (Car* trailer = TowedTrailer(c)) // off the pool's list while towed (Car::AttachTrailer)
+            {
+                CaptureCar(trailer, out);
+            }
             if (c->mDriver && !IsSpareDriver(c->mDriver))
             {
                 driving[c->mDriver] = c;

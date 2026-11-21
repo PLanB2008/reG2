@@ -122,6 +122,7 @@ enum CarField
     kCarHornCooldown,
     kCarRemap, // its colour (the sprite's remap): a respray, or a car made here, had another
     kCarTurret, // its roof turret's angle on the car (a tank's cannon, a gun jeep's gun, a fire truck's water cannon)
+    kCarTrailer, // the trailer a cab tows (CarRef; the trailer, off the pool's list then, is sent as a car of its own)
     kCarFlags, // the behaviour bits of Car::mFlags (kCarFlagsSent: proofs, alarm, no passengers...), the level start's
     kCarPhysics, // then its whole CarPhysics, member by member (cars.cpp; all 0 without physics), then its AI (car_ai.cpp)
 };
@@ -261,6 +262,8 @@ void SeenByAll(); // every ped and car counts as seen: no removal off screen on 
 void CarPhysicsFields(std::vector<FieldDesc>& out);
 void CaptureCar(Car* c, Snapshot& out);
 bool CarHasPhysics(const EntityState& e); // a car entity's physics is there (awake): not all zeros
+Car* TowedTrailer(const Car* cab); // the trailer a cab tows (Car::mpTrailer), NULL: none
+void ApplyTrailer(Car* cab, const EntityState& e); // hitched or not as the server has it
 void SetCarPhysics(Car* car, const EntityState& e); // the physics the snapshot has for it, after MoveCar
 // Whether it has exploded (or is burning out); its state as the server has it: an explosion the server had is carried
 // out (the game's own), damage, dents, lights, horn and colour are set. False: it is a wreck here and not there (it has
