@@ -5,7 +5,9 @@
 #include "members.hpp"
 #include "Source/Car.hpp"
 #include "Source/CarPhysics.hpp"
+#include "Source/Explosion.hpp"
 #include "Source/Object_3C.hpp"
+#include "Source/Object_5C.hpp"
 #include "Source/SpriteGrid.hpp"
 #include "Source/explosion_type.hpp"
 #include "Source/gtx_0x106C.hpp"
@@ -101,6 +103,47 @@ AttachedSprite* RoofTurret(Car* c)
 }
 } // namespace
 
+namespace
+{
+// A wreck's fire (Car::SpawnFire's, explosion type 4, burning until a fire engine puts it out), or NULL; one going
+// out has its timer at 2 or less (SpriteList::ExpireAttachedFlames)
+Explosion* WreckFire(const Car* c)
+{
+    for (AttachedSprite* a = c->mAttachments.mP18; a; a = a->mpNext)
+    {
+        const s32 type = a->mpSprite->GetType();
+        Object* o = a->mpSprite->mObject2CPtr;
+        if ((type == sprite_types_enum::object_1 || type == sprite_types_enum::code_obj1_4 || type == sprite_types_enum::map_obj_5) && o &&
+            o->IsFireExplosion() && o->mpAny.pExplosion && o->mpAny.pExplosion->mType == explosion_type::car_fire_4 &&
+            o->mpAny.pExplosion->mTimer > 2)
+        {
+            return o->mpAny.pExplosion;
+        }
+    }
+    return NULL;
+}
+
+// The server's wreck burns only where Car::SpawnFire could send a fire engine to it, and a client sends none: its wreck
+// burns as the server's does, lit as SpawnFire lights it
+void SetWreckFire(Car* car, bool burns)
+{
+    Explosion* fire = WreckFire(car);
+    if (burns && !fire)
+    {
+        Object* o = gObject_5C->CreateExplosion(car->mCarSprite->mXy.x, car->mCarSprite->mXy.y, 4, Ang16(0), explosion_type::car_fire_4,
+                                                car->mExploderPedId);
+        if (o)
+        {
+            car->mCarSprite->AttachSprite(o->mSprite, Fix16(0), Fix16(0), Ang16(0));
+        }
+    }
+    else if (!burns && fire)
+    {
+        car->mAttachments.ExpireAttachedFlames();
+    }
+}
+} // namespace
+
 void net::engine::CaptureCar(Car* c, Snapshot& out)
 {
     EntityState e = Entity(kCarIdBase + (uint32_t)c->mCarId, kEntityCar);
@@ -109,7 +152,7 @@ void net::engine::CaptureCar(Car* c, Snapshot& out)
     e.f[kCarDriver] = !c->mDriver ? kDriverNone : IsSpareDriver(c->mDriver) ? kDriverTraffic : kDriverPed;
     e.f[kCarDamage] = c->mDamage;
     e.f[kCarAreas] = (int32_t)c->mDamagedAreas.m_var;
-    e.f[kCarWrecked] = IsWrecked(c);
+    e.f[kCarWrecked] = (IsWrecked(c) ? kCarWreck : 0) | (WreckFire(c) ? kCarWreckBurns : 0);
     e.f[kCarLights] = (u8)c->mLightFlags;
     e.f[kCarFlash] = (u8)c->mFlashPhaseCounter;
     e.f[kCarHorn] = c->mHorn;
@@ -212,7 +255,7 @@ static void MakeWreck(Car* car)
 
 bool net::engine::SetCarState(Car* car, const EntityState& e, bool fresh)
 {
-    const bool there = e.f[kCarWrecked] != 0, here = IsWrecked(car);
+    const bool there = (e.f[kCarWrecked] & kCarWreck) != 0, here = IsWrecked(car);
     CarStateDiffs& d = gCarStateDiffs;
     d.cars++;
     d.wreckHereOnly += here && !there;
@@ -240,7 +283,12 @@ bool net::engine::SetCarState(Car* car, const EntityState& e, bool fresh)
         {
             ExplodeAsServer(car);
         }
+        SetWreckFire(car, (e.f[kCarWrecked] & kCarWreckBurns) != 0);
         return true;
+    }
+    if (there)
+    {
+        SetWreckFire(car, (e.f[kCarWrecked] & kCarWreckBurns) != 0);
     }
     if (!there && here)
     {

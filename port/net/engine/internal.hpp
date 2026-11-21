@@ -115,7 +115,7 @@ enum CarField
     kCarDriver, // kDriverNone, kDriverTraffic (the car manager's shared spare driver), kDriverPed (sent as a ped entity)
     kCarDamage, // Car::mDamage (32000 and up: exploded), the server's
     kCarAreas, // its dented areas (Car::mDamagedAreas)
-    kCarWrecked, // exploded or burning out (the wreck countdown running, or a wreck)
+    kCarWrecked, // kCarWreck | kCarWreckBurns
     kCarLights, // Car::mLightFlags (brake, head, emergency lights...), mFlashPhaseCounter, mHorn, mHornCooldown
     kCarFlash,
     kCarHorn,
@@ -125,6 +125,11 @@ enum CarField
     kCarTrailer, // the trailer a cab tows (CarRef; the trailer, off the pool's list then, is sent as a car of its own)
     kCarFlags, // the behaviour bits of Car::mFlags (kCarFlagsSent: proofs, alarm, no passengers...), the level start's
     kCarPhysics, // then its whole CarPhysics, member by member (cars.cpp; all 0 without physics), then its AI (car_ai.cpp)
+};
+enum CarWrecked
+{
+    kCarWreck = 1, // exploded or burning out (the wreck countdown running, or a wreck)
+    kCarWreckBurns = 2, // its wreck's fire (Car::SpawnFire's), which burns only where a fire engine was sent
 };
 enum CarDriver
 {

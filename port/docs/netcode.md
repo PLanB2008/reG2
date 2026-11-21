@@ -258,7 +258,7 @@ original's frame path in `winmain.cpp` (a step, then a frame): a server draws no
   | players, cars, peds, objects (movement, physics, collisions, weapons) | runs | the prediction |
   | traffic and ambient ped spawning, despawning | off | only the server creates and removes entities |
   | the map script's level start | its look and sound only | its shading level, ambient light and sounds, and the cars it puts on car transporters (`gPortScriptCommandRuns`); the rest is stepped over |
-  | scripts after the level start, police, ambulance, fire engines, buses | off | they create entities; the results arrive as state (the police's as the world entity's) |
+  | scripts after the level start, police, ambulance, fire engines, buses | off | they create entities; the results arrive as state (the police's as the world entity's; a wreck burns only where the game sent a fire engine to it, `Car::SpawnFire`, so its fire is the server's) |
   | generators, the garage, emergency crews | run, idle | scripts switch generators on and park cars in the garage, the police and the ambulance send crews |
   | doors, cranes, crushers, trains, traffic lights | runs | predicted, corrected by snapshots (the lights' phase is in the world entity, each train has one of its own) |
   | particles, tile animations, lights, HUD | runs | cosmetic |
@@ -298,7 +298,7 @@ the original's.
 |---|---|
 | World (one per snapshot, `engine/world_entity.cpp`) | the game's tick counter (timers are stamped with it), the random seed and stream, the restart zones' turn, the round's state (`core/round_state.hpp`), the game's generation (a map change), the traffic lights, the tag game's fugitive and times, the map's light level (its script sets it: `MapRenderer`'s ambient, its target and step), the police's state that a client's cops, cop cars and HUD read (the highest wanted level, the strongest crew, a crew on screen, the last cop whose shot hit, and each pursuit's criminal, level, state, timer and crews) |
 | Player (`engine/players.cpp`) | place, input, health, death count and last killer, weapons and the ammo of all 28 (a car weapon the car here lacks is added to it), frags and points, the HUD's money and multiplier, power-up timers, its car, the chat line |
-| Car (`engine/cars.cpp`, `car_ai.cpp`) | place, its whole `CarPhysics` (but its two pointers), damage, lights, horn, colour, its roof turret's angle, the trailer it tows (towed trailers sent too), its proofs and alarm (`Car::mFlags`), its driver, and its AI (`CarAI`: route, speed, the cars it chases) |
+| Car (`engine/cars.cpp`, `car_ai.cpp`) | place, its whole `CarPhysics` (but its two pointers), damage, its wreck's fire, lights, horn, colour, its roof turret's angle, the trailer it tows (towed trailers sent too), its proofs and alarm (`Car::mFlags`), its driver, and its AI (`CarAI`: route, speed, the cars it chases) |
 | Ped (`engine/ped_state.cpp`) | place, and the plain values its AI runs on (objectives, targets, speeds, timers, occupation, flags, health, death cause), its references (targets, group) and its car and seat |
 | Pickup (`engine/pickups.cpp`) | model and place; roadblock barriers too (they are off the object pool's list), and the car weapons' mines and oil |
 | Train (`engine/trains.cpp`, every train in every snapshot) | its lead's place, speed and driver (none, the traffic driver, a ped, a player), its carriages' car ids (the client's train of the same index takes them), which end leads (`Train::ReassignTrainHead`), its state, stop phase and timers, the station it heads for and that station's state, each carriage's damage and explosion timer |
@@ -403,8 +403,9 @@ minutes each, and pistols on foot at 45 ms:
 | The client's own footsteps, pistols on foot | 306 / 600 | 309 / 315 |
 | Impacts, links | 1032 / 1093 | 838 / 862 |
 
-Car fires stay over: 112 / 441 before, 77 / 393 after. They are fires only the client has (car fires on wrecks where
-the server has none), heard where they are seen: a difference of the world, in "Open".
+Car fires were over (112 / 441, then 77 / 393): wrecks burning on the client only. A wreck burns only where the game
+sends it a fire engine (`Car::SpawnFire`), which a client never does, and the client lit them all; the car entity now
+carries the server's wreck fire (`kCarWreckBurns`). With it, LAN 50 / 672 before, 50 / 76 after; 45 ms 30 / 127, 29 / 34.
 
 ### Wire format
 
@@ -556,7 +557,6 @@ The netcode's hooks, declared in `port/src/net_hooks.hpp`; those in `Source/` ar
 | `sound_obj.cpp` | `gPortSoundRequestsHook` | a client's sound log: what a frame asks for, and what resimulated ticks owe added to it |
 | `port/compat/src` | `gPortIdleHook`, `gPortNoAudio`, `gPortCrashHook` | polling while a frame waits (`window.cpp`), no sound on a server (`miles.cpp`), the crash report (`main.cpp`) |
 | `Ped.cpp` | `gPortKeepWantedPoints` | a client keeps the server's wanted points with its police off |
-| `Car.cpp` | `gPortNoFireEngines` | a client sends no fire engines (`bSkip_fire_engines`), and its wrecks burn all the same (`Car::SpawnFire`) |
 | `ScriptThread.cpp` | `gPortScriptCommandRuns` | a client runs the level start's look and sound commands, and steps over the rest |
 | `Car.cpp` | `gPortCarMayExplode` | a client's car the server sends blows up when a snapshot says the server's did, not on its own prediction |
 | `Car.cpp` | `Car::TryHonkHorn` | a train's lead without a driver (a player got out of a carriage that stood still) doesn't read it |
@@ -711,11 +711,6 @@ own (`single`) and rollback in scenes with explosions (`explode`).
 | A link at 300 ms (Linux, x86_64 desktop) | 12 ticks resimulated per snapshot: a rollback takes 3 ms a tick on average, 6 ms at worst, three quarters of it the 12 saves of the world (LAN: 0.6 ms); in the client's log every 300 frames |
 
 ## Open
-
-- **Car fires only a client has**: burning wrecks (explosion object type 4, a car's fire) that the server's game no
-  longer has at that place go on burning on a client, seen and heard (`GTA2_NET_SFXLOG`: 4 to 10 times the server's
-  car fire sounds near a burning car). Next: which of the client's wrecks keeps its fire (`gPortNoFireEngines`,
-  `Car::SpawnFire`) and the server's state for it.
 
 - **Typing on the network page with a gamepad**: the address and name take the keyboard only.
 - **Other players at car doors**: most of the remaining large corrections of other players are with the server at a

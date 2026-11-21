@@ -96,9 +96,6 @@ inline bool PortReactsInvulnerable(s32 invulnerability, bool player)
 // machine shows its message and plays the voice. NULL: the user's player's, as the original; in a network game the
 // server sends each player its own and a client shows only those
 extern bool (*gPortScoreBonusHook)(Player* pPlayer, s32 voice);
-// A network client's: it dispatches no fire engines (bSkip_fire_engines), yet a car turned to a wreck burns as one does
-// when a fire engine is sent to it (Car::SpawnFire)
-extern bool gPortNoFireEngines;
 // A network client's "Leave the game? Y / N" is up: a gamepad's A and B answer it as they do the game's quit message
 // (port_QuitMessageShown, compat/src/pad.cpp)
 extern bool gPortLeavePromptShown;
