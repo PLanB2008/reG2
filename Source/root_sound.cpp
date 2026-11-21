@@ -10,6 +10,14 @@ DEFINE_GLOBAL(root_sound, gRoot_sound, 0x66B038);
 MATCH_FUNC(0x40EF40)
 SoundObject* root_sound::CreateSoundObject(void* pObject, s32 objectType)
 {
+#if defined(GTA2_PORT)
+    // Port: the pool of 1000 runs out in a busy scene; that object then has no sound, which every caller
+    // already handles for skip_audio (the original read through the empty free list)
+    if (!mpFreeList)
+    {
+        return NULL;
+    }
+#endif
     SoundObject* pCurrent = PopFree();
     pCurrent->mpAny.pAny = pObject;
     pCurrent->mbStatus = false;
