@@ -3,6 +3,7 @@
 #include "client.hpp"
 #include "env.hpp"
 #include <algorithm>
+#include <ctype.h>
 #include <chrono>
 #include <math.h>
 #include <set>
@@ -1399,6 +1400,30 @@ void net::Client::ShowRound()
     engine::SetNetPanel(lines);
 }
 
+// A bot's map in the results: one of the others, picked by its slot and the frame (a vote among bots isn't always the
+// same map); map 2 for a test (GTA2_NET_BOTMAP2)
+uint32_t net::Client::BotMapChoice() const
+{
+    if (Env().botVoteMap2 || mMaps.size() < 2)
+    {
+        return mMaps.size() > 1 ? 2 : 1;
+    }
+    auto lower = [](std::string t) {
+        std::transform(t.begin(), t.end(), t.begin(), [](unsigned char c) { return (char)tolower(c); });
+        return t;
+    };
+    const std::string now = lower(mScr.substr(0, mScr.rfind('.')));
+    std::vector<uint32_t> others;
+    for (size_t m = 0; m < mMaps.size(); m++)
+    {
+        if (lower(mMaps[m]) != now)
+        {
+            others.push_back((uint32_t)m + 1);
+        }
+    }
+    return others.empty() ? 1 : others[(mSlot * 7 + mFrame) % others.size()];
+}
+
 void net::Client::BotRound()
 {
     if (!mBot || !mConnected || mFrame < mBotSentFrame + 90)
@@ -1413,7 +1438,7 @@ void net::Client::BotRound()
     }
     else if (r.phase == kPhaseResults && !mMaps.empty() && mSlot < kRoundSlots && !r.mapChoice[mSlot])
     {
-        SendCommand(mMaps.size() > 1 ? "/map 2" : "/map 1"); // the same choice for every bot: a test sees the map change
+        SendCommand("/map " + std::to_string(BotMapChoice()));
     }
     else if (r.voteKind != kVoteNone && mSlot < kRoundSlots && !((r.voteYes | r.voteNo) >> mSlot & 1))
     {

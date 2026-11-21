@@ -30,6 +30,7 @@ struct SessionEnv
     const char* testCar; // <tick>:<player>:<model>[,...]: server test cars beside players (11: a bus)
     const char* testTrain; // <tick>:<player>:<train>[,...]: server players put at the wheel of a train (train + 10: it reverses)
     const char* say; // <frame>:<command>[;...]: a client's test commands to the server ("/kick r_b")
+    bool botVoteMap2; // GTA2_NET_BOTMAP2: a bot client votes map 2 in the results (a test sees the map change)
 };
 const SessionEnv& Env();
 } // namespace net

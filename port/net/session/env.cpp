@@ -35,6 +35,7 @@ const net::SessionEnv& net::Env()
         e.stats = getenv("GTA2_NET_STATS") != NULL;
         e.replayOn = getenv("GTA2_NET_REPLAYON") ? atoi(getenv("GTA2_NET_REPLAYON")) : 0;
         e.say = getenv("GTA2_NET_SAY");
+        e.botVoteMap2 = getenv("GTA2_NET_BOTMAP2") != NULL;
         e.testWanted = getenv("GTA2_NET_TESTWANTED");
         return e;
     }();

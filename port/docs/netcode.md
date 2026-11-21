@@ -327,7 +327,8 @@ them in a test.
 | `human` | for crash hunts, what people do and the others don't, in turns: cars, buses and the tank (in, about, out at speed), trains (on at a station, a ride, off), every weapon it has, pickups, into water, its own blasts (`session/bot_human.cpp`) |
 | `nn:<file>` | a trained network (`session/bot_nn.cpp`): 62 inputs (`BotFeatures`), a choice in six groups of outputs |
 
-In the round flow bots ready up, vote for map 2 in the results and yes on any vote but their own kick.
+In the round flow bots ready up, vote for one of the other maps in the results (map 2 with `GTA2_NET_BOTMAP2=1`, for a
+test) and yes on any vote but their own kick.
 
 **Training** (`port/net/scripts/rl_bots.py`, PPO with torch): an **arena** (`--server --arena ... --ticks N`, bots
 on the server itself, `port/net/dev/arena.cpp`) plays the trainer's `remote:<port>` slots over a local socket, a
@@ -516,6 +517,7 @@ off by default:
 | `GTA2_NET_TESTCAR=<tick>:<player>:<model>,...` | server | a car beside the player (11: a bus; 63, 64: a truck cab with a container trailer); model + 1000 * n: damaged by n * 1000 (16: on fire, 26: burning) |
 | `GTA2_NET_TESTTRAIN=<tick>:<player>:<train>,...` | server | the player at the wheel of a train; train + 10: that train into reverse; train + 20: the player on the platform of the station it stops at next |
 | `GTA2_NET_TESTARM=<weapon>:<ammo>[,...]`, `GTA2_NET_TESTWANTED=<points>` | server | every player kept armed (car weapons from 15: the car it drives), or at least that wanted (600: a star) |
+| `GTA2_NET_BOTMAP2=1` | client bot | it votes map 2 in the results (net_check's rounds step) |
 | `GTA2_NET_BOTCARFIRE=1` | both | bots fire their car weapons while driving (a second in three) |
 | `GTA2_NET_BOTTURRET=1` | both | bots turn their roof turret while driving (a second in three) |
 | `GTA2_NET_SAY=<frame>:<command>;...` | client | commands sent at those frames |

@@ -140,6 +140,7 @@ class Client
     void WatchChat(); // a chat line typed to its end that starts with '/' goes as a command
     void ShowRound(); // the warmup, countdown, results and an open vote over the frame
     void BotRound(); // a bot readies up and votes
+    uint32_t BotMapChoice() const; // the map a bot votes for in the results (1-based)
     bool TakePong(const TransportEvent& e); // a pong (the ping's round trip measured): not for the frame
     void SendPing();
 
