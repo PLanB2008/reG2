@@ -2,6 +2,7 @@
 #include "Car.hpp"
 #include "Draw.hpp"
 #include "ExplodingScore_100.hpp"
+#include "Object_5C.hpp"
 #include "Frontend.hpp"
 #include "Game.hpp"
 #include "Hud.hpp"
@@ -192,6 +193,24 @@ void Trace(char kind)
         }
     }
     fprintf(spTrace, " attached %.4f", attachedOff > 0 ? sqrtf(attachedOff) : 0.0f);
+    // Each burning car's flames: the car's sprite, then each flame's sprite and its place on the car
+    for (Car* pCar = gCar_BC_Pool ? gCar_BC_Pool->mPool.mpPrev : NULL; pCar; pCar = pCar->mpNext)
+    {
+        bool any = false;
+        for (AttachedSprite* a = pCar->mCarSprite ? pCar->mAttachments.mP18 : NULL; a; a = a->mpNext)
+        {
+            Object* pObject = a->mpSprite ? a->mpSprite->AsObject2C() : NULL;
+            if (pObject && pObject->IsFlameObject())
+            {
+                if (!any)
+                {
+                    fprintf(spTrace, " flames %d", pCar->mCarSprite->mInstanceId);
+                    any = true;
+                }
+                fprintf(spTrace, " %d@%.2f,%.2f", a->mpSprite->mInstanceId, a->mOffsetX.mValue / 16384.0f, a->mOffsetY.mValue / 16384.0f);
+            }
+        }
+    }
     fputc('\n', spTrace);
 }
 
