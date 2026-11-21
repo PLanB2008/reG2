@@ -10,7 +10,13 @@ namespace net
 {
 const uint32_t kProtocolVersion = 27;
 const uint16_t kDefaultPort = 27920;
-const size_t kMaxPayload = 1372; // the largest unreliable ENet packet that isn't fragmented at mtu 1400 (port/docs/netcode.md, "Wire format")
+const size_t kMaxPayload = 1372; // the largest unreliable ENet packet at any link MTU (1428: ENet's mtu 1400)
+// The link's MTU, IP packets (--mtu, 576 to 1428): 1280 by default, the smallest of the VPNs people play LAN games over
+// (Tailscale; WireGuard 1420, Hamachi 1404). Its unreliable packets are at most MaxPayload: that less IP and UDP's 28
+// bytes and ENet's 28, so neither ENet nor IP fragments them (port/docs/netcode.md, "Wire format")
+void SetLinkMtu(int mtu);
+int LinkMtu();
+size_t MaxPayload();
 const uint8_t kChannelUnreliable = 0; // snapshots, commands
 const uint8_t kChannelReliable = 1; // join, events, chat
 const int kChannelCount = 2;

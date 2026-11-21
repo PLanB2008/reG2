@@ -423,7 +423,7 @@ bool net::Server::Fill(Slot& s, const Snapshot& fixed, std::vector<Item>& items,
         order[i] = i;
     }
     std::sort(order.begin(), order.end(), [&](size_t a, size_t b) { return items[a].priority > items[b].priority; });
-    const size_t room = mConfig.packets == 1 ? kMaxPayload : (size_t)mConfig.packets * (kMaxPayload - kPartHeader); // bytes
+    const size_t room = mConfig.packets == 1 ? MaxPayload() : (size_t)mConfig.packets * (MaxPayload() - kPartHeader); // bytes
     const ForwardedInputs forwarded = Forwarded((int)(&s - &mSlots[0]));
     size_t forwardedBits = 4;
     for (int i = 0; i < kMaxForwardSlots; i++)
@@ -488,10 +488,10 @@ bool net::Server::Fill(Slot& s, const Snapshot& fixed, std::vector<Item>& items,
     }
 }
 
-// One packet, or parts of at most kMaxPayload each: the client puts them together before reading it
+// One packet, or parts of at most MaxPayload() each: the client puts them together before reading it
 void net::Server::Transmit(const Slot& s, const BitWriter& w)
 {
-    if (w.ByteCount() > kMaxPayload)
+    if (w.ByteCount() > MaxPayload())
     {
         std::vector<uint8_t> message(w.Data().begin(), w.Data().begin() + w.ByteCount());
         std::vector<std::vector<uint8_t>> parts;

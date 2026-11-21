@@ -1,6 +1,6 @@
 // port/net transport over ENet 1.3.18 (port/net/enet), with the settings the probe found (port/docs/netcode.md,
-// "Wire format"): mtu 1400, two channels (unreliable and reliable never mixed), no packet throttle, a flush per
-// tick, and unreliable packets capped at kMaxPayload so ENet never fragments them.
+// "Wire format"): the link's MTU (--mtu), two channels (unreliable and reliable never mixed), no packet throttle, a flush per
+// tick, and unreliable packets capped at MaxPayload() so ENet never fragments them.
 #include "transport.hpp"
 #include "../core/protocol.hpp"
 #include <enet/enet.h>
@@ -26,7 +26,7 @@ class EnetTransport : public net::Transport
   public:
     explicit EnetTransport(ENetHost* host) : mHost(host)
     {
-        mHost->mtu = 1400;
+        mHost->mtu = (enet_uint32)(net::LinkMtu() - 28); // UDP's payload: the link's IP packets less IP and UDP
     }
     ~EnetTransport() override
     {
@@ -73,7 +73,7 @@ class EnetTransport : public net::Transport
 
     bool Send(uint32_t peer, uint8_t channel, const void* data, size_t size, bool reliable) override
     {
-        if (peer >= mPeers.size() || !mPeers[peer] || (!reliable && size > net::kMaxPayload))
+        if (peer >= mPeers.size() || !mPeers[peer] || (!reliable && size > net::MaxPayload()))
         {
             return false;
         }

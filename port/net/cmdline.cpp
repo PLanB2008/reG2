@@ -14,9 +14,11 @@
 //   --connect host[:port] [--name <name>] [--bot [brain]]  (brain: simple, carhop, rammer, soldier, hunter, nn:<file>)
 //   either: [--lag ms] [--jitter ms] [--loss percent] [--lossburst N] [--spike ms:on:every]  a link conditioner on this
 //           end's sends (tests): losses in bursts of N on average; ms more delay for <on> s every <every> s
+//           [--mtu N]  (the link's MTU, IP packets: 1280 by default, one that fits the VPNs; 1428 the most)
 //   --replay <file>  a client session recorded with GTA2_NET_RECORD=<file>, played back without a server
 // The map is a multiplayer map's .mmp in data/ (default downtown-6p). The game then starts that network game.
 #include "cmdline.hpp"
+#include "core/protocol.hpp"
 #include <algorithm>
 #include <ctype.h>
 #include <stdio.h>
@@ -164,6 +166,10 @@ bool net::ParseOptions(std::vector<std::string>& args, NetOptions& o)
         else if (a == "--replay" && more)
         {
             o.replay = args[++i];
+        }
+        else if (a == "--mtu" && more)
+        {
+            SetLinkMtu(atoi(args[++i].c_str()));
         }
         else if (a == "--lag" && more)
         {

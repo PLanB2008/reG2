@@ -34,7 +34,7 @@ where **Network game** joins a server (below). The command line (`port/net/cmdli
 | Round flow | `--minplayers N` (2), `--warmup s` (60), `--results s` (15), `--votes start,map,kick` (or `none`), `--rounds on\|off` |
 | Arena | `--arena brain,...` (bots on the server itself), `--ticks N` (the result printed and the server ended at tick N), `--seed N` |
 | Client | `--connect host[:port]`, `--name`, `--bot [brain]` (simple, carhop, rammer, soldier, hunter, `nn:<file>`), `--replay <file>` |
-| Either end | `--lag ms`, `--jitter ms`, `--loss %`, `--lossburst N`, `--spike ms:on:every`: a link conditioner on this end's sends (losses in bursts of N on average; ms more delay for `on` s every `every` s) |
+| Either end | `--lag ms`, `--jitter ms`, `--loss %`, `--lossburst N`, `--spike ms:on:every`: a link conditioner on this end's sends (losses in bursts of N on average; ms more delay for `on` s every `every` s); `--mtu N`: the link's MTU (IP packets, 1280 by default, which fits the VPNs people play over: Tailscale 1280, WireGuard 1420, Hamachi 1404; 1428 the most) |
 
 ## Hosting a game
 
@@ -166,7 +166,7 @@ original's frame path in `winmain.cpp` (a step, then a frame): a server draws no
   already has and its age, a few bits. New state goes by priority: the age plus one over one plus a sixth of the
   distance; an entity new to the client counts as 8 ticks old. Beyond 12 blocks (off screen with a margin), an entity
   whose new state costs more than its age gets it only every third tick. A busy area's snapshot goes in up to
-  `--packets` parts of 1372 bytes (the largest unreliable ENet packet that isn't fragmented).
+  `--packets` parts of the link's largest unfragmented packet (`--mtu` less 56 bytes: 1224 at the default 1280).
 - **Spawning** (`engine/spawn.cpp`): the game's limits on ambient traffic (16 cars) and peds (50) are for the whole
   game, and the first players' cameras took them all. A server allows the limits times its players, up to 3 players'
   worth (its traffic has drivers of its own: more ran the ped pool out). Before anything spawns, each client's camera
@@ -309,7 +309,7 @@ A little-endian bitstream (`core/bitstream.cpp`), never a copy of a struct: clie
 | `kMsgPing`, `kMsgPong` | unreliable | the client's clock, sent back at once |
 | `kMsgCommand`, `kMsgNotice` | reliable | a player's command; a line to show (a vote, a player ready) |
 
-ENet runs with `mtu` 1400, two channels (never reliable data on the snapshot channel: under loss it delayed the
+ENet runs with `mtu` the link's MTU less IP and UDP's 28 bytes (`--mtu`, 1280 by default), two channels (never reliable data on the snapshot channel: under loss it delayed the
 snapshots), its throttle off (it dropped snapshots when the round trip rose) and a flush after every tick.
 
 ## Recordings

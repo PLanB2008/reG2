@@ -35,7 +35,7 @@ class Conditioner : public net::Transport
 
     bool Send(uint32_t peer, uint8_t channel, const void* data, size_t size, bool reliable) override
     {
-        if (!reliable && size > net::kMaxPayload)
+        if (!reliable && size > net::MaxPayload())
         {
             return false; // the same refusal as the real one
         }

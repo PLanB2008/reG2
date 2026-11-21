@@ -372,7 +372,7 @@ void TestNames()
 // A message cut into parts and put together again, in any order, is the message
 void TestParts()
 {
-    for (size_t size = 1; size < 6 * net::kMaxPayload; size += 997)
+    for (size_t size = 1; size < 6 * net::MaxPayload(); size += 997)
     {
         std::vector<uint8_t> message(size);
         for (size_t i = 0; i < size; i++)
@@ -381,11 +381,11 @@ void TestParts()
         }
         std::vector<std::vector<uint8_t>> parts;
         net::WriteSnapshotParts(message, 1234, parts);
-        CHECK(parts.size() == (size + net::kMaxPayload - net::kPartHeader - 1) / (net::kMaxPayload - net::kPartHeader));
+        CHECK(parts.size() == (size + net::MaxPayload() - net::kPartHeader - 1) / (net::MaxPayload() - net::kPartHeader));
         std::vector<std::vector<uint8_t>> pieces(parts.size());
         for (size_t k = parts.size(); k-- > 0;) // backwards
         {
-            CHECK(parts[k].size() <= net::kMaxPayload);
+            CHECK(parts[k].size() <= net::MaxPayload());
             net::BitReader r(parts[k].data(), parts[k].size());
             CHECK(r.Bits(8) == net::kMsgSnapshotPart);
             uint32_t tick = 0;

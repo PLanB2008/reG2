@@ -314,10 +314,30 @@ bool net::ReadSnapshotHeader(BitReader& r, SnapshotHeader& h)
     return true;
 }
 
+namespace
+{
+int gLinkMtu = 1280;
+} // namespace
+
+void net::SetLinkMtu(int mtu)
+{
+    gLinkMtu = mtu < 576 ? 576 : mtu > 1428 ? 1428 : mtu;
+}
+
+int net::LinkMtu()
+{
+    return gLinkMtu;
+}
+
+size_t net::MaxPayload()
+{
+    return (size_t)gLinkMtu - 56;
+}
+
 void net::WriteSnapshotParts(const std::vector<uint8_t>& message, uint32_t tick, std::vector<std::vector<uint8_t>>& parts)
 {
     parts.clear();
-    const size_t piece = kMaxPayload - kPartHeader;
+    const size_t piece = MaxPayload() - kPartHeader;
     const int count = (int)((message.size() + piece - 1) / piece);
     for (int i = 0; i < count; i++)
     {

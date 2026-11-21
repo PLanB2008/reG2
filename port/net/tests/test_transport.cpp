@@ -112,9 +112,9 @@ int main()
     CHECK(WaitFor(server, client, server, net::TransportEvent::kReceive, &se));
     CHECK(se.channel == net::kChannelReliable && se.data.size() == sizeof(hello) && !memcmp(se.data.data(), hello, sizeof(hello)));
 
-    std::vector<uint8_t> snap(net::kMaxPayload, 0x5A);
+    std::vector<uint8_t> snap(net::MaxPayload(), 0x5A);
     CHECK(server->Send(clientOnServer, net::kChannelUnreliable, snap.data(), snap.size(), false));
-    std::vector<uint8_t> tooBig(net::kMaxPayload + 1, 1);
+    std::vector<uint8_t> tooBig(net::MaxPayload() + 1, 1);
     CHECK(!server->Send(clientOnServer, net::kChannelUnreliable, tooBig.data(), tooBig.size(), false)); // would fragment
     server->Flush();
     CHECK(WaitFor(server, client, client, net::TransportEvent::kReceive, &e));
