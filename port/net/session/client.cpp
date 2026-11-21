@@ -311,6 +311,41 @@ void net::Client::ReportBadEntities(const SnapshotHeader& h, const Snapshot& bas
     }
 }
 
+// The fuzz test (GTA2_NET_FUZZ): what a hostile server could send in each field, its width's every value, the edges
+// most often
+static void Fuzz(net::Snapshot& snap)
+{
+    using namespace net;
+    static uint32_t sRng = Env().fuzz;
+    auto next = [] {
+        sRng ^= sRng << 13;
+        sRng ^= sRng >> 17;
+        sRng ^= sRng << 5;
+        return sRng;
+    };
+    for (EntityState& e : snap.entities)
+    {
+        const EntityType& t = engine::NetSchema().types[e.type];
+        for (size_t i = 0; i < t.fields.size(); i++)
+        {
+            if (next() % 1000 >= Env().fuzzRate)
+            {
+                continue;
+            }
+            const FieldDesc& d = t.fields[i];
+            const uint32_t mask = d.bits >= 32 ? 0xFFFFFFFFu : (1u << d.bits) - 1;
+            const uint32_t pick = next() % 6;
+            uint32_t v = pick == 0 ? 0 : pick == 1 ? mask : pick == 2 ? mask >> 1 : pick == 3 ? (mask >> 1) + 1 : pick == 4 ? e.f[i] + 1 : next();
+            v &= mask;
+            if (d.isSigned && d.bits < 32 && (v >> (d.bits - 1)) & 1)
+            {
+                v |= ~mask; // as the reader sign-extends
+            }
+            e.f[i] = (int32_t)v;
+        }
+    }
+}
+
 void net::Client::OnSnapshot(BitReader& r)
 {
     SnapshotHeader h;
@@ -338,6 +373,11 @@ void net::Client::OnSnapshot(BitReader& r)
     {
         ReportBadEntities(h, *base, snap, check);
     }
+    if (Env().fuzz)
+    {
+        Fuzz(snap);
+    }
+    engine::SanitizeSnapshot(snap);
     snap.tick = h.tick;
     mReceived[h.tick % kRing] = snap;
     mForwarded[h.tick % kRing] = h.forwarded;
