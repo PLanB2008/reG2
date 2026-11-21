@@ -325,6 +325,18 @@ uint32_t net::Client::Lead() const
     return (mRtt / 2 + mTickMs - 1) / mTickMs + 2;
 }
 
+int net::Client::InView(float x, float y) const
+{
+    float px, py;
+    if (!engine::PlayerPosition(mSlot, &px, &py))
+    {
+        return 1;
+    }
+    const float dx = x - px, dy = y - py;
+    const float r = engine::PlayerViewRadius(mSlot) + 1.0f;
+    return dx * dx + dy * dy <= r * r ? 0 : 1;
+}
+
 // The display error: what tick S showed of the cars, peds and players against the server's S
 void net::Client::MeasureShownError(const Snapshot& snap)
 {
@@ -338,6 +350,10 @@ void net::Client::MeasureShownError(const Snapshot& snap)
         {
             if (e.id == shown.id)
             {
+                if (engine::EntityAge(e))
+                {
+                    return false; // only against new state: an aged entry carries what the client had, from ticks before
+                }
                 const float dx = engine::Blocks(e.f[0]) - shown.x, dy = engine::Blocks(e.f[1]) - shown.y;
                 *pError = sqrtf(dx * dx + dy * dy);
                 return true;
@@ -357,6 +373,10 @@ void net::Client::MeasureShownError(const Snapshot& snap)
             mStats.shownErrorSum += e;
             mStats.shownErrorCount++;
             mStats.shownErrorMax = e > mStats.shownErrorMax ? e : mStats.shownErrorMax;
+            const int v = InView(shown.x, shown.y);
+            mStats.shownViewSum[v] += e;
+            mStats.shownViewCount[v]++;
+            mStats.shownViewMax[v] = e > mStats.shownViewMax[v] ? e : mStats.shownViewMax[v];
         }
     }
     for (const engine::ReplicaPos& shown : rec.players)
@@ -546,6 +566,10 @@ void net::Client::Blend(const std::vector<engine::Pose>& shown)
             if (stats)
             {
                 stats->Add(sqrtf((float)dx * dx + (float)dy * dy) / 16384.0f, jumped);
+            }
+            if (stats == &mStats.cars)
+            {
+                mStats.carsView[InView(engine::Blocks(n.x), engine::Blocks(n.y))].Add(sqrtf((float)dx * dx + (float)dy * dy) / 16384.0f, jumped);
             }
         }
         mProbe.Correction(mFrame, n, dx, dy, dr, mReceived[mLatestTick % kRing]);
@@ -1042,6 +1066,13 @@ void net::Client::PrintStats(const Snapshot& snap)
     }
     st.players.Print(mFrame, "players");
     st.cars.Print(mFrame, "cars");
+    st.carsView[0].Print(mFrame, "cars in view");
+    st.carsView[1].Print(mFrame, "cars beyond the view");
+    for (int v = 0; v < 2; v++)
+    {
+        printf("net: frame %u, cars and peds %s shown %.3f blocks off (up to %.2f, %u compared)\n", mFrame, v ? "beyond the view" : "in view",
+               st.shownViewCount[v] ? (float)(st.shownViewSum[v] / st.shownViewCount[v]) : 0.0f, st.shownViewMax[v], st.shownViewCount[v]);
+    }
     mStats = Stats();
 }
 

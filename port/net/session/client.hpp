@@ -101,10 +101,16 @@ class Client
         float shownErrorMax = 0;
         ShownError others, self; // the display error of the other players, and of the local player
         double restoreUs = 0, resimUs = 0, saveUs = 0, reconcileWorstUs = 0; // the rollbacks' time
+        // The same, and the cars' corrections, split: within the local player's view and a block (InView), and beyond
+        double shownViewSum[2] = {};
+        uint32_t shownViewCount[2] = {};
+        float shownViewMax[2] = {};
+        CorrectionStats carsView[2];
         uint32_t carFrames = 0, carMismatch = 0; // frames x players, and those where in-car differs from the snapshot
         uint32_t jumps = 0, fastForwards = 0, plainApplies = 0; // Resync, FastForward, a snapshot taken without its save
     };
     void Step(); // the frame's work: what arrived, the input, the snapshot, the commands
+    int InView(float x, float y) const; // 0: within the local player's view and a block, 1: beyond
     void Welcomed(const Welcome& welcome, engine::NetworkGame* pGame);
     bool OnWelcome(const TransportEvent& e, engine::NetworkGame* pGame, std::string* error);
     void OnSnapshot(BitReader& r);
