@@ -185,6 +185,7 @@ void net::ClientProbe::FrameEnd()
     engine::StackLog(false);
     engine::TrainLog(false);
     engine::InstallSpriteCheck();
+    engine::InstallSfxLog(false);
 }
 
 void net::ClientProbe::PrintStats(uint32_t frame)

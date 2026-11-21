@@ -26,6 +26,8 @@
 #include "Source/collide.hpp"
 #include "Source/gbh_graphics.hpp"
 #include "Source/sound_obj.hpp"
+#include "Source/Explosion.hpp"
+#include "Source/root_sound.hpp"
 #include "Source/sprite.hpp"
 #include <math.h>
 #if !defined(_WIN32)
@@ -984,5 +986,83 @@ void net::engine::InstallSpriteCheck()
     if (Debug().checkGrid)
     {
         gPortSpriteMovedHook = SpriteMovedOff;
+    }
+}
+
+// GTA2_NET_SFXLOG: each sample the mixer starts, by the game's tick, what made it and where (to compare a server's with
+// a client's). A server with it opens its audio device and listens at slot <value>'s camera
+namespace
+{
+void LogSampleStart(const void*)
+{
+    // ProcessActiveQueues starts a sample on the first channel not playing, and marks it after the start
+    int ch = -1;
+    for (int i = 0; i < gSound_obj.mnActiveSamples && ch < 0; i++)
+    {
+        ch = gSound_obj.mActiveSamples[i].mbIsBeingPlayed ? -1 : i;
+    }
+    if (ch < 0)
+    {
+        return;
+    }
+    const sound_0x68& a = gSound_obj.mActiveSamples[ch];
+    const int ent = a.mEntityIndex;
+    const SoundObject* o = ent >= 0 && ent < 1020 && gSound_obj.mAudioEntities[ent].mbUsed ? gSound_obj.mAudioEntities[ent].mpObj : NULL;
+    char src[48] = "?";
+    if (o && o->mObjectType == SoundObjectTypeEnum::Weapon_30_7 && o->mpAny.pWeapon_30)
+    {
+        const Weapon* w = o->mpAny.pWeapon_30;
+        snprintf(src, sizeof(src), "weapon%d/p%d", w->mWeaponType, w->mpPed && w->mpPed->mPlayer ? w->mpPed->mPlayer->mPlayerIdx : -1);
+    }
+    else if (o && o->mObjectType == SoundObjectTypeEnum::Sprite_1 && o->mpAny.pSprite)
+    {
+        Sprite* s = o->mpAny.pSprite;
+        if (Car* c = s->AsCar())
+        {
+            snprintf(src, sizeof(src), "car%d/p%d", c->mCarInfoIdx, c->mDriver && c->mDriver->mPlayer ? c->mDriver->mPlayer->mPlayerIdx : -1);
+        }
+        else if (Char* c = s->AsCharB4())
+        {
+            snprintf(src, sizeof(src), "ped/p%d", c->mpPed && c->mpPed->mPlayer ? c->mpPed->mPlayer->mPlayerIdx : -1);
+        }
+        else if (Object* obj = s->AsObject2C())
+        {
+            snprintf(src, sizeof(src), "obj%d", obj->mModel);
+            if (obj->mModel == objects::explosion_113 && obj->mpAny.pExplosion)
+            {
+                snprintf(src + strlen(src), sizeof(src) - strlen(src), "/type%d", obj->mpAny.pExplosion->mType);
+            }
+        }
+    }
+    else if (o)
+    {
+        snprintf(src, sizeof(src), "type%d", o->mObjectType);
+    }
+    printf("sfx: tick %u samp %u %s at %d,%d loops %u\n", gpRng ? (uint32_t)gpRng->get_cur_rng() : 0, a.mSampIdx, src,
+           a.mObj.mX.ToInt(), a.mObj.mY.ToInt(), a.mLoopCount);
+}
+} // namespace
+
+void net::engine::InstallSfxLog(bool server)
+{
+    const char* on = getenv("GTA2_NET_SFXLOG");
+    if (!on)
+    {
+        return;
+    }
+    gPortSampleStartHook = LogSampleStart;
+    const int slot = atoi(on);
+    Game* g = gGame_0x40;
+    Player* p = server && g && slot > 0 && slot < (int)g->mNumPlayers ? g->mPlayers[slot] : NULL;
+    // The game's listener is its user's (slot 0 on a server): its sound object moves to that player, which then sets it
+    Player* user = p ? g->mPlayers[0] : NULL;
+    if (user && user->mSoundObj)
+    {
+        if (p->mSoundObj && p->mSoundObj != user->mSoundObj)
+        {
+            gRoot_sound.DestroySoundObj(p->mSoundObj);
+        }
+        p->mSoundObj = user->mSoundObj;
+        user->mSoundObj = NULL;
     }
 }

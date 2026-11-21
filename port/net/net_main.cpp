@@ -227,7 +227,7 @@ int NetMain_Init(std::vector<std::string>& args)
     }
     NetworkSetup(o.server);
     gPortTrafficCap = o.traffic;
-    gPortNoAudio = o.server; // nobody hears a server (port/src/net_hooks.hpp)
+    gPortNoAudio = o.server && !getenv("GTA2_NET_SFXLOG"); // nobody hears a server (port/src/net_hooks.hpp) but its sample log
     gPortNoRumble = o.server;
     std::string error;
     if (o.server)

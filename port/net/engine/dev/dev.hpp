@@ -75,6 +75,8 @@ void DumpPeds(uint32_t tick, bool server);
 // GTA2_NET_RANDLOG=<file>:<from>:<to>: each rand() draw's caller (an offset in the program) at those ticks (the game's
 // cycle), from when StartRandLog is called; port/net/scripts/rand_diff.py compares two
 void StartRandLog();
+// GTA2_NET_SFXLOG: the samples the mixer starts printed; on a server, its listener at slot <value>'s camera (every tick)
+void InstallSfxLog(bool server);
 void DebugSoundChannels(uint32_t frame); // GTA2_NET_SOUNDLOG: the sound's playing channels, printed when they change
 void DebugAnimLog(uint32_t frame); // GTA2_NET_ANIMLOG: the other players' inputs, states and walking animation, every third frame
 void DebugSelfLog(uint32_t frame); // GTA2_NET_SELFLOG: the local player around a death (position, states, the death fields)

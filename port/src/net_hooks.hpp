@@ -26,6 +26,8 @@ extern bool gPortNetFrameLoop;
 // No audio device for the game: sound_obj then doesn't run at all. A network server's: nobody hears it, and its
 // listener follows slot 0's camera, whose ped (once that player left) can be any ped's, in any car
 extern bool gPortNoAudio;
+// After the mixer starts a sample (compat/src/miles.cpp, miles3d.cpp: its handle); NULL but for a log (GTA2_NET_SFXLOG)
+extern void (*gPortSampleStartHook)(const void* handle);
 // A dedicated server (--server), known before anything runs (compat/src/main.cpp): no message box, no setup, and none of
 // the files only a player uses (the keyboard layout, the attract mode replays)
 extern bool gPortServer;

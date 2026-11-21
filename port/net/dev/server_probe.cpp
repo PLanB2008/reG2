@@ -109,6 +109,7 @@ void net::ServerProbe::Captured(uint32_t tick, const Snapshot& world)
     engine::StackLog(true);
     engine::TrainLog(true);
     engine::InstallSpriteCheck();
+    engine::InstallSfxLog(true);
     engine::DumpPeds(tick, true);
     engine::StartRandLog();
     if (!Env().jerkLog)

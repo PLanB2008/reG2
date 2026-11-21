@@ -5,6 +5,7 @@
 #include "3rdParty/mss.h"
 #include "miles3d.hpp"
 #include "port_platform.hpp"
+#include "../../src/net_hooks.hpp" // gPortSampleStartHook
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -518,6 +519,10 @@ DXDEC void AILCALL AIL_start_3D_sample(H3DSAMPLE h)
     al.alSourceStop(s->mSource);
     ApplyLoop(s);
     al.alSourcePlay(s->mSource);
+    if (gPortSampleStartHook)
+    {
+        gPortSampleStartHook(h);
+    }
 }
 
 DXDEC void AILCALL AIL_end_3D_sample(H3DSAMPLE h)

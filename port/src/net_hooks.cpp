@@ -8,6 +8,7 @@ void (*gPortIdleHook)();
 bool gPortNetFrameLoop;
 
 bool gPortNoAudio;
+void (*gPortSampleStartHook)(const void*);
 bool gPortServer;
 bool gPortNoRumble;
 s32 gPortTrafficCap = 16;
