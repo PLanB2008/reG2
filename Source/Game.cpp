@@ -341,6 +341,13 @@ void Game::BootGame()
     }
     gPublicTransport_181C->SpawnTrainsFromStations(); // trains?
 
+#if defined(GTA2_PORT)
+    // Port: a network game of more players than the map script's 6 player peds (port/net/engine/slots.cpp)
+    if (gPortScriptPlayersHook)
+    {
+        gPortScriptPlayersHook();
+    }
+#endif
     for (s32 i = 0; i < mNumPlayers; i++)
     {
         mPlayers[i]->InitializePlayerState();

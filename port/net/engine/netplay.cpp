@@ -86,6 +86,7 @@ void net::engine::StartNetworkGame(const NetworkGame& game)
     gPortWorldStill = WorldStill;
     gPortTagTimeCounts = true;
     gPortScoreBonusHook = net::engine::ScoreBonus;
+    gPortScriptPlayersHook = net::engine::GivePlayersWithoutScriptPeds;
     gNetPlay.mPlayerIdx = game.localPlayer;
     gNetPlay.mN2.mPlayersCount = 2; // > 1: the game calls SendToAll every frame
 }
@@ -126,6 +127,7 @@ void net::engine::StopNetworkGame()
     gPortTagTimeCounts = false;
     gPortChatChar = NULL;
     gPortScoreBonusHook = NULL;
+    gPortScriptPlayersHook = NULL;
     gNetPlay.mPlayerIdx = 0;
     gNetPlay.mN2.mPlayersCount = 0;
     // Off, not as before: a network game cleared them at its start (ClearDebugFlags)

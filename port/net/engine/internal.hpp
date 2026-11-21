@@ -68,7 +68,7 @@ enum WorldField
     kWorldReach, // how far this client's snapshot reaches (blocks x 16): the farthest it kept, the rest cut for size
     kWorldIt, // the tag game's "it" (TagGame::mFugitive): player index + 1, 0 nobody
     kWorldItTime, // and the seconds each player has been it (mItTimeSecs), MAX_PLAYERS of them
-    kWorldZoneTurn = kWorldItTime + 6, // which restart zone is next (Map_0x370::GetNextZoneOfTypeRoundRobin): a respawn here goes where the server's does
+    kWorldZoneTurn = kWorldItTime + MAX_PLAYERS, // which restart zone is next (Map_0x370::GetNextZoneOfTypeRoundRobin): a respawn here goes where the server's does
     kWorldRound, // the round (rounds.cpp): its number, the last one's winner (player + 1) and the seconds left
     kWorldWinner,
     kWorldSecondsLeft,

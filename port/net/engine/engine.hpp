@@ -188,6 +188,7 @@ bool SlotInGame(int slot);
 void TakeOutOfGame(int slot);
 void NeverInGame(int slot); // out from the game's start: its ped (the map script's) goes too
 void PutInGame(int slot, bool freshScore);
+void GivePlayersWithoutScriptPeds(); // a ped each at a restart zone, as the map script makes its 6 (gPortScriptPlayersHook)
 
 // --- Rollback (rollback.cpp): the whole game world and this client's replicas, saved after a tick and restored to
 // resimulate from there ---
