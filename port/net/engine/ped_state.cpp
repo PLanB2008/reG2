@@ -504,24 +504,32 @@ bool net::engine::ApplyPedState(Ped* p, const EntityState& e)
         // server's, the char's walk to a door read a car the client had no part in (Char::UpdateImmobilized)
         return true;
     }
-    // The references first: one this game doesn't have (out of its area) keeps the ped as it is here for this snapshot,
-    // whole. Its AI runs by its occupation as much as by its objective (a robbed driver reads its car thief:
-    // Ped::RobbedDriver_AI), so a part of the server's state with a target missing isn't safe
+    // The references first: one its objective acts on that this game doesn't have (out of its area) keeps the ped as it
+    // is here for this snapshot, whole. Its AI runs by its occupation as much as by its objective (a robbed driver reads
+    // its car thief: Ped::RobbedDriver_AI), so a part of the server's state with a target missing isn't safe. The others
+    // (who attacked, punched, was hit or killed it, the car it stole) the game rarely clears and often name what is gone
+    // or far: one this game doesn't have stays as it is here, the rest of the state goes
+    static const bool kPedRefBlocks[kPedRefCount] = {false, true, true, true, false, false, false};
+    static const bool kCarRefBlocks[kCarRefCount] = {false, true, true, true};
     bool ok;
     Ped* pedRefs[kPedRefCount];
+    bool pedKept[kPedRefCount];
     for (int i = 0; i < kPedRefCount; i++)
     {
         pedRefs[i] = LocalPed((uint32_t)e.f[kPedRefs + i], &ok);
-        if (!ok)
+        pedKept[i] = !ok;
+        if (!ok && kPedRefBlocks[i])
         {
             return true;
         }
     }
     Car* carRefs[kCarRefCount];
+    bool carKept[kCarRefCount];
     for (int i = 0; i < kCarRefCount; i++)
     {
         carRefs[i] = LocalCar((uint32_t)e.f[kCarRefs + i], &ok);
-        if (!ok)
+        carKept[i] = !ok;
+        if (!ok && kCarRefBlocks[i])
         {
             return true;
         }
@@ -552,7 +560,10 @@ bool net::engine::ApplyPedState(Ped* p, const EntityState& e)
                                       &p->mPedKiller};
     for (int i = 0; i < kPedRefCount; i++)
     {
-        *pedMembers[i] = pedRefs[i];
+        if (!pedKept[i])
+        {
+            *pedMembers[i] = pedRefs[i];
+        }
     }
     Car** carMembers[kCarRefCount] = {&p->mStolenCar, &p->mTargetObjectiveCar, &p->mTargetToEnter,
                                       &p->mEscapeCar};
@@ -562,7 +573,10 @@ bool net::engine::ApplyPedState(Ped* p, const EntityState& e)
         {
             continue; // in a car: what it got into is its car, and leaving it reads this (Ped::ExitCarStateMachine)
         }
-        *carMembers[i] = carRefs[i];
+        if (!carKept[i])
+        {
+            *carMembers[i] = carRefs[i];
+        }
     }
     p->mpGang = GangAt(e.f[kGangs]);
     p->mDummyGang = GangAt(e.f[kGangs + 1]);

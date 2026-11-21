@@ -232,7 +232,9 @@ a new round sets them all back to a game's start.
 
 A ped's AI state is applied only while it is on foot on both sides (a driver in the same car gets its objectives but
 not its states), its states only when plain (walking, running, standing) on both sides, and all or nothing: if a
-reference it carries isn't in the client's game, the ped keeps its own state for that snapshot. Groups are rebuilt on
+reference its objective acts on (its target ped, internal target, car thief, the car it heads for, enters or flees in)
+isn't in the client's game, the ped keeps its own state for that snapshot; the others (who attacked, punched, was hit
+or killed it, the car it stole) stay the client's when missing. Groups are rebuilt on
 the client from each ped's leader, keeping only members that are present (the game walks a group's list up to its
 count).
 
