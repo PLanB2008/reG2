@@ -158,7 +158,8 @@ command, applies snapshots and rolls back. Between frames both poll the network 
 - **One view for everyone**: every player sees the same, 16:9 at the game's own zoom. CAMERA ZOOM doesn't apply in a
   network game (`PortCameraZoom`), a wider screen shows bars at its sides (`ReadScreenSettings` keeps the game's screen
   16:9 at most, the renderer its aspect) and a narrower one sees less width. The server gives every player's cameras
-  that view, so peds and cars spawn and go out of everyone's sight.
+  that view, so peds and cars spawn and go out of everyone's sight, and a traffic car, which the game spawns 5 blocks
+  beyond one camera's edge, isn't spawned where another player's view is (`TrafficSpawner::SpawnTrafficCar`).
 - **Joining and leaving** (`engine/slots.cpp`): a slot without a client is out of the game the way the game handles a
   player who left (its ped walks on as a pedestrian). A joining client gets a new player ped at the next restart zone
   and an empty score. Snapshots carry the slots in the game, and clients mirror them.
@@ -398,6 +399,13 @@ The netcode's hooks, declared in `port/src/net_hooks.hpp`; those in `Source/` ar
 | `Pool.hpp`, `Car.cpp`, `Char_Pool.cpp`, `Game.cpp` | `PortRand::Scope` (`port/src/rand/owner.hpp`) | who a random draw belongs to |
 | `sound_obj.*`, `ParticleManager.cpp`, `Particle_4C.cpp` | `port/src/rand/sound.hpp`, `particle.hpp` | their own random streams; `SoundPosEntry` from the pool; `sound_obj`'s state public for the rollback |
 
+The game's own multiplayer assumed one machine per player in places; under `GTA2_PORT` a network game fixes them:
+the view (`winmain.cpp`'s `ReadScreenSettings`, `PortCameraZoom`) and the traffic spawn (`Car.cpp`) above, the police
+updating every pursuit and not the first criminal's alone (`Police.cpp`), and the nearest player instead of
+`mLocalPlayer` (on a server, slot 0) for the roadblock tank's aim and a roadblock's removal (`Ped.cpp`,
+`Police_38.cpp`, `Game::PortNearestPlayerPed`) and a group's gang respect (`Ped.cpp`). The tag game's tick, run after
+the game's tick outside `Game::UpdateGame`, runs in a resimulated tick too (`engine/rollback.cpp`).
+
 Other files' statics the netcode reads (winmain.cpp's inputs and its player, the restart zones' turn) it reaches through
 the registry by their 10.5.exe address (`PortStatic`, accessors in `engine/internal.hpp`).
 
@@ -526,10 +534,6 @@ own (`single`) and rollback in scenes with explosions (`explode`).
 
 ## Open
 
-- **A server's spawn area is its own screen's**: the bounds where it spawns and removes traffic and peds come from its
-  cameras' screen size and ZOOM, widened by each client's lead, not from each client's screen. A widescreen or
-  zoomed-out client can see cars and peds appear at its sides. Next: the client's screen size and zoom in its hello,
-  applied to that player's cameras on the server.
 - **reG2's frame loop in a network game**: steps and frames go the original's way (a step, then a frame), so no frame
   limit above 30, no interpolation and no SHOW FPS. Interpolating would need the netcode's frame hook on reG2's steps.
 - **Typing on the network page with a gamepad**: the address and name take the keyboard only.
@@ -538,6 +542,9 @@ own (`single`) and rollback in scenes with explosions (`explode`).
   inputs, measured on recorded sessions (`GTA2_NET_COMPARE`, `GTA2_NET_JERKLOG`).
 - **Cops** differ the most of any entity (health from hits a client predicts, animation and aim on foot): corrected by
   the next snapshot; worth a look if players see cops jump.
+- **The police are the original's**: one city for every criminal. Four pursuits for six players, and the most wanted
+  player's level decides the cop cars in everyone's traffic, the roadblocks and the crews (`--police N` above 1 shows
+  it). The ambient peds' density cap is also one count for all the players' screens.
 - **An instant gang doesn't board a bus** (on the server, so the game's own AI): the members walk to the doors and stay
   there; normal cars work. To check against a traffic bus, then the original under wine.
 - **The game's results page** instead of the overlay's text; a minimum of players that counts people only.
