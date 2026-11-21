@@ -227,6 +227,7 @@ class Client
     uint32_t mMarkFrame = 0;
     bool mLeavePrompt = false, mLeft = false; // Escape's prompt (ChooseInput), and its yes: left the server
     std::vector<std::string> mMaps; // what a map vote chooses from (the welcome's)
+    std::vector<std::string> mMapTitles; // their names as players know them (MapTitle)
     struct ScoreRow
     {
         int slot, frags, deaths, tag, points; // tag: the seconds "it" in a tag game

@@ -109,7 +109,8 @@ player's name, as far as all that fit agree; when several fit they show over the
    A client shows the clock and the goal in the bottom corner ("9:42   FIRST TO 10").
 4. **Results** (`--results` s): the winner, a table of frags and deaths (and points first, sorted by them, in a points
    game), and the maps with their votes (the number keys, Up, Down and Enter, a gamepad's
-   d-pad and A, or `/map N`).
+   d-pad and A, or `/map N`). The maps show by their `.mmp` `Description` ("Face Off" for mp5-6p, `MapTitle`), as the
+   original lobby listed them; `/map` and Tab take the file names.
    The world stands still meanwhile: a tick runs only the players' own (the chat goes on) and the HUD, and the
    inputs are key events only, on the server and every client (`gPortWorldStill`); its sounds stop as in a pause.
    Then the next round's fresh game, on the most chosen map (a tie: one of the tied, at random), else the rotation's next,

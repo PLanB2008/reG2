@@ -3,6 +3,7 @@
 // it has acknowledged.
 #include "server.hpp"
 #include "env.hpp"
+#include "../maps.hpp"
 #include <algorithm>
 #include <chrono>
 #include <math.h>
@@ -91,13 +92,15 @@ bool net::Server::Start(const ServerConfig& config, std::string* error)
         mSlots[i].peer = kArenaPeer;
         mSlots[i].name = "bot" + std::to_string(i);
     }
-    std::vector<std::string> mapNames;
+    std::vector<std::string> mapNames, titles;
     for (const MapFiles& m : mConfig.voteMaps)
     {
         mapNames.push_back(m.name);
+        titles.push_back(MapTitle(m.name));
     }
     mMap = (size_t)(mConfig.currentMap >= 0 ? mConfig.currentMap : 0);
     mRounds.Start(mConfig.rules, mapNames, mConfig.currentMap);
+    mRounds.SetMapTitles(titles);
     engine::CurrentRound() = mRounds.State();
     mProbe.Start();
     mSession = std::random_device{}() | 1; // never 0: a welcome's session is always set

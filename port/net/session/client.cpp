@@ -2,6 +2,7 @@
 // (repeating the last few commands), and puts the server's snapshots into its game.
 #include "client.hpp"
 #include "env.hpp"
+#include "../maps.hpp"
 #include <algorithm>
 #include <ctype.h>
 #include <chrono>
@@ -43,6 +44,11 @@ void net::Client::Welcomed(const Welcome& welcome, engine::NetworkGame* pGame)
     mServerGame = welcome.game; // during a map change's pause, the next game: the old one's snapshots aren't for us
     mConfig.name = welcome.name; // a reconnect asks for it: the server keeps our slot under it
     mMaps = welcome.maps;
+    mMapTitles.clear();
+    for (const std::string& m : mMaps)
+    {
+        mMapTitles.push_back(MapTitle(m)); // every client has the maps (the data check)
+    }
     mConnected = true;
     pGame->players = welcome.players;
     pGame->localPlayer = welcome.slot;
@@ -1649,14 +1655,14 @@ void net::Client::ShowRound()
                 votes += r.mapChoice[i] == m + 1;
             }
             const bool mine = mSlot < kRoundSlots && r.mapChoice[mSlot] == m + 1;
-            const std::string name = m == mMapCursor ? "(" + mMaps[m] + ")" : mMaps[m]; // the font has no '>'
+            const std::string name = m == mMapCursor ? "(" + mMapTitles[m] + ")" : mMapTitles[m]; // the font has no '>'
             lines.push_back(std::to_string(m + 1) + "\t" + name + "\t" + (votes ? std::to_string(votes) : std::string("-")) + "\t" + (mine ? "you" : ""));
         }
     }
     if (r.voteKind != kVoteNone && !hidden)
     {
         const std::string what = r.voteKind == kVoteStart ? "start the round"
-                                 : r.voteKind == kVoteMap ? "change to " + (r.voteArg < mMaps.size() ? mMaps[r.voteArg] : std::string("a map"))
+                                 : r.voteKind == kVoteMap ? "change to " + (r.voteArg < mMapTitles.size() ? mMapTitles[r.voteArg] : std::string("a map"))
                                                           : "kick " + engine::PlayerName(r.voteArg);
         const bool mine = mSlot < kRoundSlots && ((r.voteYes | r.voteNo) >> mSlot & 1);
         lines.push_back("");
