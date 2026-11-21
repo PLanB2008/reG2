@@ -36,6 +36,9 @@ struct Rule
 const int32_t kMapMin = 1 << 14, kMapMax = 255 << 14;
 const int32_t kCarSpeedMax = 1 << 14; // a block a tick: four times the fastest car, more than twice a train
 const int32_t kSpeedMax = 16 << 14; // 16 blocks a tick: far above any speed the game gives a ped (4)
+// A car's z speed: a step's rise or fall over its time step, which a collision's search cuts to an eighth or less
+// (CarPhysics::UpdateZPhysics); 2 blocks a tick measured
+const int32_t kCarZSpeedMax = 16 << 14;
 
 using namespace net::engine;
 const Rule kRules[] = {
@@ -82,8 +85,8 @@ const Rule kRules[] = {
     {kEntityCar, "mForceAccum.y", kRange, -4 * kCarSpeedMax, 4 * kCarSpeedMax},
     {kEntityCar, "mLinearAccel.x", kRange, -4 * kCarSpeedMax, 4 * kCarSpeedMax},
     {kEntityCar, "mLinearAccel.y", kRange, -4 * kCarSpeedMax, 4 * kCarSpeedMax},
-    {kEntityCar, "mZVel", kRange, -kCarSpeedMax, kCarSpeedMax},
-    {kEntityCar, "mAirZVel", kRange, -kCarSpeedMax, kCarSpeedMax},
+    {kEntityCar, "mZVel", kRange, -kCarZSpeedMax, kCarZSpeedMax},
+    {kEntityCar, "mAirZVel", kRange, -kCarZSpeedMax, kCarZSpeedMax},
     {kEntityCar, "mLastSkidPos[0].x", kZeroOrRange, kMapMin, kMapMax},
     {kEntityCar, "mLastSkidPos[0].y", kZeroOrRange, kMapMin, kMapMax},
     {kEntityCar, "mLastSkidPos[1].x", kZeroOrRange, kMapMin, kMapMax},
