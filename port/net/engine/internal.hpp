@@ -122,6 +122,7 @@ enum CarField
     kCarHornCooldown,
     kCarRemap, // its colour (the sprite's remap): a respray, or a car made here, had another
     kCarTurret, // its roof turret's angle on the car (a tank's cannon, a gun jeep's gun, a fire truck's water cannon)
+    kCarFlags, // the behaviour bits of Car::mFlags (kCarFlagsSent: proofs, alarm, no passengers...), the level start's
     kCarPhysics, // then its whole CarPhysics, member by member (cars.cpp; all 0 without physics), then its AI (car_ai.cpp)
 };
 enum CarDriver

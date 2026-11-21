@@ -87,6 +87,12 @@ void net::engine::CarPhysicsFields(std::vector<FieldDesc>& out)
 
 namespace
 {
+// What the level start's script commands and the game's own set on a car that is its behaviour (not where it is in this
+// game's structures: a detached trailer, a car on a train, being crushed)
+const u16 kCarFlagsSent = car_flag::NoPassengers | car_flag::NoCollisionDamage | car_flag::CarAlarm | car_flag::Bulletproof |
+                          car_flag::Rocketproof | car_flag::Flameproof | car_flag::ResistsPushWhenStopped |
+                          car_flag::JammedAccelerator;
+
 // The roof turret (Car::RotateRoofObjectTowardTarget's): its angle is the attachment's on top of the car's
 AttachedSprite* RoofTurret(Car* c)
 {
@@ -113,6 +119,7 @@ void net::engine::CaptureCar(Car* c, Snapshot& out)
     e.f[kCarRemap] = c->mCarSprite->mPaletteType == palette_types_enum::car_remaps_3 ? c->mCarSprite->get_remap() : -1;
     const AttachedSprite* turret = RoofTurret(c);
     e.f[kCarTurret] = turret ? turret->mOffsetRot.rValue : 0;
+    e.f[kCarFlags] = c->mFlags & kCarFlagsSent;
     CaptureCarAi(c, e);
     if (const CarPhysics* m = c->mPhysics)
     {
@@ -225,6 +232,8 @@ bool net::engine::SetCarState(Car* car, const EntityState& e)
             car->mDamageLevel = (u8)level;
         }
     }
+    // Its proofs, alarm and the like: a client runs no script, and the level start sets them
+    car->mFlags = (u16)((car->mFlags & ~kCarFlagsSent) | (e.f[kCarFlags] & kCarFlagsSent));
     // Its turret's aim: a remote driver's turn was predicted only once the snapshots had it, and a car made here starts at 0
     if (AttachedSprite* turret = RoofTurret(car))
     {
