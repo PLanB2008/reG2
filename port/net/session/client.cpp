@@ -675,12 +675,15 @@ uint32_t net::Client::ChooseInput(uint32_t recordedInput)
     // Neither the game here nor the server gets them: the game's own quit prompt is on its player, which the snapshots
     // and resimulations set again (it showed for a moment), and the server's yes ended everyone's game
     // Enter says yes too: a gamepad's A while the prompt shows (port_QuitMessageShown)
-    const uint32_t kKeyBits = 0x1FF000, kEscape = 0x01, kYes = 0x15, kNo = 0x31, kEnter = 0x1C; // DIK_ESCAPE, _Y, _N, _RETURN
-    if (!mReplay && (local & kKeyDown) && (key == kEscape || (mLeavePrompt && (key == kYes || key == kNo || key == kEnter))))
+    // While a chat line is typed, Escape is the line's (dropped: the game has no use for it there), and while the prompt
+    // shows any other key says no, so typing on doesn't answer it
+    const uint32_t kKeyBits = 0x1FF000, kEscape = 0x01, kYes = 0x15, kEnter = 0x1C; // DIK_ESCAPE, _Y, _RETURN
+    const bool chatting = !mLeavePrompt && engine::TakeLocalChat().chatting;
+    if (!mReplay && (local & kKeyDown) && (key == kEscape || mLeavePrompt))
     {
-        if (mFrame != mPromptKeyFrame + 1) // held: once
+        if (mFrame != mPromptKeyFrame + 1 && !chatting) // held: once
         {
-            if (key == kYes || key == kEnter)
+            if (mLeavePrompt && (key == kYes || key == kEnter))
             {
                 printf("net: frame %u, left the game\n", mFrame);
                 mLeavePrompt = false;
