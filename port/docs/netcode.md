@@ -61,7 +61,8 @@ go back to the network page with "the server closed"; one started again starts a
 ## Playing
 
 **Joining from the frontend.** The start menu has **Network game** (`port/net/menu.cpp`, frontend page 13): an address
-(`host[:port]`), a name and **Join game**, kept in gta2_registry.ini (`Network`). The join runs in the background with "Connecting..." and any
+(`host[:port]`, empty until one is typed, then the last one), a name and **Join game**, kept in gta2_registry.ini
+(`Network`). The join runs in the background with "Connecting..." and any
 error on the page; welcomed, the frontend boots the network game as it boots a level. `--name` and the link
 conditioner's options apply to a join from the page too.
 

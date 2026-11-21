@@ -35,7 +35,7 @@ enum
     kOptions
 };
 
-std::string gAddress = "127.0.0.1", gName, gStatus;
+std::string gAddress, gName, gStatus; // the address: the last one joined, none the first time
 int gEditing = -1; // the field being typed into (kAddress, kName), or -1
 std::string gBefore; // the field as it was: Esc gives it back
 bool gJoining;
@@ -286,6 +286,7 @@ bool Input(Frontend* pFrontend)
         {
             // Ours too: the game's page change draws a level's picture for a frame (UpdateMenuScreen)
             pFrontend->ChangeMenuPage(kPage);
+            pFrontend->mMenuPagesArray[kPage].mCurrentOptionIdx = gAddress.empty() ? kAddress : kJoin;
             pFrontend->mMenuScreen = Options_0;
             snd1.mObjectType = 5;
             return true;
