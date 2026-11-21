@@ -185,7 +185,8 @@ original's frame path in `winmain.cpp` (a step, then a frame): a server draws no
   beyond one camera's edge, isn't spawned where another player's view is (`TrafficSpawner::SpawnTrafficCar`).
 - **Joining and leaving** (`engine/slots.cpp`): a slot without a client is out of the game the way the game handles a
   player who left (its ped walks on as a pedestrian). A joining client gets a new player ped at the next restart zone
-  and an empty score. Snapshots carry the slots in the game, and clients mirror them.
+  and an empty score. Snapshots carry the slots in the game, and clients mirror them. The others read "BOB joined",
+  "BOB is back", "BOB left" or "BOB was kicked" (the server's notices).
 - **No sound**: a server opens no audio device (`gPortNoAudio`). Nobody hears it, and its listener would follow slot
   0's camera, whose ped can be any ped in any car once that player has left.
 

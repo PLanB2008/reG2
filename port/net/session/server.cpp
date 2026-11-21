@@ -253,6 +253,7 @@ void net::Server::OnHello(uint32_t peer, BitReader& r)
             engine::SetPlayerName(slot, name.c_str());
             printf("net: %s %s player %d%s\n", name.c_str(), back >= 0 ? "is back as" : "joined as", slot,
                    name != hello.name ? (" (asked for \"" + hello.name + "\")").c_str() : "");
+            Notice(-1, name + (back >= 0 ? " is back" : " joined"), slot);
         }
     }
     if (w.ByteCount()) // a second hello from a client already in: nothing to say
@@ -647,6 +648,7 @@ void net::Server::OnEvent(const TransportEvent& e)
             mSlots[slot].token = token;
             engine::TakeOutOfGame(slot);
             mRounds.Left(slot);
+            Notice(-1, name + " left");
         }
     }
 }
@@ -831,13 +833,13 @@ void net::Server::ReportSent(int slot, const std::string& text)
            DescribeFields(engine::NetSchema(), *e, base.tick == baseTick ? was : NULL).c_str());
 }
 
-void net::Server::Notice(int slot, const std::string& text)
+void net::Server::Notice(int slot, const std::string& text, int except)
 {
     BitWriter w;
     WriteText(w, kMsgNotice, text);
     for (size_t i = 0; i < mSlots.size(); i++)
     {
-        if (mSlots[i].used && mSlots[i].peer != kArenaPeer && (slot < 0 || slot == (int)i))
+        if (mSlots[i].used && mSlots[i].peer != kArenaPeer && (slot < 0 || slot == (int)i) && (int)i != except)
         {
             mTransport->Send(mSlots[i].peer, kChannelReliable, w.Data().data(), w.ByteCount(), true);
         }
@@ -864,8 +866,10 @@ void net::Server::Kick(int slot)
     mTransport->Disconnect(s.peer);
     printf("net: player %d (%s) kicked\n", slot, s.name.c_str());
     mRounds.Left(slot);
+    const std::string name = s.name;
     s = Slot(); // the name isn't kept for a return
     engine::TakeOutOfGame(slot);
+    Notice(-1, name + " was kicked");
 }
 
 // A map for everyone: after a pause (the round's winner on the HUD), the game ends here and on the clients and the

@@ -109,7 +109,7 @@ class Server
     void Carry(const RoundActions& actions);
     void ChangeToMap(int map); // voteMaps' <map>, for everyone
     void Kick(int slot);
-    void Notice(int slot, const std::string& text); // to one client (slot) or all (-1)
+    void Notice(int slot, const std::string& text, int except = -1); // to one client (slot) or all (-1) but <except>
     std::vector<RoundPlayer> RoundPlayers(const Snapshot& world) const;
     void StartOver(); // a new game (the next map): its start, and every client's baseline, again
     void PrintStats(const Snapshot& world);
