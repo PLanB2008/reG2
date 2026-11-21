@@ -47,6 +47,8 @@ class GridCheck
 void DebugKill(int victim, int killer);
 void DebugArm(int player, int weapon, int ammo); // Player::AddWeaponWithAmmo
 void DebugFire(int player); // the player's ped set on fire (Ped::SetOnFire)
+// That many ambient peds nearest the player, at least that many blocks from it, set on fire: their corpses call the ambulance
+void DebugPatients(int player, int count, int fromBlocks);
 void DebugStreak(int player); // a kill streak's bonus (PlayerScoreTracker::Service: 20 kills in a row)
 void DebugWanted(int player, int points); // at least that many wanted points (Ped::mWantedPoints)
 void DebugPowerUp(int player, int powerUp); // Player::CollectPowerUp (power_up_indices, e.g. 12 instant gang)

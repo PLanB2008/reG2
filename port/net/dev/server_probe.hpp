@@ -18,7 +18,7 @@ class ServerProbe
     void Captured(uint32_t tick, const Snapshot& world); // the world as captured: the logs
 
   private:
-    struct TestEvent // GTA2_NET_TESTKILL, _TESTPOWERUP, _TESTCAR, _TESTTRAIN, _TESTSTREAK, _TESTFIRE
+    struct TestEvent // GTA2_NET_TESTKILL, _TESTPOWERUP, _TESTCAR, _TESTTRAIN, _TESTSTREAK, _TESTFIRE, _TESTPATIENTS
     {
         enum Kind
         {
@@ -27,10 +27,11 @@ class ServerProbe
             kCar,
             kTrain,
             kStreak,
-            kFire
+            kFire,
+            kPatients
         } kind;
         uint32_t tick;
-        int player, arg; // the victim and its killer (-1: nobody); the player and the power-up, car model or train
+        int player, arg; // the victim and its killer (-1: nobody); the player and the power-up, car model, train or patients (+ 1000 per block away)
     };
     std::vector<TestEvent> mEvents;
     int mWanted = -1; // GTA2_NET_TESTWANTED's points

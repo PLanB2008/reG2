@@ -31,6 +31,16 @@ void net::ServerProbe::Start()
     Parse(Env().testTrain, TestEvent::kTrain, 2, 0, v); // <tick>:<player>[:<train>] at the wheel of that train
     Parse(Env().testStreak, TestEvent::kStreak, 2, 0, v); // <tick>:<player>: a kill streak's bonus (its 20th kill)
     Parse(Env().testFire, TestEvent::kFire, 2, 0, v); // <tick>:<player>: set on fire
+    // <tick>:<player>:<n>[:<blocks>]: the n ambient peds nearest it (at least that far) set on fire
+    for (const char* k = Env().testPatients; k && *k; k = strchr(k, ','), k = k ? k + 1 : NULL)
+    {
+        unsigned tick = 0;
+        int player = 0, n = 0, blocks = 0;
+        if (sscanf(k, "%u:%d:%d:%d", &tick, &player, &n, &blocks) >= 3)
+        {
+            v.insert(v.end(), {TestEvent::kPatients, (int)tick, player, n + 1000 * blocks});
+        }
+    }
     for (size_t i = 0; i < v.size(); i += 4)
     {
         mEvents.push_back(TestEvent{(TestEvent::Kind)v[i], (uint32_t)v[i + 1], v[i + 2], v[i + 3]});
@@ -83,6 +93,10 @@ void net::ServerProbe::Tests(uint32_t tick, int players)
             case TestEvent::kFire:
                 printf("net: test fire on player %d at tick %u\n", e.player, tick);
                 engine::DebugFire(e.player);
+                break;
+            case TestEvent::kPatients:
+                printf("net: test fire on %d ambient peds %d blocks or more from player %d at tick %u\n", e.arg % 1000, e.arg / 1000, e.player, tick);
+                engine::DebugPatients(e.player, e.arg % 1000, e.arg / 1000);
                 break;
         }
     }
