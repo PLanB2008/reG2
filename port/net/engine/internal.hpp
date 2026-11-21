@@ -115,7 +115,7 @@ enum CarField
     kCarDriver, // kDriverNone, kDriverTraffic (the car manager's shared spare driver), kDriverPed (sent as a ped entity)
     kCarDamage, // Car::mDamage (32000 and up: exploded), the server's
     kCarAreas, // its dented areas (Car::mDamagedAreas)
-    kCarWrecked, // exploded or burning out (the wreck countdown running, or a wreck)
+    kCarWrecked, // kCarWreck | kCarWreckBurns
     kCarLights, // Car::mLightFlags (brake, head, emergency lights...), mFlashPhaseCounter, mHorn, mHornCooldown
     kCarFlash,
     kCarHorn,
@@ -125,6 +125,11 @@ enum CarField
     kCarTrailer, // the trailer a cab tows (CarRef; the trailer, off the pool's list then, is sent as a car of its own)
     kCarFlags, // the behaviour bits of Car::mFlags (kCarFlagsSent: proofs, alarm, no passengers...), the level start's
     kCarPhysics, // then its whole CarPhysics, member by member (cars.cpp; all 0 without physics), then its AI (car_ai.cpp)
+};
+enum CarWrecked
+{
+    kCarWreck = 1, // exploded or burning out (the wreck countdown running, or a wreck)
+    kCarWreckBurns = 2, // its wreck's fire (Car::SpawnFire's), which burns only where a fire engine was sent
 };
 enum CarDriver
 {
@@ -255,6 +260,11 @@ bool ScoreBonus(Player* p, s32 voice); // gPortScoreBonusHook: a server counts i
 void ResetHudScores(Player* p); // the HUD's money, frags and multiplier as at a game's start (slots.cpp)
 
 // A client's game (client_mode.cpp)
+// The client's sound log (sound_log.cpp): a restore of that tick, a resimulated tick's sound without the mixer (applied:
+// what a snapshot's Apply left, before its first tick), the network game's end
+void SoundLogRestored(uint32_t tick);
+void SoundLogResimTick(bool applied);
+void SoundLogStop();
 void ProtectPlayers(); // player peds take no damage on a client: their health and deaths are the server's
 void SeenByAll(); // every ped and car counts as seen: no removal off screen on a client
 

@@ -163,36 +163,51 @@ void Trace(char kind)
         const f32 back = kind == 'D' && pScore->mExplodeCounter <= -2 ? StepNotElapsed() : 0.0f;
         fprintf(spTrace, " score %.3f", pScore->mExplodeCounter < 0 ? -pScore->mExplodeCounter - back : 1.0f);
     }
+    // On cars, then on peds (their fire)
     f32 attachedOff = 0;
-    for (Car* pCar = gCar_BC_Pool ? gCar_BC_Pool->mPool.mpPrev : NULL; pCar; pCar = pCar->mpNext)
+    f32 pedAttachedOff = 0;
+    for (s32 k = 0; gSpritePool && k < static_cast<s32>(sizeof(gSpritePool->mPool.mPool) / sizeof(gSpritePool->mPool.mPool[0])); k++)
     {
-        const Sprite* pCarSprite = pCar->mCarSprite;
-        if (pCarSprite && kind == 'D' && !PortInterp::Steered(pCarSprite))
+        const Sprite* pOwner = &gSpritePool->mPool.mPool[k];
+        const Car* pCar = pOwner->mInstanceId ? pOwner->AsCar() : NULL;
+        const Char* pChar = pOwner->mInstanceId ? pOwner->AsCharB4() : NULL;
+        if (pCar && pCar->mCarSprite != pOwner)
+        {
+            continue;
+        }
+        if (pCar && kind == 'D' && !PortInterp::Steered(pOwner))
         {
             continue; // a train's carriage turning a corner: its lights stay put
         }
-        for (AttachedSprite* a = pCarSprite ? pCar->mAttachments.mP18 : NULL; a; a = a->mpNext)
+        for (AttachedSprite* a = pCar ? pCar->mAttachments.mP18 : pChar ? pChar->mObj2c.mP18 : NULL; a; a = a->mpNext)
         {
             if (!a->mpSprite || !a->mpSprite->AsObject2C())
             {
                 continue;
             }
-            Fix16 x = pCarSprite->mXy.x, y = pCarSprite->mXy.y;
+            Fix16 x = pOwner->mXy.x, y = pOwner->mXy.y;
             if (a->mOffsetX != Fix16(0) || a->mOffsetY != Fix16(0))
             {
                 x = a->mOffsetX;
                 y = a->mOffsetY;
-                Ang16 rot = pCarSprite->mRotation;
+                Ang16 rot = pOwner->mRotation;
                 Ang16::RotateVector(x, y, rot);
-                x += pCarSprite->mXy.x;
-                y += pCarSprite->mXy.y;
+                x += pOwner->mXy.x;
+                y += pOwner->mXy.y;
             }
             const f32 dx = (a->mpSprite->mXy.x.mValue - x.mValue) / 16384.0f, dy = (a->mpSprite->mXy.y.mValue - y.mValue) / 16384.0f;
-            const f32 off = dx * dx + dy * dy;
-            attachedOff = off > attachedOff ? off : attachedOff;
+            f32& worst = pCar ? attachedOff : pedAttachedOff;
+            worst = dx * dx + dy * dy > worst ? dx * dx + dy * dy : worst;
         }
     }
-    fprintf(spTrace, " attached %.4f", attachedOff > 0 ? sqrtf(attachedOff) : 0.0f);
+    fprintf(spTrace, " attached %.4f %.4f", attachedOff > 0 ? sqrtf(attachedOff) : 0.0f, pedAttachedOff > 0 ? sqrtf(pedAttachedOff) : 0.0f);
+    if (kind == 'D')
+    {
+        u32 off;
+        f32 worst;
+        PortInterp::ObjectCounts(&off, &worst);
+        fprintf(spTrace, " objs %u %.3f", off, worst);
+    }
     // Each burning car's flames: the car's sprite, then each flame's sprite and its place on the car
     for (Car* pCar = gCar_BC_Pool ? gCar_BC_Pool->mPool.mpPrev : NULL; pCar; pCar = pCar->mpNext)
     {

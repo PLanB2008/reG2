@@ -42,8 +42,13 @@ class EnetTransport : public net::Transport
 
     bool Poll(net::TransportEvent& event) override
     {
+        return Wait(event, 0);
+    }
+
+    bool Wait(net::TransportEvent& event, int ms) override
+    {
         ENetEvent e;
-        while (enet_host_service(mHost, &e, 0) > 0)
+        for (int wait = ms; enet_host_service(mHost, &e, (enet_uint32)wait) > 0; wait = 0)
         {
             event.data.clear();
             switch (e.type)

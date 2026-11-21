@@ -17,6 +17,7 @@ namespace
 {
 const uint32_t kArenaPeer = ~0u; // an arena bot's slot (no transport peer has it)
 const int kHelloWaitMs = 10000;
+const int kDesertedWaitMs = 100;
 
 long long NowMs()
 {
@@ -638,8 +639,24 @@ void net::Server::PollTransport()
 void net::Server::Idle()
 {
     TransportEvent e;
-    while (mTransport && mTransport->Poll(e))
+    if (!mTransport)
     {
+        return;
+    }
+    // Nobody connected and no arena bot: the game stands still (no step, its tick kept) until the network has news
+    bool waited = false;
+    if (Deserted())
+    {
+        if (!mTransport->Wait(e, kDesertedWaitMs))
+        {
+            engine::HoldStep();
+            return;
+        }
+        waited = true;
+    }
+    while (waited || mTransport->Poll(e))
+    {
+        waited = false;
         if (e.type == TransportEvent::kReceive && e.channel == kChannelUnreliable && !e.data.empty() && e.data[0] == kMsgPing)
         {
             e.data[0] = kMsgPong;
@@ -651,6 +668,22 @@ void net::Server::Idle()
             mPending.push_back(e);
         }
     }
+}
+
+bool net::Server::Deserted() const
+{
+    if (!mStarted || !mPending.empty() || !mHelloWait.empty())
+    {
+        return false;
+    }
+    for (const Slot& slot : mSlots)
+    {
+        if (slot.used) // a client's or an arena bot's
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 void net::Server::OnEvent(const TransportEvent& e)

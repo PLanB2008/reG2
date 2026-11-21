@@ -3,6 +3,7 @@
 #include "../internal.hpp"
 #include "dev.hpp"
 #include "Source/Car.hpp"
+#include "Source/Char_Pool.hpp"
 #include "Source/Game.hpp"
 #include "Source/Ped.hpp"
 #include "Source/Player.hpp"
@@ -10,8 +11,10 @@
 #include "Source/Weapon.hpp"
 #include "Source/WeaponManager.hpp"
 #include "Source/map_0x370.hpp"
+#include <algorithm>
 #include <stdlib.h>
 #include <string>
+#include <vector>
 
 void net::engine::DebugKill(int victim, int killer)
 {
@@ -131,6 +134,32 @@ void net::engine::DebugArm(int player, int weapon, int ammo)
     else if (ped && weapon >= 0 && weapon < kPlayerWeapons && p->mWeapons[weapon] && p->mWeapons[weapon]->mAmmo == 0)
     {
         p->AddWeaponWithAmmo(weapon, (u8)ammo);
+    }
+}
+
+void net::engine::DebugPatients(int player, int count, int fromBlocks)
+{
+    Ped* ped = InGamePed(player);
+    if (!ped)
+    {
+        return;
+    }
+    std::vector<std::pair<s32, Ped*>> candidates;
+    for (Ped* p = gPedPool->mPool.mpPrev; p; p = p->mpNext)
+    {
+        if (!p->mPlayer && !p->mCar && p->mGameObject && !p->isDead() && !p->IsOnFire())
+        {
+            const s32 d = Fix16::MaxAbsDistance(p->get_cam_x(), p->get_cam_y(), ped->get_cam_x(), ped->get_cam_y()).mValue;
+            if (d >= fromBlocks << 14)
+            {
+                candidates.push_back(std::make_pair(d, p));
+            }
+        }
+    }
+    std::sort(candidates.begin(), candidates.end(), [](const std::pair<s32, Ped*>& a, const std::pair<s32, Ped*>& b) { return a.first < b.first; });
+    for (int i = 0; i < count && i < (int)candidates.size(); i++)
+    {
+        candidates[i].second->SetOnFire();
     }
 }
 

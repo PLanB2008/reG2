@@ -16,7 +16,8 @@
 
 namespace
 {
-wchar_t gStatusCorner[64], gStatusCentre[64];
+// The corner holds the round's line, GTA2_NET_STATS's and the ping's
+wchar_t gStatusCorner[256], gStatusCentre[64];
 wchar_t gBanner[64];
 } // namespace
 

@@ -31,6 +31,11 @@ class Transport
     }
     // The next event, without waiting; false when there is none
     virtual bool Poll(TransportEvent& event) = 0;
+    // The next event, waiting up to <ms> for one
+    virtual bool Wait(TransportEvent& event, int ms)
+    {
+        return Poll(event);
+    }
     // Queued until Flush; false if the peer is gone or the packet is too big for an unreliable send
     virtual bool Send(uint32_t peer, uint8_t channel, const void* data, size_t size, bool reliable) = 0;
     virtual void Flush() = 0;

@@ -197,7 +197,9 @@ A client runs reG2's frame loop (`port/src/frame_loop.cpp`, `gPortNetFrameLoop`)
 game's rate, frames at the FRAME LIMIT, each drawn between the last two ticks (`port/src/interpolation.cpp`), SHOW FPS.
 The step is the tick and the hook together, so a draw only ever sees the state after a hook: the interpolation goes
 from what the frames before showed (the state before the tick, after the last hook's blend) to the state after this
-one's rollback and blend, and a correction is spread over the frames of a tick. A server and a replay run the
+one's rollback and blend, and a correction is spread over the frames of a tick. Objects and particles go from the
+corrected game's place before the tick instead (recorded before the shown tick is resimulated, `engine::ResimStepStart`):
+after a rollback the same sprite slot and id may hold another object in the prediction. A server and a replay run the
 original's frame path in `winmain.cpp` (a step, then a frame): a server draws nothing, a replay runs as fast as it can.
 
 ### The server
@@ -230,6 +232,10 @@ original's frame path in `winmain.cpp` (a step, then a frame): a server draws no
   player who left (its ped walks on as a pedestrian). A joining client gets a new player ped at the next restart zone
   and an empty score. Snapshots carry the slots in the game, and clients mirror them. The others read "BOB joined",
   "BOB is back", "BOB left" or "BOB was kicked" (the server's notices).
+- **Idle when empty**: a server with nobody to play for (no client connected or connecting, no arena bot) runs no
+  step: its idle hook waits on the network up to 100 ms at a time (`Server::Deserted`, `Transport::Wait`) and puts the
+  next step off (`engine::HoldStep`). Its tick and the round flow stand still, so the round goes on where it was when a
+  client connects (that event lets the steps run again); pings and connects are answered meanwhile.
 - **No sound**: a server opens no audio device (`gPortNoAudio`). Nobody hears it, and its listener would follow slot
   0's camera, whose ped can be any ped in any car once that player has left.
 
@@ -258,10 +264,11 @@ original's frame path in `winmain.cpp` (a step, then a frame): a server draws no
   | players, cars, peds, objects (movement, physics, collisions, weapons) | runs | the prediction |
   | traffic and ambient ped spawning, despawning | off | only the server creates and removes entities |
   | the map script's level start | its look and sound only | its shading level, ambient light and sounds, and the cars it puts on car transporters (`gPortScriptCommandRuns`); the rest is stepped over |
-  | scripts after the level start, police, ambulance, fire engines, buses | off | they create entities; the results arrive as state (the police's as the world entity's) |
+  | scripts after the level start, police, ambulance, fire engines, buses | off | they create entities; the results arrive as state (the police's as the world entity's; a wreck burns only where the game sent a fire engine to it, `Car::SpawnFire`, so its fire is the server's) |
   | generators, the garage, emergency crews | run, idle | scripts switch generators on and park cars in the garage, the police and the ambulance send crews |
   | doors, cranes, crushers, trains, traffic lights | runs | predicted, corrected by snapshots (the lights' phase is in the world entity, each train has one of its own) |
-  | particles, tile animations, lights, HUD, sound | runs | cosmetic; a resimulated tick runs without the sound service, then takes what it left (shots, impacts, voice lines, sound events, radio reports), so a restore doesn't play them again; what no live tick played (a snapshot's death, another player's shot the prediction missed, by ammo) is given to the next live tick |
+  | particles, tile animations, lights, HUD | runs | cosmetic |
+  | sound | runs | the sound log ("Sound on a client" below): a resimulated tick runs the sound's entities without the mixer, and what it asked for that no live frame played is played once its tick is settled |
 
   Player peds take no damage on a client, and everything counts as seen there, so nothing is removed off screen. A
   player's health that drops in a snapshot shows the server's hit: the game's blood burst at its ped and the grunt of a
@@ -297,7 +304,7 @@ the original's.
 |---|---|
 | World (one per snapshot, `engine/world_entity.cpp`) | the game's tick counter (timers are stamped with it), the random seed and stream, the restart zones' turn, the round's state (`core/round_state.hpp`), the game's generation (a map change), the traffic lights, the tag game's fugitive and times, the map's light level (its script sets it: `MapRenderer`'s ambient, its target and step), the police's state that a client's cops, cop cars and HUD read (the highest wanted level, the strongest crew, a crew on screen, the last cop whose shot hit, and each pursuit's criminal, level, state, timer and crews) |
 | Player (`engine/players.cpp`) | place, input, health, death count and last killer, weapons and the ammo of all 28 (a car weapon the car here lacks is added to it), frags and points, the HUD's money and multiplier, power-up timers, its car, the chat line |
-| Car (`engine/cars.cpp`, `car_ai.cpp`) | place, its whole `CarPhysics` (but its two pointers), damage, lights, horn, colour, its roof turret's angle, the trailer it tows (towed trailers sent too), its proofs and alarm (`Car::mFlags`), its driver, and its AI (`CarAI`: route, speed, the cars it chases) |
+| Car (`engine/cars.cpp`, `car_ai.cpp`) | place, its whole `CarPhysics` (but its two pointers), damage, its wreck's fire, lights, horn, colour, its roof turret's angle, the trailer it tows (towed trailers sent too), its proofs and alarm (`Car::mFlags`), its driver, and its AI (`CarAI`: route, speed, the cars it chases) |
 | Ped (`engine/ped_state.cpp`) | place, and the plain values its AI runs on (objectives, targets, speeds, timers, occupation, flags, health, death cause), its references (targets, group) and its car and seat |
 | Pickup (`engine/pickups.cpp`) | model and place; roadblock barriers too (they are off the object pool's list), and the car weapons' mines and oil |
 | Train (`engine/trains.cpp`, every train in every snapshot) | its lead's place, speed and driver (none, the traffic driver, a ped, a player), its carriages' car ids (the client's train of the same index takes them), which end leads (`Train::ReassignTrainHead`), its state, stop phase and timers, the station it heads for and that station's state, each carriage's damage and explosion timer |
@@ -342,11 +349,69 @@ bring back freed sound entries. Left out: the frame loop's own globals around th
 pacing, the keyboard recorder), the audio driver and DirectInput devices, and `file.cpp`'s open file, which a
 resimulation doesn't run or which are freed while the game goes on. The sound's channel bookkeeping and the radios (the car
 radio's station and in-car state, the police radio's calls) stay as they are over a restore: they mirror the mixer and
-the radio's stream, which aren't rolled back, and a resimulation runs no sound to bring them up to date. The set is made again for every game (a new map's pools are elsewhere), and leaves
+the radio's stream, which aren't rolled back, and a resimulation doesn't play sound to bring them up to date. The set is made again for every game (a new map's pools are elsewhere), and leaves
 out what the game's scratch pointers point to (they point into a freed map after a map change). A function's static
 registers when the function first runs; one that comes after the set was taken goes at its end and the set is taken
 again, so a world saved before is the start of the new one. The whole world is about 3.2 MB; saving or restoring it
 takes under 0.2 ms, a busy tick about 40 µs.
+
+### Sound on a client
+
+A client makes its sounds from its own simulation, as the original's lockstep game did; the server sends none (it has
+no sound at all) and its snapshots carry state, not sound events. Most games with prediction do the same for what a
+player's own simulation shows, and send what it can't know (another player's shot, an explosion) as an event or as
+state the client plays from: here that state is the snapshot plus the resimulation that follows it. So the sound has to
+follow the rollback: a tick first simulated in a resimulation, which plays nothing, would never be heard, and one
+predicted and resimulated would be heard twice.
+
+The sound log (`engine/sound_log.cpp`): every live frame notes the one-shot samples its audio entities ask for
+(`gPortSoundRequestsHook`, in `sound_obj::ServiceSoundEffects`, around `InterrogateAudioEntities`), keyed by the entity's
+owner (its pointer and id), which of its sounds it is (`sound_0x68::mSampleIndex`; the collision queue's impacts by
+place), the place and the tick. A resimulated tick runs the same entities without the mixer (`SoundLogResimTick`: the
+queues and channels as they were, no radio, vocal stream or pager) and notes what they would have asked for; their
+progress moves on with the world as on a live frame (entity ages, `SoundPosEntry`, the frame counter, the events they
+take). Once a snapshot settles a tick (its tick and the next, which runs with the server's state and inputs), that
+tick's requests no live frame had (same owner and sound, within 2 ticks and a block) are added to the next live frame's
+queue, each once, and noted as heard. What a snapshot's Apply leaves (a death the server carried out) is asked for by a
+pass before the first resimulated tick, as the snapshot's next tick's. Loops are asked for every frame by the live
+frames from the corrected world, and the channels playing them are kept over a restore.
+
+| Sound | Where (`sound_obj.cpp`) | On a client |
+|---|---|---|
+| Shots (pistol, SMG, shotgun, rocket, car guns, mines) | `ProcessType7_Weapon`, `Weapon::mShotFired` | one-shot: the log |
+| Flamethrower, fire truck gun, shocker | `ProcessType7_Weapon` | loop: live, channels kept |
+| Impacts (landings, crashes, bullets) | `ProcessType6_CollisionSoundQueue`, `CollisionSoundQueue` | one-shot: the log, by place |
+| Explosions: the bang at age 2, the crackle after | `ProcessOtherObjects` (object 113), the entity's age | one-shot: the log; the age moves on in a resimulation |
+| Car fires, fire | `ProcessOtherObjects` | one-shot asked for every frame: the log |
+| Footsteps | `ProcessPed`, the animation frame and the frame counter | one-shot: the log (the variant is drawn: keyed by the sound, not the sample) |
+| Ped voices (hits, screams, a death's cry), a burning ped's scream | `HandlePedVoiceEvent` (`Ped::mVoiceEvent`), `ProcessPed` (`mScreamTimer`) | one-shot: the log; an Apply's by the pass before the first resimulated tick |
+| Car doors, engine start, air brakes, AI horn beeps, car shop | `HandleCarDoorSounds`, `HandleCarEngineStartSound`, `HandleHeavyVehicleStopSound` (`SoundPosEntry::mLastSpeed`), `HandleAICarHornBeep` (`Car::mSoundEvent`), `PlayCarShopEventSound` | one-shot: the log; the last speed moves on in a resimulation |
+| Phones, blaster, tank crush | `ProcessOtherObjects`, `HandleTankCrushSound` | one-shot: the log |
+| Engines, cornering, skids, sirens, alarms, horn, damage, car bomb, trains, tank, cranes, crushers, ambient emitters | `HandleCarEngineSound`, `HandleAICarEngineSound`, ..., `ProcessType8_Crane`, `ProcessType9_Crusher`, `ProcessEffectOnlyObject` | loop: live, channels kept |
+| Announcer lines (vocals) | `ProcessType10_Vocals`, `mVocals.mPendingVoice` | stream: the log, by line |
+| Car radio, police radio, music | `ProcessType3_CopRadioAndMusic` | stream: live, kept over a restore, not run in a resimulation |
+| HUD pager, frontend | `ProcessType11_HudPager`, `ProcessType2_Frontend` | live only |
+
+`GTA2_NET_SFXLOG` measures it: a server with it listens at a client's player, both print every sample they start.
+
+Measured with it: a server with three arena bots and a bot client (all armed, burning cars and trucks put beside the
+client), the samples the server's game started at the client's player against the client's (matched by owner, tick
+within 12 and place), LAN and three links (30 ms with 10 of jitter, 45 with 15 and 1% loss, 60 with 20 and 2%), 2
+minutes each, and pistols on foot at 45 ms:
+
+| Sound | Before (server / client) | After |
+|---|---|---|
+| Other players' shots, at 30-60 ms | 117 / 93, 36 missing | 109 / 111, 1 missing |
+| Other players' shots, LAN | 149 / 276 (each twice) | 51 / 51 |
+| Explosions' bangs, LAN / links | 9 / 0, 22 / 50 | 8 / 8, 29 / 26 |
+| Explosions' crackle, links | 39 / 2 | 41 / 42 |
+| Air brakes, links | 66 / 77, 61 missing (a stopped truck hissed every tick, others never) | 102 / 97 |
+| The client's own footsteps, pistols on foot | 306 / 600 | 309 / 315 |
+| Impacts, links | 1032 / 1093 | 838 / 862 |
+
+Car fires were over (112 / 441, then 77 / 393): wrecks burning on the client only. A wreck burns only where the game
+sends it a fire engine (`Car::SpawnFire`), which a client never does, and the client lit them all; the car entity now
+carries the server's wreck fire (`kCarWreckBurns`). With it, LAN 50 / 672 before, 50 / 76 after; 45 ms 30 / 127, 29 / 34.
 
 ### Wire format
 
@@ -393,7 +458,8 @@ What a network game trusts, and what it doesn't:
   `ScriptManager::GetScrFileName`, `Start_NetworkGame`), and port builds have stack canaries.
 - **Snapshots**: a client puts every field the game uses as an index, a table's entry, an angle into the sine table,
   a place it looks the map up at or a count of a fixed array into its valid range before anything uses it
-  (`engine/sanitize.cpp`; a changed field is a `net: CHECK` line, as a real server never sends one), and refuses at
+  (`engine/sanitize.cpp`; a changed field is a `net: CHECK` line, as a real server never sends one: a server with
+  `GTA2_NET_SNAPCHECK` runs the same check on its own world every tick, so a range too narrow for the game shows there), and refuses at
   the place it is applied what needs the game to check: a car model without a `car_info`, a remap beyond the style's,
   a trailer the game wouldn't hitch, an object without a definition, a station that isn't a train's, a ped state whose
   objective lacks its target, a carjacking animation on foot. In port builds the map's lookups stay on the map
@@ -462,6 +528,7 @@ port/net/
                     world.cpp, rollback.cpp, sound_pool.cpp             the rollback set, save and resimulate
                     rounds.cpp        new rounds, map changes           overlay.cpp       what a client draws over the frame
                     stats.cpp         the periodic log's statistics     navmap.cpp        the map for bots
+                    sound_log.cpp     a client's sound over rollbacks
                     dev/              checks, logs and test cheats (dev.hpp), off unless switched on
   dev/            the session's checks and test hooks (client_probe.cpp, server_probe.cpp), the arena, the jerk meter
   eval/           measurements behind the design (sim_bench.cpp, neteval.cpp)
@@ -494,9 +561,9 @@ The netcode's hooks, declared in `port/src/net_hooks.hpp`; those in `Source/` ar
 | `sprite.cpp` | `gPortSpriteMovedHook` | a sprite moved: the grid check (`GTA2_NET_CHECKGRID`) |
 | `port/src/game_hooks.cpp` | `gPortLeavePromptShown` | the leave prompt is up: a gamepad's A and B answer it |
 | `port/src/rumble.cpp` | `gPortNoRumble` | no vibration on a server (its local player is a remote one) or in a client's resimulation |
+| `sound_obj.cpp` | `gPortSoundRequestsHook` | a client's sound log: what a frame asks for, and what resimulated ticks owe added to it |
 | `port/compat/src` | `gPortIdleHook`, `gPortNoAudio`, `gPortCrashHook` | polling while a frame waits (`window.cpp`), no sound on a server (`miles.cpp`), the crash report (`main.cpp`) |
 | `Ped.cpp` | `gPortKeepWantedPoints` | a client keeps the server's wanted points with its police off |
-| `Car.cpp` | `gPortNoFireEngines` | a client sends no fire engines (`bSkip_fire_engines`), and its wrecks burn all the same (`Car::SpawnFire`) |
 | `ScriptThread.cpp` | `gPortScriptCommandRuns` | a client runs the level start's look and sound commands, and steps over the rest |
 | `Car.cpp` | `gPortCarMayExplode` | a client's car the server sends blows up when a snapshot says the server's did, not on its own prediction |
 | `Car.cpp` | `Car::TryHonkHorn` | a train's lead without a driver (a player got out of a carriage that stood still) doesn't read it |
@@ -571,7 +638,7 @@ left held) an alarm ends the process with its signal after 5 s.
 
 **The comparison check** (`GTA2_NET_COMPARE=1` on a client): on each snapshot, with the game restored to the
 snapshot's tick and before it is applied, every mapped entity is captured here and compared with the server's, field
-by field; every 300 frames the fields that differ most and how often. A measure, not a pass: remote players and AI
+by field; every 300 frames the fields that differ most and how often (the cops apart, and the paramedics on a line of their own). A measure, not a pass: remote players and AI
 peds are predicted, so they differ.
 
 **The divergence check** (`GTA2_NET_DIVERGE=<server tick>[:<ticks>]`, 300 by default): the client reconciles up to that
@@ -600,19 +667,22 @@ off by default:
 | `GTA2_NET_CORRLOG=1` | client | corrections over half a block or 45 degrees |
 | `GTA2_NET_JERKLOG=1\|2` | both | how jerky what is shown moves (2: and each jump), and how far its way is from its facing and how fast it turns (on a client also where the newest snapshots have the two agree) |
 | `GTA2_NET_MARKER=1` | client | a square where the newest snapshot has the local player |
+| `GTA2_NET_SFXLOG=1` (client), `=<slot>` (server) | both | every sample the mixer starts, by tick, what made it and where; a server with it opens its audio device and listens at that slot's player (to count what a client misses or plays twice) |
 | `GTA2_NET_INPUTLOG=1`, `_ANIMLOG=1`, `_SELFLOG=1`, `_SOUNDLOG=1` | client | the input, the other players' animation, the local player around a death and the server's hits on players, the sound's channels and the car radio |
 | `GTA2_NET_CARDIFF=1` | client | where the prediction of the local player's car differs from the snapshot |
 | `GTA2_NET_GANGLOG=1` | both | player 0's group every 15 ticks, by the server's ids |
 | `GTA2_NET_STACKLOG=1` | both | two cars in one place (under 0.4 blocks apart), once per pair: a car the client kept that the server dropped |
 | `GTA2_NET_PICKUPLOG=1` | client | pickups made and removed |
+| `GTA2_NET_FIRELOG=1` | both | every fire at every 30th tick of the game's cycle: a car's (its id, wrecked or not, its fire's explosion types), the ones on nothing by place, the peds on fire |
 | `GTA2_NET_TRAINLOG=1` | both | every train's place and state at every 150th tick of the game's cycle (the same tick on both ends) |
 | `GTA2_NET_CHECKGRID=1` | both | the collision grid checked after every move, a sprite moved off the map reported with the code that moved it, a rollback block whose pointee moved since the set was taken, on a client a ped driving a car that has another driver or leaving it through another car, and on both the weapon pool's lists looping or sharing a weapon and a ped holding a weapon it would free wrongly (a freed one, a player slot's, a car's, another ped's), a tank, fire truck or gun jeep without its roof turret, and a collision grid row that isn't a sorted list of pool cells and links, after every tick, restore and apply (`net: CHECK` lines) |
-| `GTA2_NET_SNAPCHECK=1` | server | every entity's hash in the snapshots, checked by the clients (`net: CHECK` lines) |
+| `GTA2_NET_SNAPCHECK=1` | server | every entity's hash in the snapshots, checked by the clients, and the snapshot sanity check run on the server's own world (`net: CHECK` lines) |
 | `GTA2_NET_DUMPPEDS=<file>[:<from>:<to>]`, `GTA2_NET_RANDLOG=<file>:<from>:<to>` | both | the divergence check's dumps |
 | `GTA2_NET_NAVDUMP=<file.pgm>` | client bot | the bots' map as a picture |
 | `GTA2_NET_TESTKILL=<tick>:<victim>:<killer>,...` | server | a player killed by the game's own death |
 | `GTA2_NET_TESTPOWERUP=<tick>:<player>:<power-up>,...` | server | a power-up (12: an instant gang) |
 | `GTA2_NET_TESTFIRE=<tick>:<player>,...` | server | the player set on fire |
+| `GTA2_NET_TESTPATIENTS=<tick>:<player>:<n>[:<blocks>],...` | server | the n ambient peds nearest the player (at least that many blocks away) set on fire: the ambulance comes for their corpses |
 | `GTA2_NET_TESTSTREAK=<tick>:<player>,...` | server | a kill streak's bonus, as the 20th kill in a row gives it |
 | `GTA2_NET_TESTCAR=<tick>:<player>:<model>,...` | server | a car beside the player (11: a bus; 63, 64: a truck cab with a container trailer); model + 1000 * n: damaged by n * 1000 (16: on fire, 26: burning) |
 | `GTA2_NET_TESTTRAIN=<tick>:<player>:<train>,...` | server | the player at the wheel of a train; train + 10: that train into reverse; train + 20: the player on the platform of the station it stops at next |

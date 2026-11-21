@@ -47,6 +47,8 @@ class GridCheck
 void DebugKill(int victim, int killer);
 void DebugArm(int player, int weapon, int ammo); // Player::AddWeaponWithAmmo
 void DebugFire(int player); // the player's ped set on fire (Ped::SetOnFire)
+// That many ambient peds nearest the player, at least that many blocks from it, set on fire: their corpses call the ambulance
+void DebugPatients(int player, int count, int fromBlocks);
 void DebugStreak(int player); // a kill streak's bonus (PlayerScoreTracker::Service: 20 kills in a row)
 void DebugWanted(int player, int points); // at least that many wanted points (Ped::mWantedPoints)
 void DebugPowerUp(int player, int powerUp); // Player::CollectPowerUp (power_up_indices, e.g. 12 instant gang)
@@ -59,6 +61,7 @@ void GangLog(bool server); // GTA2_NET_GANGLOG
 void InstallSpriteCheck(); // GTA2_NET_CHECKGRID: a sprite moved off the map is reported (gPortSpriteMovedHook)
 void StackLog(bool server); // GTA2_NET_STACKLOG: two cars in one place (under 0.4 blocks apart in x and y), once per pair
 void TrainLog(bool server); // GTA2_NET_TRAINLOG: every train's place and state at every 150th tick of the game's cycle
+void FireLog(bool server); // GTA2_NET_FIRELOG: every fire (cars', loose, peds on fire) at every 30th tick of the game's cycle
 // GTA2_NET_CARDIFF: where this game's prediction of the local player's car differs from the snapshot's (call after
 // restoring the snapshot's tick, before applying it)
 void DebugOwnCarDiff(const Snapshot& snap);
@@ -75,6 +78,8 @@ void DumpPeds(uint32_t tick, bool server);
 // GTA2_NET_RANDLOG=<file>:<from>:<to>: each rand() draw's caller (an offset in the program) at those ticks (the game's
 // cycle), from when StartRandLog is called; port/net/scripts/rand_diff.py compares two
 void StartRandLog();
+// GTA2_NET_SFXLOG: the samples the mixer starts printed; on a server, its listener at slot <value>'s camera (every tick)
+void InstallSfxLog(bool server);
 void DebugSoundChannels(uint32_t frame); // GTA2_NET_SOUNDLOG: the sound's playing channels, printed when they change
 void DebugAnimLog(uint32_t frame); // GTA2_NET_ANIMLOG: the other players' inputs, states and walking animation, every third frame
 void DebugSelfLog(uint32_t frame); // GTA2_NET_SELFLOG: the local player around a death (position, states, the death fields)

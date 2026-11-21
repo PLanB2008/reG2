@@ -245,6 +245,12 @@ void net::engine::IdleWait()
     }
 }
 
+void net::engine::HoldStep()
+{
+    static u32& sNextStep = PortStatic<u32>(0x6F5A28);
+    sNextStep = timeGetTime() + (gGame_0x40 ? gGame_0x40->GetFrameDurationMs() : 33);
+}
+
 void net::engine::SetTickMs(int ms)
 {
     if (gGame_0x40 && ms > 0)

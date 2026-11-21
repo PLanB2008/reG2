@@ -44,6 +44,7 @@ void ShowLeavePrompt(bool shown); // the client's "Leave the game?": the gamepad
 void SetRoundPad(bool results);
 bool PadMode(); // the gamepad gave the last input: the hints name its buttons
 void IdleWait(); // while the game waits for its next step: a millisecond's sleep when that is more than 1 ms away
+void HoldStep(); // the next step put off by a tick (an empty server's: no step while it waits)
 void SeedRandom(uint32_t seed); // the game's rand() state (a server's: clients take it from snapshots)
 // A network game's random draws: each entity's update and each server service its own (port/src/rand/owner.hpp)
 void SetRandOwners(bool client);
@@ -208,6 +209,8 @@ void RestoreGame(const SavedWorld& in);
 bool Restorable(const SavedWorld& in); // saved with the rollback set as it is now
 // One tick without drawing or sound, with every player's buttons (count: players)
 void ResimTick(const uint32_t* buttons, int count);
+// Before resimulating the tick the frame loop just ran: the corrected game's places the frames draw from
+void ResimStepStart();
 
 // --- A client's view (replica.cpp, snapshot.cpp) ---
 

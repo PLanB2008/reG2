@@ -3426,6 +3426,18 @@ Object* Object_5C::CreateObject(s32 object_type, Fix16 xpos, Fix16 ypos, Fix16 z
             }
             else
             {
+#if defined(GTA2_PORT)
+                // Port: with all 40 explosions in use the original kept this object, which never updates or goes away
+                // (a spreading fire leaks hundreds, then the sound and object pools run out); freed as when blocked
+                if (pNewObject->mPoolListState == object_pool_state::in_pool_list_1)
+                {
+                    gObject_2C_Pool->FindAndDeAllocate(pNewObject);
+                }
+                else
+                {
+                    gObject_2C_Pool->DeAllocate(pNewObject);
+                }
+#endif
                 return NULL;
             }
 

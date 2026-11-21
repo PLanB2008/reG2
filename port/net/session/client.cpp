@@ -575,6 +575,10 @@ void net::Client::Reconcile(const Snapshot& snap)
             buttons[i] = RemoteInput((int)i, t);
         }
         buttons[mSlot] = mHist[t % kRing].tick == t ? mHist[t % kRing].buttons : 0;
+        if (t == mTick)
+        {
+            engine::ResimStepStart();
+        }
         engine::ResimTick(buttons.data(), (int)buttons.size());
         mProbe.AfterResim();
         const Clock::time_point ticked = Clock::now();

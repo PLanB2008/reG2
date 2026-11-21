@@ -65,6 +65,11 @@ bool IsCop(Ped* p)
     return (o >= ped_ocupation_enum::police && o <= ped_ocupation_enum::walking_army_guard_31) || o == ped_ocupation_enum::roadblock_cop_37;
 }
 
+bool IsParamedic(Ped* p)
+{
+    return p->mOccupation == ped_ocupation_enum::paramedic_23;
+}
+
 // A car reference of this game's (CarRef) as the server's
 int32_t ServerCarRef(int32_t ref, const std::unordered_map<int32_t, int32_t>& toServer)
 {
@@ -76,7 +81,7 @@ int32_t ServerCarRef(int32_t ref, const std::unordered_map<int32_t, int32_t>& to
 namespace
 {
 // Each entity of the snapshot this game has too, with this game's state of it as captured here (its references
-// into the server's ids): fn(server's, here's, a cop)
+// into the server's ids): fn(server's, here's, its group: 0, 1 a cop, 2 a paramedic)
 template <class Fn> void ForEachPair(const Snapshot& snap, Fn fn)
 {
     using namespace net::engine;
@@ -110,7 +115,7 @@ template <class Fn> void ForEachPair(const Snapshot& snap, Fn fn)
     for (const EntityState& s : snap.entities)
     {
         uint32_t local = s.id; // the world and players: the same ids
-        bool cop = false;
+        int group = 0;
         if (s.type == kEntityCar)
         {
             Car* c = ReplicaCar(s.id);
@@ -120,7 +125,7 @@ template <class Fn> void ForEachPair(const Snapshot& snap, Fn fn)
         {
             Ped* p = ReplicaPed(s.id);
             local = p ? kPedIdBase + p->mId : 0;
-            cop = p && IsCop(p);
+            group = p && IsCop(p) ? 1 : p && IsParamedic(p) ? 2 : 0;
         }
         else if (s.type == kEntityObject || s.type == kEntityTrain)
         {
@@ -163,7 +168,7 @@ template <class Fn> void ForEachPair(const Snapshot& snap, Fn fn)
                 h.f[f] = h.f[f] ? toServer(h.f[f], carIdToServer) : 0;
             }
         }
-        fn(s, h, cop);
+        fn(s, h, group);
     }
 }
 
@@ -172,12 +177,15 @@ void EnsureTally(std::vector<std::vector<FieldTally>>& tally)
     const net::Schema& schema = net::engine::NetSchema();
     if (tally.empty())
     {
-        tally.resize(schema.types.size() + 1); // the last: cops, apart from the other peds
+        tally.resize(schema.types.size() + 2); // then cops and paramedics, apart from the other peds
         for (size_t t = 0; t < schema.types.size(); t++)
         {
             tally[t].resize(schema.types[t].fields.size());
         }
-        tally.back().resize(schema.types[net::engine::kEntityPed].fields.size());
+        for (size_t t = schema.types.size(); t < tally.size(); t++)
+        {
+            tally[t].resize(schema.types[net::engine::kEntityPed].fields.size());
+        }
     }
 }
 } // namespace
@@ -185,8 +193,8 @@ void EnsureTally(std::vector<std::vector<FieldTally>>& tally)
 void net::engine::ComparePrediction(const Snapshot& snap)
 {
     EnsureTally(gTally);
-    ForEachPair(snap, [](const EntityState& s, const EntityState& h, bool cop) {
-        std::vector<FieldTally>& tally = cop ? gTally.back() : gTally[s.type];
+    ForEachPair(snap, [](const EntityState& s, const EntityState& h, int group) {
+        std::vector<FieldTally>& tally = group ? gTally[NetSchema().types.size() + group - 1] : gTally[s.type];
         for (size_t f = 0; f < tally.size(); f++)
         {
             // Not the client's to predict: a player's deaths (a client counts its own, only to carry out each once),
@@ -247,8 +255,8 @@ void net::engine::CompareDivergence(const Snapshot& snap, uint32_t age)
         gDiverged.back().resize(schema.types[kEntityPed].fields.size());
     }
     const uint64_t missingBefore = gMissing[kEntityCar] + gMissing[kEntityPed];
-    ForEachPair(snap, [&](const EntityState& s, const EntityState& h, bool cop) {
-        const size_t t = cop ? gDiverged.size() - 1 : s.type;
+    ForEachPair(snap, [&](const EntityState& s, const EntityState& h, int group) {
+        const size_t t = group == 1 ? gDiverged.size() - 1 : s.type;
         gComparedEntities[(uint32_t)t * 0x10000000u + (s.id & 0x0FFFFFFF)] = 1;
         std::vector<Divergence>& d = gDiverged[t];
         for (size_t f = 0; f < d.size(); f++)
@@ -414,7 +422,8 @@ void net::engine::PrintPredictionStats(uint32_t frame)
         double share;
         std::string line;
     };
-    std::vector<Row> rows;
+    std::vector<Row> rows, medics;
+    uint64_t medicCompared = 0;
     for (size_t t = 0; t < gTally.size(); t++)
     {
         for (size_t f = 0; f < gTally[t].size(); f++)
@@ -423,15 +432,30 @@ void net::engine::PrintPredictionStats(uint32_t frame)
             if (x.differ)
             {
                 char line[160];
-                const bool cop = t == schema.types.size();
-                snprintf(line, sizeof(line), "%s.%s %.1f%% (%llu of %llu, %.1f off on average)", cop ? "cop" : schema.types[t].name,
-                         schema.types[cop ? kEntityPed : t].fields[f].name,
+                const bool group = t >= schema.types.size();
+                snprintf(line, sizeof(line), "%s.%s %.1f%% (%llu of %llu, %.1f off on average)",
+                         !group ? schema.types[t].name : t == schema.types.size() ? "cop" : "medic", schema.types[group ? kEntityPed : t].fields[f].name,
                          100.0 * x.differ / x.compared, (unsigned long long)x.differ, (unsigned long long)x.compared, x.absSum / x.differ);
-                rows.push_back(Row{(double)x.differ / x.compared, line});
+                (t == schema.types.size() + 1 ? medics : rows).push_back(Row{(double)x.differ / x.compared, line});
             }
         }
     }
-    std::sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.share > b.share; });
+    if (gTally.size() > schema.types.size() + 1)
+    {
+        medicCompared = gTally[schema.types.size() + 1][0].compared;
+    }
+    const auto byShare = [](const Row& a, const Row& b) { return a.share > b.share; };
+    std::sort(rows.begin(), rows.end(), byShare);
+    std::sort(medics.begin(), medics.end(), byShare);
+    if (medicCompared)
+    {
+        printf("net: frame %u, paramedics against the server (%llu compared):", frame, (unsigned long long)medicCompared);
+        for (size_t i = 0; i < medics.size() && i < 16; i++)
+        {
+            printf("%s %s", i ? ";" : "", medics[i].line.c_str());
+        }
+        printf("%s\n", medics.empty() ? " none" : "");
+    }
     printf("net: frame %u, prediction against the server, the fields that differ most:", frame);
     for (size_t i = 0; i < rows.size() && i < 12; i++)
     {

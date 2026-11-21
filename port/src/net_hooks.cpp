@@ -8,6 +8,8 @@ void (*gPortIdleHook)();
 bool gPortNetFrameLoop;
 
 bool gPortNoAudio;
+void (*gPortSampleStartHook)(const void*);
+void (*gPortSoundRequestsHook)(bool);
 bool gPortServer;
 bool gPortNoRumble;
 s32 gPortTrafficCap = 16;
@@ -28,6 +30,5 @@ bool gPortTagTimeCounts;
 u16 (*gPortChatChar)(Player*, s32);
 bool gPortProtectsPlayers;
 bool (*gPortScoreBonusHook)(Player* pPlayer, s32 voice);
-bool gPortNoFireEngines;
 bool gPortLeavePromptShown;
 int gPortNetRoundPad;

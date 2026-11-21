@@ -793,6 +793,10 @@ DXDEC void AILCALL AIL_start_sample(HSAMPLE h)
     S(h)->mPos = 0;
     S(h)->mGain[0] = S(h)->mGain[1] = -1;
     S(h)->mStatus = SMP_PLAYING;
+    if (gPortSampleStartHook)
+    {
+        gPortSampleStartHook(h);
+    }
 }
 
 DXDEC void AILCALL AIL_end_sample(HSAMPLE h)

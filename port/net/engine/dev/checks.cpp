@@ -26,6 +26,8 @@
 #include "Source/collide.hpp"
 #include "Source/gbh_graphics.hpp"
 #include "Source/sound_obj.hpp"
+#include "Source/Explosion.hpp"
+#include "Source/root_sound.hpp"
 #include "Source/sprite.hpp"
 #include <math.h>
 #if !defined(_WIN32)
@@ -985,4 +987,143 @@ void net::engine::InstallSpriteCheck()
     {
         gPortSpriteMovedHook = SpriteMovedOff;
     }
+}
+
+// GTA2_NET_SFXLOG: each sample the mixer starts, by the game's tick, what made it and where (to compare a server's with
+// a client's). A server with it opens its audio device and listens at slot <value>'s camera
+namespace
+{
+void LogSampleStart(const void*)
+{
+    // ProcessActiveQueues starts a sample on the first channel not playing, and marks it after the start
+    int ch = -1;
+    for (int i = 0; i < gSound_obj.mnActiveSamples && ch < 0; i++)
+    {
+        ch = gSound_obj.mActiveSamples[i].mbIsBeingPlayed ? -1 : i;
+    }
+    if (ch < 0)
+    {
+        return;
+    }
+    const sound_0x68& a = gSound_obj.mActiveSamples[ch];
+    const int ent = a.mEntityIndex;
+    const SoundObject* o = ent >= 0 && ent < 1020 && gSound_obj.mAudioEntities[ent].mbUsed ? gSound_obj.mAudioEntities[ent].mpObj : NULL;
+    char src[48] = "?";
+    if (o && o->mObjectType == SoundObjectTypeEnum::Weapon_30_7 && o->mpAny.pWeapon_30)
+    {
+        const Weapon* w = o->mpAny.pWeapon_30;
+        snprintf(src, sizeof(src), "weapon%d/p%d", w->mWeaponType, w->mpPed && w->mpPed->mPlayer ? w->mpPed->mPlayer->mPlayerIdx : -1);
+    }
+    else if (o && o->mObjectType == SoundObjectTypeEnum::Sprite_1 && o->mpAny.pSprite)
+    {
+        Sprite* s = o->mpAny.pSprite;
+        if (Car* c = s->AsCar())
+        {
+            snprintf(src, sizeof(src), "car%d/p%d", c->mCarInfoIdx, c->mDriver && c->mDriver->mPlayer ? c->mDriver->mPlayer->mPlayerIdx : -1);
+        }
+        else if (Char* c = s->AsCharB4())
+        {
+            snprintf(src, sizeof(src), "ped/p%d", c->mpPed && c->mpPed->mPlayer ? c->mpPed->mPlayer->mPlayerIdx : -1);
+        }
+        else if (Object* obj = s->AsObject2C())
+        {
+            snprintf(src, sizeof(src), "obj%d", obj->mModel);
+            if (obj->mModel == objects::explosion_113 && obj->mpAny.pExplosion)
+            {
+                snprintf(src + strlen(src), sizeof(src) - strlen(src), "/type%d", obj->mpAny.pExplosion->mType);
+            }
+        }
+    }
+    else if (o)
+    {
+        snprintf(src, sizeof(src), "type%d", o->mObjectType);
+    }
+    printf("sfx: tick %u samp %u %s at %d,%d loops %u\n", gpRng ? (uint32_t)gpRng->get_cur_rng() : 0, a.mSampIdx, src,
+           a.mObj.mX.ToInt(), a.mObj.mY.ToInt(), a.mLoopCount);
+}
+} // namespace
+
+void net::engine::InstallSfxLog(bool server)
+{
+    const char* on = getenv("GTA2_NET_SFXLOG");
+    if (!on)
+    {
+        return;
+    }
+    gPortSampleStartHook = LogSampleStart;
+    const int slot = atoi(on);
+    Game* g = gGame_0x40;
+    Player* p = server && g && slot > 0 && slot < (int)g->mNumPlayers ? g->mPlayers[slot] : NULL;
+    // The game's listener is its user's (slot 0 on a server): its sound object moves to that player, which then sets it
+    Player* user = p ? g->mPlayers[0] : NULL;
+    if (user && user->mSoundObj)
+    {
+        if (p->mSoundObj && p->mSoundObj != user->mSoundObj)
+        {
+            gRoot_sound.DestroySoundObj(p->mSoundObj);
+        }
+        p->mSoundObj = user->mSoundObj;
+        user->mSoundObj = NULL;
+    }
+}
+
+// GTA2_NET_FIRELOG: every fire at every 30th tick of the game's cycle (the same tick on both ends): a car's (its net id,
+// wrecked or not, its fire explosions' types), the ones on nothing (a molotov's, a flamethrower's, an explosion's) by
+// place, and the peds on fire
+void net::engine::FireLog(bool server)
+{
+    static const bool on = getenv("GTA2_NET_FIRELOG") != NULL;
+    static uint32_t sLast;
+    const uint32_t tick = gpRng ? (uint32_t)gpRng->get_cur_rng() : 0;
+    if (!on || !gCar_BC_Pool || !gExplosionPool_7A8 || tick % 30 || tick == sLast)
+    {
+        return;
+    }
+    sLast = tick;
+    const char* end = server ? "server" : "client";
+    std::set<const Object*> onCars;
+    for (Car* c = gCar_BC_Pool->mPool.mpPrev; c; c = c->mpNext)
+    {
+        std::string types;
+        for (AttachedSprite* a = c->mAttachments.mP18; a; a = a->mpNext)
+        {
+            const Object* o = a->mpSprite ? a->mpSprite->mObject2CPtr : NULL;
+            const s32 st = a->mpSprite ? a->mpSprite->GetType() : 0;
+            if (o && (st == sprite_types_enum::object_1 || st == sprite_types_enum::code_obj1_4 || st == sprite_types_enum::map_obj_5) &&
+                o->IsFireExplosion() && o->mpAny.pExplosion)
+            {
+                onCars.insert(o);
+                types += (types.empty() ? "" : ",") + std::to_string(o->mpAny.pExplosion->mType);
+            }
+        }
+        if (!types.empty())
+        {
+            const uint32_t id = server ? kCarIdBase + (uint32_t)c->mCarId : MappedId(c);
+            printf("net: FIRE %s tick %u: car %u wreck %d damage %d model %d at (%.1f, %.1f) types %s\n", end, tick, id, (int)IsWrecked(c),
+                   (int)c->mDamage, (int)c->mCarInfoIdx, c->mCarSprite->mXy.x.ToFloat(), c->mCarSprite->mXy.y.ToFloat(), types.c_str());
+        }
+    }
+    for (int pool = 0; pool < 2; pool++)
+    {
+        const int n = pool ? 20 : 40;
+        for (int i = 0; i < n; i++)
+        {
+            const bool used = pool ? (gExplosionPool_3D4 && gExplosionPool_3D4->mbUsed[i]) : gExplosionPool_7A8->mbUsed[i];
+            const Explosion& x = pool ? gExplosionPool_3D4->mExplosions[i] : gExplosionPool_7A8->mExplosions[i];
+            if (!used || !x.IsFireType() || !x.mpObj2C || !x.mpObj2C->mSprite || onCars.count(x.mpObj2C))
+            {
+                continue;
+            }
+            printf("net: FIRE %s tick %u: loose type %d timer %d at (%.1f, %.1f)\n", end, tick, (int)x.mType, (int)x.mTimer,
+                   x.mpObj2C->mSprite->mXy.x.ToFloat(), x.mpObj2C->mSprite->mXy.y.ToFloat());
+        }
+    }
+    int burning = 0;
+    for (Ped* p = gPedPool ? gPedPool->mPool.mpPrev : NULL; p; p = p->mpNext)
+    {
+        burning += p->mBf21C.bOnFire;
+    }
+    const Ped* me = server ? NULL : InGamePed(LocalPlayer());
+    printf("net: FIRE %s tick %u: peds burning %d, the local player at (%.1f, %.1f)\n", end, tick, burning, me ? me->get_cam_x().ToFloat() : -1.0f,
+           me ? me->get_cam_y().ToFloat() : -1.0f);
 }

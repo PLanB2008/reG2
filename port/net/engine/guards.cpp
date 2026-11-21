@@ -216,34 +216,52 @@ void net::engine::KeepPlayerArrows()
     }
 }
 
-// What is attached to a car (a tank's turret, a fire engine's water cannon) put back on it after the snapshot moved the
-// car, before the frame is drawn: the game moves an attachment with its car in the tick only, so it was drawn where the
-// car had been
+// What is attached to a car (a tank's turret, a fire engine's water cannon) or a ped (its fire) put back on it after the
+// snapshot or the blend moved it, before the frame is drawn: the game moves an attachment with its car or ped in the tick
+// only, so it was drawn where that had been
+namespace
+{
+void Anchor(const Sprite* owner, AttachedSprite* first)
+{
+    for (AttachedSprite* a = first; a; a = a->mpNext)
+    {
+        Object* o = a->mpSprite ? a->mpSprite->AsObject2C() : NULL;
+        if (!o || !o->mSprite || o->mRemovalState)
+        {
+            continue;
+        }
+        // As the game does: the offset turned with its owner, its rotation on top of the owner's
+        Fix16 x = owner->mXy.x, y = owner->mXy.y;
+        if (a->mOffsetX != Fix16(0) || a->mOffsetY != Fix16(0))
+        {
+            x = a->mOffsetX;
+            y = a->mOffsetY;
+            Ang16 rot = owner->mRotation;
+            Ang16::RotateVector(x, y, rot);
+            x += owner->mXy.x;
+            y += owner->mXy.y;
+        }
+        o->mSprite->set_xyz_lazy(x, y, owner->mZpos);
+        o->mSprite->set_ang_lazy(owner->mRotation + a->mOffsetRot);
+    }
+}
+} // namespace
+
 void net::engine::AnchorAttachments()
 {
     for (Car* c = gCar_BC_Pool->mPool.mpPrev; c; c = c->mpNext)
     {
-        Sprite* car = c->mCarSprite;
-        for (AttachedSprite* a = car ? c->mAttachments.mP18 : NULL; a; a = a->mpNext)
+        if (c->mCarSprite)
         {
-            Object* o = a->mpSprite ? a->mpSprite->AsObject2C() : NULL;
-            if (!o || !o->mSprite || o->mRemovalState)
-            {
-                continue;
-            }
-            // As the game does: the offset turned with the car, its rotation on top of the car's
-            Fix16 x = car->mXy.x, y = car->mXy.y;
-            if (a->mOffsetX != Fix16(0) || a->mOffsetY != Fix16(0))
-            {
-                x = a->mOffsetX;
-                y = a->mOffsetY;
-                Ang16 rot = car->mRotation;
-                Ang16::RotateVector(x, y, rot);
-                x += car->mXy.x;
-                y += car->mXy.y;
-            }
-            o->mSprite->set_xyz_lazy(x, y, car->mZpos);
-            o->mSprite->set_ang_lazy(car->mRotation + a->mOffsetRot);
+            Anchor(c->mCarSprite, c->mAttachments.mP18);
+        }
+    }
+    for (Ped* p = gPedPool->mPool.mpPrev; p; p = p->mpNext)
+    {
+        Char* c = p->mGameObject;
+        if (c && c->mSpritePtr && c->mSpritePtr->mInstanceId)
+        {
+            Anchor(c->mSpritePtr, c->mObj2c.mP18);
         }
     }
 }
