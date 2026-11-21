@@ -85,6 +85,16 @@ void net::engine::CarPhysicsFields(std::vector<FieldDesc>& out)
     AppendFields(kPhysics, kPhysicsCount, out);
 }
 
+namespace
+{
+// The roof turret (Car::RotateRoofObjectTowardTarget's): its angle is the attachment's on top of the car's
+AttachedSprite* RoofTurret(Car* c)
+{
+    const s32 model = c->IsTank() ? objects::tank_cannon_148 : c->IsGunJeep() ? 248 : c->IsFireTruck() ? objects::water_cannon_114 : 0;
+    return model ? c->mAttachments.GetSpriteForModel(model) : NULL;
+}
+} // namespace
+
 void net::engine::CaptureCar(Car* c, Snapshot& out)
 {
     EntityState e = Entity(kCarIdBase + (uint32_t)c->mCarId, kEntityCar);
@@ -101,6 +111,8 @@ void net::engine::CaptureCar(Car* c, Snapshot& out)
     // Its colour: a remap, or the model's own palette (-1: Car::AssignRandomRemap picks it as one choice, and it
     // leaves the remap as it was, so the remap alone said nothing then)
     e.f[kCarRemap] = c->mCarSprite->mPaletteType == palette_types_enum::car_remaps_3 ? c->mCarSprite->get_remap() : -1;
+    const AttachedSprite* turret = RoofTurret(c);
+    e.f[kCarTurret] = turret ? turret->mOffsetRot.rValue : 0;
     CaptureCarAi(c, e);
     if (const CarPhysics* m = c->mPhysics)
     {
@@ -212,6 +224,11 @@ bool net::engine::SetCarState(Car* car, const EntityState& e)
             }
             car->mDamageLevel = (u8)level;
         }
+    }
+    // Its turret's aim: a remote driver's turn was predicted only once the snapshots had it, and a car made here starts at 0
+    if (AttachedSprite* turret = RoofTurret(car))
+    {
+        turret->mOffsetRot.rValue = (s16)e.f[kCarTurret];
     }
     // Its lights and horn: a siren switched with the horn key (Car::HandleSpecialInput counts the horn down) came
     // on again here after the server had it off
