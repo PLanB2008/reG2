@@ -143,7 +143,7 @@ void BeginDraw()
     f32 x, y, z;
     PortView::Eye(&x, &y, &z);
     port_RainScene((Mode() & (kWet | kReflect)) | (getenv("GTA2_RAIN_DEBUG") ? 8u : 0u) | (getenv("GTA2_RAIN_NOSPRITE") ? 16u : 0u), x, y, z, static_cast<f32>(fmod(PortFrameLoop::WorldSeconds(), 3600.0)),
-                   GroundZ(x, y), EnvFloat("GTA2_RAIN_GLOW", 1.0f), EnvFloat("GTA2_RAIN_PUDDLES", 0.35f));
+                   GroundZ(x, y), EnvFloat("GTA2_RAIN_GLOW", 1.0f), EnvFloat("GTA2_RAIN_PUDDLES", 0.15f));
 #endif
 }
 
