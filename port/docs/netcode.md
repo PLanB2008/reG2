@@ -314,7 +314,7 @@ snapshots), its throttle off (it dropped snapshots when the round trip rose) and
 ## Recordings
 
 Every client session is recorded (`session/recording.cpp`): the welcome, then per frame the packets, the round trip
-and the input, to `recordings/session-<n>.rec` (the newest 10; `GTA2_NET_RECORD=<file>` elsewhere, `off` none). A
+and the input, to `recordings/session-<n>.rec` (the newest 10, each stopped at 200 MB: one to a few hours; `GTA2_NET_RECORD=<file>` elsewhere, `off` none). A
 client does nothing but react to what arrives and to its own input, so `--replay <file>` plays the session again
 without a server, tick for tick, as fast as the game runs: a minute in about 2 s, the same every time. **F12, or the key
 under Esc, marks a moment** in play: the client and its replay print `net: mark <n> at frame <f>`, so a bug seen in
