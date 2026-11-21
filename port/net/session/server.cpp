@@ -280,12 +280,21 @@ void net::Server::OnCommands(int slot, BitReader& r)
         {
             s.lastCmdTick = cmds[i].tick > s.lastCmdTick ? cmds[i].tick : s.lastCmdTick;
         }
+        const uint32_t buttons = WithoutEscape(cmds[i].buttons);
         // Commands for ticks still to come (and not too far ahead) go into the buffer
         if (cmds[i].tick > mTick && cmds[i].tick <= mTick + kRing)
         {
             s.cmdTick[cmds[i].tick % kRing] = cmds[i].tick;
-            s.cmdButtons[cmds[i].tick % kRing] = WithoutEscape(cmds[i].buttons);
-            s.cmdTyped[cmds[i].tick % kRing] = cmds[i].typed;
+            s.cmdButtons[cmds[i].tick % kRing] = buttons & ~kKeyEventBits;
+        }
+        // A key event, late or not, once (the packets repeat the commands)
+        const uint32_t key = buttons & kKeyEventBits, at = cmds[i].tick % kRing;
+        const bool seen = s.keySeenTick[at] == cmds[i].tick && s.keySeenBits[at] == key;
+        if (key && !seen && cmds[i].tick + kRing > mTick && cmds[i].tick <= mTick + kRing && s.keys.size() < (size_t)kRing)
+        {
+            s.keys.push_back({cmds[i].tick, key, cmds[i].typed});
+            s.keySeenTick[at] = cmds[i].tick;
+            s.keySeenBits[at] = key;
         }
     }
 }
@@ -637,30 +646,39 @@ void net::Server::SetNextInputs(const Snapshot& world)
         {
             s.buttons = mStarted ? mArena.Buttons((int)i) : 0;
         }
-        else if (s.used && s.cmdTick[next % kRing] == next)
-        {
-            s.buttons = s.cmdButtons[next % kRing];
-            s.typed = s.cmdTyped[next % kRing];
-            if (s.silent > kHeldTicks)
-            {
-                float x = 0, y = 0;
-                engine::PlayerPosition((int)i, &x, &y);
-                printf("net: tick %u, player %zu back after %u ticks without commands, at (%.2f, %.2f)\n", mTick, i, s.silent, x, y);
-            }
-            s.silent = 0;
-        }
         else if (s.used)
         {
-            s.late++;
-            // The last one again, its controls only (a key event, the chat, happens once); a client silent longer than
-            // a late command's few ticks plays nothing: its player stands, rather than running on blind
-            s.buttons = ++s.silent > kHeldTicks ? 0 : s.buttons & 0xFFF;
-            s.typed = 0;
-            if (s.silent == kHeldTicks + 1)
+            const bool came = s.cmdTick[next % kRing] == next;
+            if (came)
             {
-                float x = 0, y = 0;
-                engine::PlayerPosition((int)i, &x, &y);
-                printf("net: tick %u, player %zu without commands for %u ticks: its input let go, at (%.2f, %.2f)\n", mTick, i, kHeldTicks, x, y);
+                s.buttons = s.cmdButtons[next % kRing];
+                if (s.silent > kHeldTicks)
+                {
+                    float x = 0, y = 0;
+                    engine::PlayerPosition((int)i, &x, &y);
+                    printf("net: tick %u, player %zu back after %u ticks without commands, at (%.2f, %.2f)\n", mTick, i, s.silent, x, y);
+                }
+                s.silent = 0;
+            }
+            else
+            {
+                s.late++;
+                // The last controls again (a key event, the chat, comes from the key queue below); a client silent
+                // longer than a late command's few ticks plays nothing: its player stands, rather than running on blind
+                s.buttons = ++s.silent > kHeldTicks ? 0 : s.buttons & ~kKeyEventBits;
+                if (s.silent == kHeldTicks + 1)
+                {
+                    float x = 0, y = 0;
+                    engine::PlayerPosition((int)i, &x, &y);
+                    printf("net: tick %u, player %zu without commands for %u ticks: its input let go, at (%.2f, %.2f)\n", mTick, i, kHeldTicks, x, y);
+                }
+            }
+            s.typed = 0;
+            if (!s.keys.empty() && s.keys.front().tick <= next)
+            {
+                s.buttons |= s.keys.front().bits;
+                s.typed = s.keys.front().typed;
+                s.keys.erase(s.keys.begin());
             }
         }
         // The results and the countdown: a player's key events (the chat) are all it has (round_state.hpp)

@@ -53,9 +53,18 @@ class Server
         uint32_t token = 0; // the welcome's: a reconnect shows it to have this slot back as it was
         uint32_t lastCmdTick = 0; // the newest command tick received (late ones too)
         uint32_t cmdTick[kRing] = {}; // received commands by tick % kRing
-        uint32_t cmdButtons[kRing] = {};
-        uint16_t cmdTyped[kRing] = {};
-        uint16_t typed = 0; // what the input applied last typed (InputCmd::typed)
+        uint32_t cmdButtons[kRing] = {}; // their controls: the key events go by <keys>
+        // The key events (the chat) in the order typed, one a tick, from its own tick on: a late command's is applied
+        // late, not lost. <keySeen>: the event taken for each tick, by tick % kRing (a client that steps its lead back
+        // sends the same ticks again, with other key presses)
+        struct KeyEvent
+        {
+            uint32_t tick, bits;
+            uint16_t typed; // InputCmd::typed
+        };
+        std::vector<KeyEvent> keys;
+        uint32_t keySeenTick[kRing] = {}, keySeenBits[kRing] = {};
+        uint16_t typed = 0; // what the key event applied last typed
         uint32_t buttons = 0; // the input applied last (repeated while commands are late)
         uint32_t next = 0; // what the next tick runs with, as the game has it (the other clients get it forwarded)
         uint32_t late = 0; // ticks without their command (counted for the log)
