@@ -109,6 +109,11 @@ void net::ServerProbe::Captured(uint32_t tick, const Snapshot& world)
     engine::StackLog(true);
     engine::TrainLog(true);
     engine::FireLog(true);
+    if (Env().snapCheck)
+    {
+        Snapshot copy = world;
+        engine::SanitizeSnapshot(copy);
+    }
     engine::InstallSpriteCheck();
     engine::InstallSfxLog(true);
     engine::DumpPeds(tick, true);

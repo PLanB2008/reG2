@@ -452,7 +452,8 @@ What a network game trusts, and what it doesn't:
   `ScriptManager::GetScrFileName`, `Start_NetworkGame`), and port builds have stack canaries.
 - **Snapshots**: a client puts every field the game uses as an index, a table's entry, an angle into the sine table,
   a place it looks the map up at or a count of a fixed array into its valid range before anything uses it
-  (`engine/sanitize.cpp`; a changed field is a `net: CHECK` line, as a real server never sends one), and refuses at
+  (`engine/sanitize.cpp`; a changed field is a `net: CHECK` line, as a real server never sends one: a server with
+  `GTA2_NET_SNAPCHECK` runs the same check on its own world every tick, so a range too narrow for the game shows there), and refuses at
   the place it is applied what needs the game to check: a car model without a `car_info`, a remap beyond the style's,
   a trailer the game wouldn't hitch, an object without a definition, a station that isn't a train's, a ped state whose
   objective lacks its target, a carjacking animation on foot. In port builds the map's lookups stay on the map
@@ -669,7 +670,7 @@ off by default:
 | `GTA2_NET_FIRELOG=1` | both | every fire at every 30th tick of the game's cycle: a car's (its id, wrecked or not, its fire's explosion types), the ones on nothing by place, the peds on fire |
 | `GTA2_NET_TRAINLOG=1` | both | every train's place and state at every 150th tick of the game's cycle (the same tick on both ends) |
 | `GTA2_NET_CHECKGRID=1` | both | the collision grid checked after every move, a sprite moved off the map reported with the code that moved it, a rollback block whose pointee moved since the set was taken, on a client a ped driving a car that has another driver or leaving it through another car, and on both the weapon pool's lists looping or sharing a weapon and a ped holding a weapon it would free wrongly (a freed one, a player slot's, a car's, another ped's), a tank, fire truck or gun jeep without its roof turret, and a collision grid row that isn't a sorted list of pool cells and links, after every tick, restore and apply (`net: CHECK` lines) |
-| `GTA2_NET_SNAPCHECK=1` | server | every entity's hash in the snapshots, checked by the clients (`net: CHECK` lines) |
+| `GTA2_NET_SNAPCHECK=1` | server | every entity's hash in the snapshots, checked by the clients, and the snapshot sanity check run on the server's own world (`net: CHECK` lines) |
 | `GTA2_NET_DUMPPEDS=<file>[:<from>:<to>]`, `GTA2_NET_RANDLOG=<file>:<from>:<to>` | both | the divergence check's dumps |
 | `GTA2_NET_NAVDUMP=<file.pgm>` | client bot | the bots' map as a picture |
 | `GTA2_NET_TESTKILL=<tick>:<victim>:<killer>,...` | server | a player killed by the game's own death |
