@@ -153,6 +153,10 @@ net::RoundActions net::RoundFlow::Tick(uint32_t tick, const std::vector<RoundPla
         if (players[i].in)
         {
             in++;
+            if (players[i].alwaysReady && mState.phase == kPhaseWarmup)
+            {
+                mState.ready |= (uint8_t)(1u << i); // shown ready to the clients, as it counts
+            }
             allReady = allReady && (players[i].alwaysReady || (mState.ready >> i & 1));
             allLoaded = allLoaded && players[i].loaded;
         }
