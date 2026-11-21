@@ -57,7 +57,7 @@ struct Welcome
     uint8_t slot = 0; // the client's player index
     uint8_t players = 0; // player slots in the game
     uint8_t gameType = 1; // 1 frags, 2 points, 3 tag (MultiplayerGameType)
-    uint16_t fragLimit = 10;
+    uint32_t fragLimit = 10; // frags, or a points game's money
     uint16_t timeLimitMin = 10;
     uint16_t tickMs = 33;
     uint8_t police = 0;

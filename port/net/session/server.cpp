@@ -206,7 +206,7 @@ void net::Server::OnHello(uint32_t peer, BitReader& r)
             welcome.slot = (uint8_t)slot;
             welcome.players = (uint8_t)mSlots.size();
             welcome.gameType = (uint8_t)mConfig.game.gameType;
-            welcome.fragLimit = (uint16_t)mConfig.game.fragLimit;
+            welcome.fragLimit = (uint32_t)mConfig.game.fragLimit;
             welcome.timeLimitMin = (uint16_t)mConfig.game.timeLimitMin;
             welcome.tickMs = (uint16_t)mConfig.game.tickMs;
             welcome.police = (uint8_t)mConfig.game.police;
