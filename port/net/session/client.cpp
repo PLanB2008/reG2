@@ -401,7 +401,6 @@ void net::Client::TakePlayerStates(const Snapshot& snap)
         {
             continue;
         }
-        // A turn is repeated only once held: a tap repeated would turn the ped far past the server's
         // Past the controls the server forwarded, the last of them is held, a turn only if the one before had it too
         const uint32_t turn = kBtnLeft | kBtnRight;
         const int n = player < kMaxForwardSlots ? mKnown.count[player] : 0;
@@ -880,10 +879,13 @@ bool net::Client::Saved(uint32_t tick) const
 void net::Client::FastForward(int ticks)
 {
     const uint32_t local = mHist[mTick % kRing].tick == mTick ? mHist[mTick % kRing].buttons : 0;
-    std::vector<uint32_t> buttons(mRemote);
-    buttons[mSlot] = local;
+    std::vector<uint32_t> buttons(mRemote.size());
     for (int i = 0; i < ticks; i++)
     {
+        for (size_t p = 0; p < buttons.size(); p++)
+        {
+            buttons[p] = (int)p == mSlot ? local : RemoteInput((int)p, mTick + 1); // as a live tick would have them
+        }
         SetNextInputs(local);
         engine::ResimTick(buttons.data(), (int)buttons.size());
         RecordTick();
