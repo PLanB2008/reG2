@@ -951,6 +951,8 @@ void net::Client::FastForward(int ticks)
 void net::Client::Resync(const Snapshot& snap)
 {
     const int off = mSynced && mSlackKnown ? mSlack - 2 : 0;
+    const uint32_t before = mTick;
+    const bool back = mSynced && mLatestTick <= mTick && off > 0;
     mTick = !mSynced || mLatestTick > mTick ? mLatestTick + Lead() : mTick - off;
     if (mSynced)
     {
@@ -959,7 +961,9 @@ void net::Client::Resync(const Snapshot& snap)
     }
     mSynced = true;
     mSlackKnown = false; // until a snapshot answers commands for the new ticks
-    mJumpTick = mTick;
+    // Back: the server keeps the newest command it had, ours from before the jump, and its slack would have us jump
+    // back again: known once our commands go past those
+    mJumpTick = back ? before + 1 : mTick;
     mTakenAt = mTick;
     for (size_t i = 0; i < mSaves.size(); i++)
     {
