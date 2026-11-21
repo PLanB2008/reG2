@@ -939,6 +939,25 @@ void Hud_Arrow::DrawArrow()
             pPlayer = gGame_0x40->mLocalPlayer;
             pCam = pPlayer->get_camera();
 
+#if defined(GTA2_PORT)
+            // Port: an arrow with a user remap in its high byte (SetPlayerArrowColour)
+            const s16 arrow_remap = mTargets.mArrowSprtIdx >> 8;
+            if (arrow_remap)
+            {
+                arrow_palette_type = palette_types_enum::user_remaps_7;
+            }
+            DrawFigure(sprite_types_enum::user_6,
+                       mTargets.mArrowSprtIdx & 0xFF,
+                       mScreenPosX,
+                       mScreenPosY,
+                       mRotation,
+                       pCam->mUiScale,
+                       arrow_palette_type,
+                       arrow_remap,
+                       1,
+                       14u,
+                       true);
+#else
             DrawFigure(sprite_types_enum::user_6,
                        mTargets.mArrowSprtIdx,
                        mScreenPosX,
@@ -950,6 +969,7 @@ void Hud_Arrow::DrawArrow()
                        1,
                        14u,
                        true);
+#endif
 
             s16 colour_related;
             switch (this->mTargets.mArrowColour)
@@ -1013,10 +1033,27 @@ void Hud_Arrow::SetPlayerArrowColour(Ped* pPed)
         case 8:
             mTargets.mArrowSprtIdx = 3;
             break;
+#if defined(GTA2_PORT)
+        // Port: more players than the original's 6 (MAX_PLAYERS): the blond redneck, Elvis and the police look get
+        // arrows of their own, an arrow drawn with a user remap (the high byte, DrawArrow): cyan, brown, olive
+        case 5:
+            mTargets.mArrowSprtIdx = 4;
+            break;
+        case 6:
+            mTargets.mArrowSprtIdx = 3 | 9 << 8;
+            break;
+        case 12:
+            mTargets.mArrowSprtIdx = 3 | 14 << 8;
+            break;
+        case 0:
+            mTargets.mArrowSprtIdx = 1 | 14 << 8;
+            break;
+#else
         case 5:
         case 6:
             mTargets.mArrowSprtIdx = 4;
             break;
+#endif
         case 7:
             mTargets.mArrowSprtIdx = 5;
             break;

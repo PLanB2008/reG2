@@ -2514,8 +2514,27 @@ void Player::ColorScoreFromRemap()
             mHudPaletteType = palette_types_enum::user_remaps_7;
             break;
 
+#if defined(GTA2_PORT)
+        // Port: more players than the original's 6 (MAX_PLAYERS): the blond redneck, Elvis and the police look get
+        // colours of their own, from the user remaps the HUD leaves unused (pink, cyan, teal)
+        case ped_remap_enum::ped_remap_blond_head_redneck:
+        case ped_remap_enum::ped_remap_elvis:
+        case ped_remap_enum::ped_remap_blue_police:
+        {
+            const s16 palette = mPlayerPed->mRemap == ped_remap_enum::ped_remap_blond_head_redneck ? 11
+                                : mPlayerPed->mRemap == ped_remap_enum::ped_remap_elvis           ? 9
+                                                                                                  : 1;
+            mScores.GetScoreDigits()->ColorDigits(palette_types_enum::user_remaps_7, palette);
+            mScores.GetMultiplayerFragDigits()->ColorDigits(palette_types_enum::user_remaps_7, palette);
+            mHudPalette = palette;
+            mHudPaletteType = palette_types_enum::user_remaps_7;
+            break;
+        }
+        case ped_remap_enum::ped_remap_red_head_redneck:
+#else
         case ped_remap_enum::ped_remap_red_head_redneck:
         case ped_remap_enum::ped_remap_blond_head_redneck:
+#endif
             mScores.GetScoreDigits()->ColorDigits(palette_types_enum::user_remaps_7, 4);
             mScores.GetMultiplayerFragDigits()->ColorDigits(palette_types_enum::user_remaps_7, 4);
             mHudPalette = 4;
