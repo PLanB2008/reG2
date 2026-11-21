@@ -333,9 +333,15 @@ void net::Server::OnReceive(const TransportEvent& e)
     }
 }
 
+namespace
+{
+const float kFullRateRadius = 12.0f; // blocks: beyond, an entity the client has gets new state every kFarAgeTicks
+const int kFarAgeTicks = 3;
+} // namespace
+
 // Each nearby entity with what it costs new and aged, and its priority: the age plus one, over one plus a sixth of the
 // distance (an entity new to the client counts as 8 ticks old: one near comes soon)
-std::vector<net::Server::Item> net::Server::PriceArea(const std::vector<const EntityState*>& area, const Snapshot* base, float x, float y) const
+std::vector<net::Server::Item> net::Server::PriceArea(const Slot& s, const std::vector<const EntityState*>& area, const Snapshot* base, float x, float y) const
 {
     const Schema& schema = engine::NetSchema();
     std::vector<Item> items(area.size());
@@ -347,6 +353,7 @@ std::vector<net::Server::Item> net::Server::PriceArea(const std::vector<const En
         it.freshBits = EntryBits(schema, it.had, *it.now);
         it.pick = 0;
         it.agedBits = 0;
+        it.hold = false;
         if (it.had)
         {
             it.aged = *it.had;
@@ -358,6 +365,11 @@ std::vector<net::Server::Item> net::Server::PriceArea(const std::vector<const En
             }
             it.agedBits = EntryBits(schema, it.had, it.aged);
             it.priority = (float)(age + 1) / (1.0f + Distance(*it.now, x, y) / 6.0f);
+            // Off screen with a margin (a view is 8 to 11 blocks centre to corner), new state every third tick when it
+            // costs more than its age: the client's own simulation keeps it within a pixel meanwhile (netcode.md, "Drift")
+            const auto last = s.lastFresh.find(it.now->id);
+            it.hold = last != s.lastFresh.end() && mTick - last->second < (uint32_t)kFarAgeTicks &&
+                      Distance(*it.now, x, y) > kFullRateRadius && it.freshBits > it.agedBits;
         }
         else
         {
@@ -431,7 +443,7 @@ bool net::Server::Fill(Slot& s, const Snapshot& fixed, std::vector<Item>& items,
         {
             Item& it = items[order[k]];
             const size_t was = it.had ? it.agedBits : 0;
-            if (bits - was + it.freshBits <= budget)
+            if (!it.hold && bits - was + it.freshBits <= budget)
             {
                 bits += it.freshBits - was;
                 it.pick = 2;
@@ -463,6 +475,13 @@ bool net::Server::Fill(Slot& s, const Snapshot& fixed, std::vector<Item>& items,
             mStats.fresh += (uint32_t)fresh;
             mStats.cut += fresh < items.size();
             s.sent[mTick % kRing] = candidate;
+            for (const Item& it : items)
+            {
+                if (it.pick == 2)
+                {
+                    s.lastFresh[it.now->id] = mTick;
+                }
+            }
             return w.ByteCount() <= room;
         }
         budget -= budget / 8; // the estimate was off (ids' gaps): a little less
@@ -489,6 +508,8 @@ void net::Server::Transmit(const Slot& s, const BitWriter& w)
         mStats.parts++;
     }
     mStats.bytes += (uint32_t)w.ByteCount();
+    mStats.snapshots++;
+    mStats.maxBytes = std::max(mStats.maxBytes, (uint32_t)w.ByteCount());
 }
 
 // The client's area: every player and the cars they sit in (wherever they are: a player far off isn't a ped without its
@@ -524,7 +545,7 @@ void net::Server::SendSnapshot(int slot, Slot& s, const Snapshot& world)
     std::sort(area.begin(), area.end(), [&](const EntityState* a, const EntityState* b) { return Distance(*a, x, y) < Distance(*b, x, y); });
     const Snapshot& acked = s.sent[s.ackTick % kRing];
     const Snapshot* base = s.ackTick && acked.tick == s.ackTick && mTick - s.ackTick < (uint32_t)kRing ? &acked : NULL;
-    std::vector<Item> items = PriceArea(area, base, x, y);
+    std::vector<Item> items = PriceArea(s, area, base, x, y);
     BitWriter w;
     if (Fill(s, fixed, items, base, w))
     {
@@ -922,6 +943,7 @@ void net::Server::StartOver()
     for (Slot& s : mSlots)
     {
         s.ackTick = 0; // the old game's snapshots are no baseline: full ones again
+        s.lastFresh.clear();
         for (Snapshot& sent : s.sent)
         {
             sent = Snapshot();
@@ -942,9 +964,10 @@ void net::Server::PrintStats(const Snapshot& world)
     }
     int sent = 0, driven = 0, same = 0;
     engine::DriverStats(world, &sent, &driven, &same);
-    printf("net: tick %u, %d players, %zu entities (%d drivers), %.0f bytes per snapshot, %u late commands; frags/deaths(health)%s\n", mTick, used,
-           world.entities.size(), sent, used ? mStats.bytes / 300.0 / used : 0.0, late, Scoreboard(world).c_str());
-    printf("net: tick %u, %.2f packets per snapshot; %s\n", mTick, used ? mStats.parts / 300.0 / used : 0.0, engine::SpawnStats().c_str());
+    const double snapshots = mStats.snapshots ? mStats.snapshots : 1;
+    printf("net: tick %u, %d players, %zu entities (%d drivers), %.0f bytes per snapshot (up to %u), %u late commands; frags/deaths(health)%s\n",
+           mTick, used, world.entities.size(), sent, mStats.bytes / snapshots, mStats.maxBytes, late, Scoreboard(world).c_str());
+    printf("net: tick %u, %.2f packets per snapshot; %s\n", mTick, mStats.parts / snapshots, engine::SpawnStats().c_str());
     for (size_t i = 0; i < mSlots.size(); i++)
     {
         if (mSlots[i].used)

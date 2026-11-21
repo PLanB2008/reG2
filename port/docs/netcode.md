@@ -164,8 +164,9 @@ original's frame path in `winmain.cpp` (a step, then a frame): a server draws no
   entity is a delta against the state that client acknowledged for it (per-entity baselines, so a snapshot can carry
   part of the world and nothing waits for a lost packet). What doesn't fit the budget goes with the state the client
   already has and its age, a few bits. New state goes by priority: the age plus one over one plus a sixth of the
-  distance; an entity new to the client counts as 8 ticks old. A busy area's snapshot goes in up to `--packets` parts
-  of 1372 bytes (the largest unreliable ENet packet that isn't fragmented).
+  distance; an entity new to the client counts as 8 ticks old. Beyond 12 blocks (off screen with a margin), an entity
+  whose new state costs more than its age gets it only every third tick. A busy area's snapshot goes in up to
+  `--packets` parts of 1372 bytes (the largest unreliable ENet packet that isn't fragmented).
 - **Spawning** (`engine/spawn.cpp`): the game's limits on ambient traffic (16 cars) and peds (50) are for the whole
   game, and the first players' cameras took them all. A server allows the limits times its players, up to 3 players'
   worth (its traffic has drivers of its own: more ran the ped pool out). Before anything spawns, each client's camera

@@ -11,6 +11,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace net
@@ -72,11 +73,12 @@ class Server
         uint32_t silent = 0; // ticks in a row without their command
         uint32_t ackTick = 0; // the newest snapshot the client has
         Snapshot sent[kRing]; // what was sent, by tick % kRing: the baselines
+        std::unordered_map<uint32_t, uint32_t> lastFresh; // entity -> the tick its new state was last sent (PriceArea)
     };
     // For the log, every 300 ticks
     struct Stats
     {
-        uint32_t bytes = 0, parts = 0;
+        uint32_t bytes = 0, parts = 0, snapshots = 0, maxBytes = 0; // what went to the clients (arena bots get none)
         uint32_t inArea = 0, fresh = 0, cut = 0; // entities in the areas, with new state, snapshots without it for all
         uint32_t unsent = 0; // snapshots that fit no budget
     };
@@ -89,6 +91,7 @@ class Server
         size_t freshBits, agedBits;
         float priority;
         int pick; // 0: not sent (new, no room), 1: aged, 2: this tick's
+        bool hold; // far off screen and fresh lately: aged this tick even with room (PriceArea)
     };
     void OnReceive(const TransportEvent& e);
     void OnHello(uint32_t peer, BitReader& r);
@@ -111,7 +114,7 @@ class Server
     void StartOver(); // a new game (the next map): its start, and every client's baseline, again
     void PrintStats(const Snapshot& world);
     void SendSnapshot(int slot, Slot& s, const Snapshot& world);
-    std::vector<Item> PriceArea(const std::vector<const EntityState*>& area, const Snapshot* base, float x, float y) const;
+    std::vector<Item> PriceArea(const Slot& s, const std::vector<const EntityState*>& area, const Snapshot* base, float x, float y) const;
     ForwardedInputs Forwarded(int slot) const; // the other players' controls after this tick, for <slot>'s snapshot
     bool Fill(Slot& s, const Snapshot& fixed, std::vector<Item>& items, const Snapshot* base, BitWriter& w);
     void Transmit(const Slot& s, const BitWriter& w);
