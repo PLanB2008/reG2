@@ -230,6 +230,10 @@ original's frame path in `winmain.cpp` (a step, then a frame): a server draws no
   player who left (its ped walks on as a pedestrian). A joining client gets a new player ped at the next restart zone
   and an empty score. Snapshots carry the slots in the game, and clients mirror them. The others read "BOB joined",
   "BOB is back", "BOB left" or "BOB was kicked" (the server's notices).
+- **Idle when empty**: a server with nobody to play for (no client connected or connecting, no arena bot) runs no
+  step: its idle hook waits on the network up to 100 ms at a time (`Server::Deserted`, `Transport::Wait`) and puts the
+  next step off (`engine::HoldStep`). Its tick and the round flow stand still, so the round goes on where it was when a
+  client connects (that event lets the steps run again); pings and connects are answered meanwhile.
 - **No sound**: a server opens no audio device (`gPortNoAudio`). Nobody hears it, and its listener would follow slot
   0's camera, whose ped can be any ped in any car once that player has left.
 

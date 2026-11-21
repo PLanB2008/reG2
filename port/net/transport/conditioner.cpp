@@ -33,6 +33,12 @@ class Conditioner : public net::Transport
         return mInner->Poll(event);
     }
 
+    bool Wait(net::TransportEvent& event, int ms) override
+    {
+        Release();
+        return mHeld.empty() ? mInner->Wait(event, ms) : mInner->Poll(event); // held sends go out on time
+    }
+
     bool Send(uint32_t peer, uint8_t channel, const void* data, size_t size, bool reliable) override
     {
         if (!reliable && size > net::MaxPayload())

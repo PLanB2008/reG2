@@ -101,6 +101,7 @@ class Server
     void OnCommands(int slot, BitReader& r);
     void StartGameOnce();
     void PollTransport();
+    bool Deserted() const; // nobody to play for: no client connected or connecting, no arena bot
     void OnEvent(const TransportEvent& e);
     void SetNextInputs(const Snapshot& world);
     void RunRounds(const Snapshot& world); // the round flow's tick and what it asks for
