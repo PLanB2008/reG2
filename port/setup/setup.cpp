@@ -448,11 +448,20 @@ bool HasGameData(const fs::path& dir)
     return FindNoCase(dir, "data/fstyle.sty", &found);
 }
 
-// $GTA2_DIR, else the current folder or the executable's when it holds the game's data, else the
+// --data, else $GTA2_DIR, else the current folder or the executable's when it holds the game's data, else the
 // per-user folder (empty if none). pWhy: which one, for the log.
-fs::path GameFolder(bool* pPerUser, const char** pWhy)
+fs::path GameFolder(const char* dataDir, bool* pPerUser, const char** pWhy)
 {
     *pPerUser = false;
+    fs::path found;
+    if (dataDir)
+    {
+        *pWhy = "--data";
+        const fs::path dir = PathFromUtf8(dataDir);
+        // The data folder itself, or the game folder holding it
+        const bool dataItself = !FindNoCase(dir, "data", &found) && FindNoCase(dir, "nyc.gci", &found);
+        return dataItself ? (dir / "..").lexically_normal() : dir;
+    }
     if (const char* dir = SDL_getenv("GTA2_DIR"))
     {
         *pWhy = "GTA2_DIR";
@@ -491,11 +500,11 @@ void port_SetWindowIcon(SDL_Window* pWindow)
 #endif
 }
 
-bool port_PrepareGameFolder(bool forceSetup, bool server)
+bool port_PrepareGameFolder(bool forceSetup, bool server, const char* dataDir)
 {
     bool perUser;
     const char* why = "";
-    const fs::path dir = GameFolder(&perUser, &why);
+    const fs::path dir = GameFolder(dataDir, &perUser, &why);
     SDL_Log("Game folder (%s): %s", why, PathToUtf8(dir).c_str());
     std::error_code ec;
     fs::current_path(dir, ec);
@@ -524,7 +533,7 @@ bool port_PrepareGameFolder(bool forceSetup, bool server)
         }
         if (!check.mMissing.empty())
         {
-            SDL_Log("Server: that is the %s; GTA2_DIR=<folder> for another (the one holding data/)", why);
+            SDL_Log("Server: that is the %s; --data <folder> or GTA2_DIR=<folder> for another (the one holding data/)", why);
         }
         return check.mMissing.empty();
     }

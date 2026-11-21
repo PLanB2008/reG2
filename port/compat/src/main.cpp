@@ -19,9 +19,10 @@
 
 void port_RegisterRenderer();
 
-static bool IsSetupArg(const char* arg)
+// The options read here, not the game's or the netcode's: how many arguments arg takes with it, -1 for none of these
+static int StartArg(const char* arg)
 {
-    return strcmp(arg, "--setup") == 0;
+    return !strcmp(arg, "--data") ? 1 : !strcmp(arg, "--setup") || !strcmp(arg, "--help") || !strcmp(arg, "-h") ? 0 : -1;
 }
 
 // The game folder, and the setup if it has no game data (--setup: the setup screens anyway, to
@@ -30,10 +31,25 @@ static bool IsSetupArg(const char* arg)
 static void EnterGameFolder(int argc, char** argv)
 {
     bool forceSetup = false;
+    const char* dataDir = NULL;
     for (int i = 1; i < argc; i++)
     {
-        forceSetup |= IsSetupArg(argv[i]);
+        if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "-h"))
+        {
+            NetMain_PrintUsage();
+            exit(0);
+        }
+        forceSetup |= !strcmp(argv[i], "--setup");
         gPortServer |= !strcmp(argv[i], "--server");
+        if (!strcmp(argv[i], "--data"))
+        {
+            if (i + 1 >= argc)
+            {
+                fprintf(stderr, "reg2: --data <folder>: the game folder, or its data folder\n");
+                exit(1);
+            }
+            dataDir = argv[++i];
+        }
     }
     // Before the setup's windows and the game's: on Linux the id matches the packages' desktop file.
     SDL_SetAppMetadata("reG2", GTA2_VERSION, GTA2_APP_ID);
@@ -41,7 +57,7 @@ static void EnterGameFolder(int argc, char** argv)
 #if defined(_WIN32)
     port_InstallCrashHandler();
 #endif
-    if (!port_PrepareGameFolder(forceSetup, gPortServer))
+    if (!port_PrepareGameFolder(forceSetup, gPortServer, dataDir))
     {
         port_LogExit(gPortServer);
         exit(gPortServer); // a player who left the setup quit: 0
@@ -135,10 +151,12 @@ int main(int argc, char** argv)
     std::vector<std::string> args;
     for (int i = 1; i < argc; i++)
     {
-        if (!IsSetupArg(argv[i]))
+        const int taken = StartArg(argv[i]);
+        if (taken < 0)
         {
             args.push_back(argv[i]);
         }
+        i += taken > 0 ? taken : 0;
     }
     const int net = NetMain_Init(args); // --server, --connect (port/docs/netcode.md)
     if (net < 0)
