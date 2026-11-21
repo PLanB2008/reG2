@@ -1,5 +1,7 @@
 #include "frame_loop.hpp"
+#include "Car.hpp"
 #include "Draw.hpp"
+#include "ExplodingScore_100.hpp"
 #include "Frontend.hpp"
 #include "Game.hpp"
 #include "Hud.hpp"
@@ -13,6 +15,8 @@
 #include "winmain.hpp"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <math.h>
 
 #if defined(GTA2_PORT_SDL)
 unsigned long long port_NowNs();
@@ -146,6 +150,48 @@ void Trace(char kind)
                     pOther->mRotation.rValue);
         }
     }
+    // The local player's place its name and markers are drawn at (Ped::mCam) against its sprite, the exploding scores'
+    // size, and how far a car's attached objects are drawn off where its drawn place puts them (blocks)
+    Ped* pPed = gGame_0x40 && gGame_0x40->mLocalPlayer ? gGame_0x40->mLocalPlayer->mPlayerPed : NULL;
+    if (pSprite && pPed)
+    {
+        fprintf(spTrace, " pedcam %d %d", pPed->mCam.x.mValue - pSprite->mXy.x.mValue, pPed->mCam.y.mValue - pSprite->mXy.y.mValue);
+    }
+    for (ExplodingScore* pScore = gExplodingScorePool ? gExplodingScorePool->mPool.GetFirstUsed() : NULL; pScore; pScore = pScore->mpNext)
+    {
+        const f32 back = kind == 'D' && pScore->mExplodeCounter <= -2 ? StepNotElapsed() : 0.0f;
+        fprintf(spTrace, " score %.3f", pScore->mExplodeCounter < 0 ? -pScore->mExplodeCounter - back : 1.0f);
+    }
+    f32 attachedOff = 0;
+    for (Car* pCar = gCar_BC_Pool ? gCar_BC_Pool->mPool.mpPrev : NULL; pCar; pCar = pCar->mpNext)
+    {
+        const Sprite* pCarSprite = pCar->mCarSprite;
+        if (pCarSprite && kind == 'D' && !PortInterp::Steered(pCarSprite))
+        {
+            continue; // a train's carriage turning a corner: its lights stay put
+        }
+        for (AttachedSprite* a = pCarSprite ? pCar->mAttachments.mP18 : NULL; a; a = a->mpNext)
+        {
+            if (!a->mpSprite || !a->mpSprite->AsObject2C())
+            {
+                continue;
+            }
+            Fix16 x = pCarSprite->mXy.x, y = pCarSprite->mXy.y;
+            if (a->mOffsetX != Fix16(0) || a->mOffsetY != Fix16(0))
+            {
+                x = a->mOffsetX;
+                y = a->mOffsetY;
+                Ang16 rot = pCarSprite->mRotation;
+                Ang16::RotateVector(x, y, rot);
+                x += pCarSprite->mXy.x;
+                y += pCarSprite->mXy.y;
+            }
+            const f32 dx = (a->mpSprite->mXy.x.mValue - x.mValue) / 16384.0f, dy = (a->mpSprite->mXy.y.mValue - y.mValue) / 16384.0f;
+            const f32 off = dx * dx + dy * dy;
+            attachedOff = off > attachedOff ? off : attachedOff;
+        }
+    }
+    fprintf(spTrace, " attached %.4f", attachedOff > 0 ? sqrtf(attachedOff) : 0.0f);
     fputc('\n', spTrace);
 }
 
@@ -322,6 +368,16 @@ void BeforeStep()
 
 void AfterStep()
 {
+    // GTA2_TEST_SCORE=<step>,...: an exploding score over the local player at those steps (the trace's test)
+    static const char* sTestScore = getenv("GTA2_TEST_SCORE");
+    for (const char* p = sTestScore; p && *p; p = strchr(p, ',') ? strchr(p, ',') + 1 : "")
+    {
+        Ped* pPed = gGame_0x40 && gGame_0x40->mLocalPlayer ? gGame_0x40->mLocalPlayer->mPlayerPed : NULL;
+        if (pPed && gExplodingScorePool && static_cast<u32>(atoi(p)) == sStepCount)
+        {
+            gExplodingScorePool->PushScore(pPed->mCam.x, pPed->mCam.y, pPed->mCam.z, 1000);
+        }
+    }
     sStepsSinceDraw++;
     sStepCount++;
     sStatsSteps++;
@@ -385,5 +441,10 @@ u32 StepCount()
 f32 DrawAlpha()
 {
     return sInDraw && !Original() ? sAlpha : 1.0f;
+}
+
+f32 StepNotElapsed()
+{
+    return 1.0f - DrawAlpha();
 }
 } // namespace PortFrameLoop
