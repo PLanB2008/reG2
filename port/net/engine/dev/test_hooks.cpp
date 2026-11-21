@@ -144,7 +144,7 @@ void net::engine::DebugPatients(int player, int count, int fromBlocks)
     {
         return;
     }
-    std::vector<std::pair<s32, Ped*>> near;
+    std::vector<std::pair<s32, Ped*>> candidates;
     for (Ped* p = gPedPool->mPool.mpPrev; p; p = p->mpNext)
     {
         if (!p->mPlayer && !p->mCar && p->mGameObject && !p->isDead() && !p->IsOnFire())
@@ -152,14 +152,14 @@ void net::engine::DebugPatients(int player, int count, int fromBlocks)
             const s32 d = Fix16::MaxAbsDistance(p->get_cam_x(), p->get_cam_y(), ped->get_cam_x(), ped->get_cam_y()).mValue;
             if (d >= fromBlocks << 14)
             {
-                near.push_back(std::make_pair(d, p));
+                candidates.push_back(std::make_pair(d, p));
             }
         }
     }
-    std::sort(near.begin(), near.end(), [](const std::pair<s32, Ped*>& a, const std::pair<s32, Ped*>& b) { return a.first < b.first; });
-    for (int i = 0; i < count && i < (int)near.size(); i++)
+    std::sort(candidates.begin(), candidates.end(), [](const std::pair<s32, Ped*>& a, const std::pair<s32, Ped*>& b) { return a.first < b.first; });
+    for (int i = 0; i < count && i < (int)candidates.size(); i++)
     {
-        near[i].second->SetOnFire();
+        candidates[i].second->SetOnFire();
     }
 }
 
