@@ -93,12 +93,14 @@ static void WritePrint(net::BitWriter& w, const net::MapPrint& p)
 {
     w.Bits(p.gmp, 32);
     w.Bits(p.sty, 32);
+    w.Bits(p.scr, 32);
 }
 
 static void ReadPrint(net::BitReader& r, net::MapPrint& p)
 {
     p.gmp = r.Bits(32);
     p.sty = r.Bits(32);
+    p.scr = r.Bits(32);
 }
 
 void net::WriteWelcome(BitWriter& w, const Welcome& m)

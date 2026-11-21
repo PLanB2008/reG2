@@ -151,9 +151,13 @@ static bool HaveMap(const std::string& gmp, const std::string& sty, const std::s
 }
 
 // The same map as the server's: its files as the server has them, else <error> says which differs
-static bool SameMap(const std::string& map, const std::string& gmp, const std::string& sty, const net::MapPrint& print, std::string* error)
+static bool SameMap(const std::string& map, const std::string& gmp, const std::string& sty, const std::string& scr, const net::MapPrint& print,
+                    std::string* error)
 {
-    const std::string* differs = net::engine::DataFileCrc(gmp) != print.gmp ? &gmp : net::engine::DataFileCrc(sty) != print.sty ? &sty : NULL;
+    const std::string* differs = net::engine::DataFileCrc(gmp) != print.gmp   ? &gmp
+                                 : net::engine::DataFileCrc(sty) != print.sty ? &sty
+                                 : net::engine::DataFileCrc(scr) != print.scr ? &scr
+                                                                              : NULL;
     if (!differs)
     {
         return true;
@@ -179,7 +183,7 @@ bool net::Client::OnWelcome(const TransportEvent& e, engine::NetworkGame* pGame,
         *error = "a welcome we don't understand";
         return false;
     }
-    if (!HaveMap(welcome.gmp, welcome.sty, welcome.scr, error) || !SameMap(welcome.map, welcome.gmp, welcome.sty, welcome.print, error))
+    if (!HaveMap(welcome.gmp, welcome.sty, welcome.scr, error) || !SameMap(welcome.map, welcome.gmp, welcome.sty, welcome.scr, welcome.print, error))
     {
         SendLeave(*error);
         Leave();
@@ -781,7 +785,7 @@ void net::Client::OnMapChange(BitReader& r)
     if (ReadMapChange(r, m))
     {
         std::string missing;
-        if (!HaveMap(m.gmp, m.sty, m.scr, &missing) || !SameMap(m.map, m.gmp, m.sty, m.print, &missing))
+        if (!HaveMap(m.gmp, m.sty, m.scr, &missing) || !SameMap(m.map, m.gmp, m.sty, m.scr, m.print, &missing))
         {
             printf("net: frame %u, %s\n", mFrame, missing.c_str());
             SendLeave(missing);

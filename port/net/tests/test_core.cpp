@@ -253,6 +253,7 @@ void TestMessages()
     w.map = "downtown-6p";
     w.print.gmp = 0x80000001;
     w.print.sty = 7;
+    w.print.scr = 9;
     w.serverTick = 123456;
     w.maps = {"mp1-6p", "mp2-6p", "downtown-6p"};
     net::BitWriter bw;
@@ -263,7 +264,7 @@ void TestMessages()
     CHECK(net::ReadWelcome(br, got));
     CHECK(got.slot == 2 && got.players == 6 && got.gameType == 3 && got.fragLimit == 25 && got.gmp == w.gmp &&
           got.scr == w.scr && got.serverTick == 123456 && got.maps == w.maps && got.session == w.session && got.name == w.name &&
-          got.map == w.map && got.print.gmp == w.print.gmp && got.print.sty == 7);
+          got.map == w.map && got.print.gmp == w.print.gmp && got.print.sty == 7 && got.print.scr == 9);
 
     net::Hello hello;
     hello.build = "0.1.0-dev 1a2b3c4d5e";

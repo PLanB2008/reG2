@@ -8,7 +8,7 @@
 
 namespace net
 {
-const uint32_t kProtocolVersion = 24;
+const uint32_t kProtocolVersion = 25;
 const uint16_t kDefaultPort = 27920;
 const size_t kMaxPayload = 1372; // the largest unreliable ENet packet that isn't fragmented at mtu 1400 (port/docs/netcode.md, "Wire format")
 const uint8_t kChannelUnreliable = 0; // snapshots, commands
@@ -38,7 +38,7 @@ enum MsgType : uint8_t
 // CRC-32s of a map's files (core/crc32.hpp): a client with other files would play another game
 struct MapPrint
 {
-    uint32_t gmp = 0, sty = 0;
+    uint32_t gmp = 0, sty = 0, scr = 0;
 };
 
 // The build first after the version, so that a server of any version can say what it runs and what the client does
@@ -65,7 +65,7 @@ struct Welcome
     std::string name; // the player's name, as the server has it (another than the hello's if that was taken)
     std::string map; // the map's name (data/<map>.mmp)
     std::string gmp, sty, scr; // file names in data/
-    MapPrint print; // the server's copy of gmp and sty
+    MapPrint print; // the server's copy of gmp, sty and scr
     uint32_t serverTick = 0;
     std::vector<std::string> maps; // the maps a vote can choose, by number (the round's state in the world entity counts them)
 };
@@ -79,7 +79,7 @@ struct MapChange
 {
     std::string map; // the map's name (data/<map>.mmp)
     std::string gmp, sty, scr; // file names in data/
-    MapPrint print; // the server's copy of gmp and sty
+    MapPrint print; // the server's copy of gmp, sty and scr
     uint16_t game = 0; // the server's game on it (its snapshots' world.game)
 };
 

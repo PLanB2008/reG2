@@ -102,6 +102,7 @@ bool net::Server::Start(const ServerConfig& config, std::string* error)
     mCarInfo = engine::DataFileCrc("nyc.gci");
     mPrint.gmp = engine::DataFileCrc(mConfig.game.gmp);
     mPrint.sty = engine::DataFileCrc(mConfig.game.sty);
+    mPrint.scr = engine::DataFileCrc(mConfig.game.scr);
     printf("net: server on port %u, %d player slots, %s, reG2 %s\n", config.port, config.game.players, config.game.scr.c_str(), config.build.c_str());
     return true;
 }
@@ -755,6 +756,7 @@ void net::Server::ChangeToMap(int map)
     mConfig.game.scr = m.scr;
     mPrint.gmp = engine::DataFileCrc(m.gmp);
     mPrint.sty = engine::DataFileCrc(m.sty);
+    mPrint.scr = engine::DataFileCrc(m.scr);
     printf("net: the next map: %s\n", m.name.c_str());
     MapChange change;
     change.map = m.name;
