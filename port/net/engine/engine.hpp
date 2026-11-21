@@ -102,6 +102,7 @@ bool PlayerOf(const EntityState& e, int* pPlayer, uint32_t* pButtons);
 int PlayerHealth(const EntityState& e); // a player entity's health
 int PlayerFrags(const EntityState& e);
 int PlayerPoints(const EntityState& e);
+int TagSeconds(int slot); // a tag game's: the seconds the slot was "it" (the game's tag winner has the most)
 int PlayerDeaths(const EntityState& e);
 uint32_t PlayerCarId(const EntityState& e); // the NetId of the car it drives, 0 on foot
 int PlayerWeapon(const EntityState& e); // its weapon in hand (Player::mCurrWeaponIdx), -1: none

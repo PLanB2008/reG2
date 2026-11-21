@@ -68,6 +68,9 @@ extern bool gPortServerKillNotices;
 // A network client's: a kill's points and bonuses (PlayerScoreTracker::AwardPedKilledScore, with the multi-kill messages
 // and voices) are the server's, whose scores come with its snapshots, not its prediction's
 extern bool gPortServerKillAwards;
+// A network game's: the tag game counts the fugitive's seconds (TagGame::ExecuteGamemodeTick) though the game has no
+// time limit (the netcode ends the rounds), whose flag the original counts by
+extern bool gPortTagTimeCounts;
 // A network client's: its players are kept at mInvulnerability 2 so that only the server takes their health
 // (ProtectPlayers); how a ped reacts to a car, a blast or fire goes by the invulnerability the server gives
 extern bool gPortProtectsPlayers;

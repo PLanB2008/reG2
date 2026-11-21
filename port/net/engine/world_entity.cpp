@@ -168,3 +168,8 @@ int net::engine::SnapshotGame(const Snapshot& snap)
     const EntityState* w = FindWorld(snap);
     return w ? w->f[kWorldGame] : -1;
 }
+
+int net::engine::TagSeconds(int slot)
+{
+    return slot >= 0 && slot < MAX_PLAYERS ? gTagGame.mItTimeSecs[slot] : 0;
+}

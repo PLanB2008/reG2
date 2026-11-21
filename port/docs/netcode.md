@@ -96,8 +96,8 @@ player's name, as far as all that fit agree; when several fit they show over the
    new game (it acknowledged one of its snapshots: the newest its game took, not the newest that arrived, so a client
    still loading the map isn't counted), "Waiting for players" until then, 30 s at most. The players
    start where the map script puts them. Too few left: back to the warmup.
-3. **The round**, to the frag limit (points in a points game; tag: time only) or the time limit. The leader wins;
-   a tie at the time limit is a draw.
+3. **The round**, to the frag limit (points in a points game; tag: time only) or the time limit. The leader wins
+   (in a tag game, as the game's own results: the player who was "it" the longest); a tie at the time limit is a draw.
 4. **Results** (`--results` s): the winner, a table of frags and deaths, and the maps with their votes (the number keys, or `/map N`).
    The world stands still meanwhile: a tick runs only the players' own (the chat goes on) and the HUD, and the
    inputs are key events only, on the server and every client (`gPortWorldStill`); its sounds stop as in a pause.
@@ -393,6 +393,7 @@ The netcode's hooks, declared in `port/src/net_hooks.hpp`; those in `Source/` ar
 | `Car.cpp` | `Car::TryHonkHorn` | a train's lead without a driver (a player got out of a carriage that stood still) doesn't read it |
 | `Hud.cpp` | `port_TypedChar` (`port/compat/src/dinput.cpp`) | the chat types the keyboard layout's characters |
 | `Hud.cpp` | `gPortServerKillNotices` | a client's kill notices are the server's deaths only |
+| `TagGame.cpp` | `gPortTagTimeCounts` | the tag game counts the "it" seconds without the game's time limit, which the original counts by |
 | `PlayerScoreTracker.cpp` | `gPortServerKillAwards`, `gPortScoreBonusHook` | a client's kills award no points or bonuses: the scores are the server's, and a bonus's message and voice are its player's client's, from the server |
 | `Pool.hpp`, `Car.cpp`, `Char_Pool.cpp`, `Game.cpp` | `PortRand::Scope` (`port/src/rand/owner.hpp`) | who a random draw belongs to |
 | `sound_obj.*`, `ParticleManager.cpp`, `Particle_4C.cpp` | `port/src/rand/sound.hpp`, `particle.hpp` | their own random streams; `SoundPosEntry` from the pool; `sound_obj`'s state public for the rollback |
