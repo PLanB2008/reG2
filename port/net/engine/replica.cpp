@@ -20,6 +20,7 @@ struct net::engine::ReplicaState
 {
     std::unordered_map<uint32_t, Car*> cars;
     std::unordered_map<uint32_t, Ped*> peds;
+    std::unordered_map<uint32_t, int32_t> carIds, pedIds;
     std::unordered_map<uint32_t, Object*> objects;
 };
 
@@ -31,6 +32,9 @@ using net::Snapshot;
 
 std::unordered_map<uint32_t, Car*> gCars; // NetId -> this game's car
 std::unordered_map<uint32_t, Ped*> gPeds;
+// The game's own id of each mapped car and ped (Car::mCarId, Ped::mId): a pool slot this game freed and handed out again
+// since is another car or ped, and its mapping goes (Prune)
+std::unordered_map<uint32_t, int32_t> gCarIds, gPedIds;
 const int32_t kAdoptRadius = 4096; // a quarter block: the same car or ped as the server's
 
 // For the log (PrintReplicaLog)
@@ -133,7 +137,9 @@ void Prune(Pass& a)
 {
     for (auto it = gCars.begin(); it != gCars.end();)
     {
-        it = a.liveCars.count(it->second) && !it->second->IsDespawning() ? (a.mapped.insert(it->second), ++it) : gCars.erase(it);
+        auto id = gCarIds.find(it->first);
+        const bool same = id == gCarIds.end() || id->second == it->second->mCarId;
+        it = same && a.liveCars.count(it->second) && !it->second->IsDespawning() ? (a.mapped.insert(it->second), ++it) : gCars.erase(it);
     }
     for (auto it = gPeds.begin(); it != gPeds.end();)
     {
@@ -142,7 +148,17 @@ void Prune(Pass& a)
         // (a passenger isn't "active" either, as a driver isn't, but no car re-adopts it: kept while it sits in one)
         Ped* p = it->second;
         const bool riding = p->mCar && p->mEnterCarAsPassenger;
-        it = a.livePeds.count(p) && (p->IsActive() || riding) && !a.owned.count(p) ? (a.mapped.insert(p), ++it) : gPeds.erase(it);
+        auto id = gPedIds.find(it->first);
+        const bool same = id == gPedIds.end() || id->second == p->mId;
+        it = same && a.livePeds.count(p) && (p->IsActive() || riding) && !a.owned.count(p) ? (a.mapped.insert(p), ++it) : gPeds.erase(it);
+    }
+    for (auto it = gCarIds.begin(); it != gCarIds.end();)
+    {
+        it = gCars.count(it->first) ? ++it : gCarIds.erase(it);
+    }
+    for (auto it = gPedIds.begin(); it != gPedIds.end();)
+    {
+        it = gPeds.count(it->first) ? ++it : gPedIds.erase(it);
     }
 }
 
@@ -235,6 +251,7 @@ Car* MapCar(Pass& a, const EntityState& e)
     if (car)
     {
         gCars[e.id] = car;
+        gCarIds[e.id] = car->mCarId;
         a.mapped.insert(car);
     }
     return car;
@@ -329,6 +346,7 @@ Ped* MapPed(Pass& a, const EntityState& e, Car* serverCar)
     if (ped && !gPeds.count(e.id))
     {
         gPeds[e.id] = ped;
+        gPedIds[e.id] = ped->mId;
         a.mapped.insert(ped);
         ped->mRemap = (char_type)e.f[kPedRemap] ^ 1; // set below, with its char's
     }
@@ -417,6 +435,7 @@ void ApplyTrains(Pass& a, const Snapshot& snap)
                 it = it->second == c.second && it->first != c.first ? gCars.erase(it) : ++it;
             }
             gCars[c.first] = c.second;
+            gCarIds[c.first] = c.second->mCarId;
             a.mapped.insert(c.second);
             a.seen.insert(c.first);
         }
@@ -558,6 +577,8 @@ net::engine::ReplicaState* net::engine::SaveReplicas(ReplicaState* reuse)
     ReplicaState* state = reuse ? reuse : new ReplicaState();
     state->cars = gCars;
     state->peds = gPeds;
+    state->carIds = gCarIds;
+    state->pedIds = gPedIds;
     state->objects = PickupMap();
     return state;
 }
@@ -566,6 +587,8 @@ void net::engine::RestoreReplicas(const ReplicaState* state)
 {
     gCars = state->cars;
     gPeds = state->peds;
+    gCarIds = state->carIds;
+    gPedIds = state->pedIds;
     PickupMap() = state->objects;
 }
 
@@ -591,6 +614,8 @@ void net::engine::ClearReplicas()
 {
     gCars.clear();
     gPeds.clear();
+    gCarIds.clear();
+    gPedIds.clear();
 }
 
 // --- The owners of random draws (port/src/rand/owner.hpp): an entity's key is the server's net id ---

@@ -187,7 +187,8 @@ command, applies snapshots and rolls back. Between frames both poll the network 
   a carriage is placed by its train only, never moved to a player in it. What the client's prediction did that the game can't undo (a wreck, a corpse of
   its own) is removed, and the next snapshot makes the entity again as the server has it. A car carries its driver: none, the traffic driver (all
   traffic cars share CarManager's spare, which is never sent as a ped), or a ped. A car's seated passengers come as
-  peds at their car and are seated as the game seats them.
+  peds at their car and are seated as the game seats them. Each mapping keeps its car's or ped's own id (`mCarId`,
+  `mId`), so a pool slot the client's game freed and handed out again isn't taken for the old entity.
 - **Players in cars** (`engine/car_entry.cpp`): a client gets into and out of cars by its own predicted input. When
   both sides have settled and the server has the player elsewhere, the client puts the ped into the server's car, or
   out of its own, at once, ending the way the game's own entering and leaving end. Another player's enter key reaches
