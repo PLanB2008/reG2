@@ -56,7 +56,13 @@ bool net::ParseOptions(std::vector<std::string>& args, NetOptions& o)
         }
         else if (a == "--port" && more)
         {
-            sc.port = (uint16_t)atoi(args[++i].c_str());
+            const int port = atoi(args[++i].c_str());
+            if (port < 1 || port > 65535)
+            {
+                fprintf(stderr, "net: --port %s isn't a port (1-65535)\n", args[i].c_str());
+                return false;
+            }
+            sc.port = (uint16_t)port;
         }
         else if (a == "--map" && more)
         {

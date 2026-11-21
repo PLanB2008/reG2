@@ -164,7 +164,7 @@ net::Transport* net::CreateServerTransport(uint16_t port, uint32_t maxPeers, std
     ENetHost* host = enet_host_create(&address, maxPeers, kChannelCount, 0, 0);
     if (!host)
     {
-        *error = "can't listen on that port";
+        *error = "can't listen on port " + std::to_string(port);
         return NULL;
     }
     return new EnetTransport(host);
