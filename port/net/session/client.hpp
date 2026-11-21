@@ -211,7 +211,7 @@ class Client
     int mMarks = 0; // mark key presses (F12 or the key under Esc) (ChooseInput)
     engine::Round mRound; // the last one announced
     int mGeneration = 0; // engine::GameGeneration's, of the game running
-    int mServerGame = -1; // the server's game we take snapshots of: the next after a map change (-1: the first one's)
+    int mServerGame = -1; // the server's game we take snapshots of (the welcome's, the next after a map change)
     uint32_t mMarkFrame = 0;
     bool mLeavePrompt = false, mLeft = false; // Escape's prompt (ChooseInput), and its yes: left the server
     std::vector<std::string> mMaps; // what a map vote chooses from (the welcome's)

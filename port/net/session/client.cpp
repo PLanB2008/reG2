@@ -40,6 +40,7 @@ void net::Client::Welcomed(const Welcome& welcome, engine::NetworkGame* pGame)
     mSlot = welcome.slot;
     mSession = welcome.session;
     mToken = welcome.token;
+    mServerGame = welcome.game; // during a map change's pause, the next game: the old one's snapshots aren't for us
     mConfig.name = welcome.name; // a reconnect asks for it: the server keeps our slot under it
     mMaps = welcome.maps;
     mConnected = true;
