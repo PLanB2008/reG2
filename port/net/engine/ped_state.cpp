@@ -576,6 +576,15 @@ bool net::engine::ApplyPedState(Ped* p, const EntityState& e)
     {
         return true;
     }
+    // On its way to a car here only, still walking up to it, while the server's ped is on foot with something else to do
+    // (an ambulance's crew sent back to a patient: the service that changes their objectives runs on the server only):
+    // called off the game's way, and the server's state taken below
+    const int32_t objectiveThere = e.f[kFirst + kObjective];
+    if (!p->mCar && p->mObjective == objectives_enum::enter_car_as_driver_35 && !AtCarDoor(p) && !e.f[kPedCar] && !e.f[kPedState] &&
+        objectiveThere != objectives_enum::enter_car_as_driver_35 && objectiveThere != objectives_enum::enter_train_37)
+    {
+        p->CancelEnterCarObjective();
+    }
     if (!driving && (p->mCar || InCarTransition(p) || e.f[kPedCar] || e.f[kPedState]))
     {
         // In a car, or on its way into or out of one, on either side: that is replica.cpp's (ForceIntoCar, ForceOutOfCar
