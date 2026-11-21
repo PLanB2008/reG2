@@ -11,9 +11,15 @@ Client/server multiplayer for the port (`../README.md`), in the style of Quake 3
 It replaces the original's DirectPlay lockstep game. The game's own code runs unchanged: the netcode sits where
 DirectPlay sat (`NetPlay`), and the few changes to `Source/` are port-only hooks ("The game's code").
 
-What works: 1-6 players on the game's multiplayer maps, frags, points and tag games, police, traffic, trains and ambient peds,
+What works: 1-10 players on the game's multiplayer maps, frags, points and tag games, police, traffic, trains and ambient peds,
 joining and leaving mid-game, rounds with warmup, results and votes, map rotations, chat with commands, reconnecting,
-a frontend page to join, bots (scripted and trained), recordings that replay without a server. Protocol 27.
+a frontend page to join, bots (scripted and trained), recordings that replay without a server. Protocol 29.
+
+The player limit is `NET_MAX_PLAYERS` (`core/player_limit.hpp`, 10), the port build's `MAX_PLAYERS`; the original and
+the MSVC build have 6. The maps' scripts make 6 player peds: a slot past them gets one at a restart zone as the game
+boots (`engine/slots.cpp`), with a look no script slot has, its own HUD colour and arrow. What stays as the game has it:
+the police chase 4 criminals at once, the ambient traffic and peds are 3 players' worth for everyone, and Residential has
+4 restart zones (players start two to a zone).
 
 ## Running
 
@@ -30,7 +36,7 @@ where **Network game** joins a server (below). The command line (`port/net/cmdli
 
 | | Options |
 |---|---|
-| Server | `--port` (27920), `--map <data/*.mmp>` (downtown-6p), `--maps a,b,c` (a rotation), `--players 1-6`, `--gametype 1-3` (frags, points, tag), `--fraglimit` (frags, 10; a points game's is money, 10000 as the original lobby's), `--timelimit` (minutes), `--tickms`, `--police [stars]` (off by default, as the lobby; up to the game's 1 star, or 1-6), `--traffic N` (ambient cars per player, 16), `--packets N` (a snapshot's parts at most, 4), `--interest blocks` (24) |
+| Server | `--port` (27920), `--map <data/*.mmp>` (downtown-6p), `--maps a,b,c` (a rotation), `--players 1-10` (6), `--gametype 1-3` (frags, points, tag), `--fraglimit` (frags, 10; a points game's is money, 10000 as the original lobby's), `--timelimit` (minutes), `--tickms`, `--police [stars]` (off by default, as the lobby; up to the game's 1 star, or 1-6), `--traffic N` (ambient cars per player, 16), `--packets N` (a snapshot's parts at most, 4), `--interest blocks` (24) |
 | Round flow | `--minplayers N` (2), `--warmup s` (60), `--results s` (15), `--votes start,map,kick` (or `none`), `--rounds on\|off` |
 | Arena | `--arena brain,...` (bots on the server itself), `--ticks N` (the result printed and the server ended at tick N), `--seed N` |
 | Client | `--connect host[:port]`, `--name`, `--bot [brain]` (simple, carhop, rammer, soldier, hunter, `nn:<file>`), `--replay <file>` |
@@ -732,9 +738,6 @@ own (`single`) and rollback in scenes with explosions (`explode`).
 - **An instant gang doesn't board a bus** (on the server, so the game's own AI): the members walk to the doors and stay
   there; normal cars work. To check against a traffic bus, then the original under wine.
 - **The game's results page** instead of the overlay's text; a minimum of players that counts people only.
-- **More than 6 players**: about 45-50 places in the game depend on the count (arrays sized `MAX_PLAYERS`, a few
-  literal 6s, a `u8` bitmask, the results screen, colours, the scripts' six `PLAYER_PED`s). A port-only cap with a
-  runtime count covers most; spawn points beyond the scripts' from the restart zones.
 - **Modes** beyond the game's frags, points and tag (team deathmatch, CTF) as a mode module, reusing the game's assets.
 - **Hardening**: the game's loaders (GMP, STY, SCR) on a hostile map pack: port-only checks in their write paths
   first (a sprite delta's apply, `LoadMissionScript`, `LoadStringTbl`), then a validator; rate limits on a server;

@@ -237,7 +237,7 @@ After a stall the game catches up at most 4 steps before the next frame, then dr
 
 ## Network game
 
-Client/server multiplayer for up to 6 players on the game's multiplayer maps, in place of the original's DirectPlay
+Client/server multiplayer for up to 10 players on the game's multiplayer maps, in place of the original's DirectPlay
 game ([docs/netcode.md](docs/netcode.md)). NETWORK GAME in the start menu joins a server; from a game folder (macOS:
 `reg2.app/Contents/MacOS/reg2`):
 
