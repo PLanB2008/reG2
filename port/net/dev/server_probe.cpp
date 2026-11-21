@@ -108,6 +108,7 @@ void net::ServerProbe::Captured(uint32_t tick, const Snapshot& world)
     engine::DebugCheckGridLists("after the tick", tick);
     engine::StackLog(true);
     engine::TrainLog(true);
+    engine::FireLog(true);
     engine::InstallSpriteCheck();
     engine::InstallSfxLog(true);
     engine::DumpPeds(tick, true);

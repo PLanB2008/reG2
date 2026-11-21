@@ -184,6 +184,7 @@ void net::ClientProbe::FrameEnd()
     engine::GangLog(false);
     engine::StackLog(false);
     engine::TrainLog(false);
+    engine::FireLog(false);
     engine::InstallSpriteCheck();
     engine::InstallSfxLog(false);
 }

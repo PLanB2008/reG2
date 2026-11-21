@@ -1066,3 +1066,64 @@ void net::engine::InstallSfxLog(bool server)
         user->mSoundObj = NULL;
     }
 }
+
+// GTA2_NET_FIRELOG: every fire at every 30th tick of the game's cycle (the same tick on both ends): a car's (its net id,
+// wrecked or not, its fire explosions' types), the ones on nothing (a molotov's, a flamethrower's, an explosion's) by
+// place, and the peds on fire
+void net::engine::FireLog(bool server)
+{
+    static const bool on = getenv("GTA2_NET_FIRELOG") != NULL;
+    static uint32_t sLast;
+    const uint32_t tick = gpRng ? (uint32_t)gpRng->get_cur_rng() : 0;
+    if (!on || !gCar_BC_Pool || !gExplosionPool_7A8 || tick % 30 || tick == sLast)
+    {
+        return;
+    }
+    sLast = tick;
+    const char* end = server ? "server" : "client";
+    std::set<const Object*> onCars;
+    for (Car* c = gCar_BC_Pool->mPool.mpPrev; c; c = c->mpNext)
+    {
+        std::string types;
+        for (AttachedSprite* a = c->mAttachments.mP18; a; a = a->mpNext)
+        {
+            const Object* o = a->mpSprite ? a->mpSprite->mObject2CPtr : NULL;
+            const s32 st = a->mpSprite ? a->mpSprite->GetType() : 0;
+            if (o && (st == sprite_types_enum::object_1 || st == sprite_types_enum::code_obj1_4 || st == sprite_types_enum::map_obj_5) &&
+                o->IsFireExplosion() && o->mpAny.pExplosion)
+            {
+                onCars.insert(o);
+                types += (types.empty() ? "" : ",") + std::to_string(o->mpAny.pExplosion->mType);
+            }
+        }
+        if (!types.empty())
+        {
+            const uint32_t id = server ? kCarIdBase + (uint32_t)c->mCarId : MappedId(c);
+            printf("net: FIRE %s tick %u: car %u wreck %d damage %d model %d at (%.1f, %.1f) types %s\n", end, tick, id, (int)IsWrecked(c),
+                   (int)c->mDamage, (int)c->mCarInfoIdx, c->mCarSprite->mXy.x.ToFloat(), c->mCarSprite->mXy.y.ToFloat(), types.c_str());
+        }
+    }
+    for (int pool = 0; pool < 2; pool++)
+    {
+        const int n = pool ? 20 : 40;
+        for (int i = 0; i < n; i++)
+        {
+            const bool used = pool ? (gExplosionPool_3D4 && gExplosionPool_3D4->mbUsed[i]) : gExplosionPool_7A8->mbUsed[i];
+            const Explosion& x = pool ? gExplosionPool_3D4->mExplosions[i] : gExplosionPool_7A8->mExplosions[i];
+            if (!used || !x.IsFireType() || !x.mpObj2C || !x.mpObj2C->mSprite || onCars.count(x.mpObj2C))
+            {
+                continue;
+            }
+            printf("net: FIRE %s tick %u: loose type %d timer %d at (%.1f, %.1f)\n", end, tick, (int)x.mType, (int)x.mTimer,
+                   x.mpObj2C->mSprite->mXy.x.ToFloat(), x.mpObj2C->mSprite->mXy.y.ToFloat());
+        }
+    }
+    int burning = 0;
+    for (Ped* p = gPedPool ? gPedPool->mPool.mpPrev : NULL; p; p = p->mpNext)
+    {
+        burning += p->mBf21C.bOnFire;
+    }
+    const Ped* me = server ? NULL : InGamePed(LocalPlayer());
+    printf("net: FIRE %s tick %u: peds burning %d, the local player at (%.1f, %.1f)\n", end, tick, burning, me ? me->get_cam_x().ToFloat() : -1.0f,
+           me ? me->get_cam_y().ToFloat() : -1.0f);
+}

@@ -59,6 +59,7 @@ void GangLog(bool server); // GTA2_NET_GANGLOG
 void InstallSpriteCheck(); // GTA2_NET_CHECKGRID: a sprite moved off the map is reported (gPortSpriteMovedHook)
 void StackLog(bool server); // GTA2_NET_STACKLOG: two cars in one place (under 0.4 blocks apart in x and y), once per pair
 void TrainLog(bool server); // GTA2_NET_TRAINLOG: every train's place and state at every 150th tick of the game's cycle
+void FireLog(bool server); // GTA2_NET_FIRELOG: every fire (cars', loose, peds on fire) at every 30th tick of the game's cycle
 // GTA2_NET_CARDIFF: where this game's prediction of the local player's car differs from the snapshot's (call after
 // restoring the snapshot's tick, before applying it)
 void DebugOwnCarDiff(const Snapshot& snap);
