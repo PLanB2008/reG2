@@ -176,6 +176,7 @@ class Client
     ForwardedInputs mForwarded[kRing]; // the other players' controls after each snapshot's tick (its header's)
     ForwardedInputs mKnown; // those of the snapshot the game took last, for the ticks after <mKnownTick>
     uint32_t mKnownTick = 0;
+    uint32_t mTakenAt = 0; // our tick when the game took the newest snapshot (a stall: the ticks since)
     uint32_t RemoteInput(int player, uint32_t tick) const; // what we predict another player's tick with
 
     std::unique_ptr<BotBrain> mBot;

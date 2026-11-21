@@ -422,7 +422,8 @@ void net::Client::TakePlayerStates(const Snapshot& snap)
     }
 }
 
-// The server's forwarded controls for that tick if it sent them, else the held input
+// The server's forwarded controls for that tick if it sent them, else the held input. With no snapshot for a while the
+// held one is let go: the fire after 5 ticks, the rest after 10 (nobody runs on or shoots on through a stall)
 uint32_t net::Client::RemoteInput(int player, uint32_t tick) const
 {
     const uint32_t k = tick - mKnownTick - 1;
@@ -430,7 +431,12 @@ uint32_t net::Client::RemoteInput(int player, uint32_t tick) const
     {
         return mKnown.controls[player][k];
     }
-    return mRemote[player];
+    const int stalled = mSynced && !Env().holdAll ? (int)(tick - mTakenAt) : 0;
+    if (stalled == 11 && tick == mTick + 1 && mRemote[player])
+    {
+        printf("net: frame %u, no snapshot for 10 ticks: player %d's held input 0x%x let go\n", mFrame, player, mRemote[player]);
+    }
+    return stalled > 10 ? 0 : stalled > 5 ? mRemote[player] & ~(uint32_t)kBtnAttack : mRemote[player];
 }
 
 // A snapshot of tick S: back to the game as it was after S, the server's state on top, then the ticks since then
@@ -900,6 +906,7 @@ void net::Client::Resync(const Snapshot& snap)
     mSynced = true;
     mSlackKnown = false; // until a snapshot answers commands for the new ticks
     mJumpTick = mTick;
+    mTakenAt = mTick;
     for (size_t i = 0; i < mSaves.size(); i++)
     {
         mSaves[i]->valid = false;
@@ -943,6 +950,7 @@ void net::Client::TakeSnapshot()
     // its save and the ticks the commands lack are run at once, so the saves go on; else a jump (Resync), which loses
     // every save and with them the prediction until snapshots of the new ticks come. Far ahead is paced back slowly
     const int off = mSynced && mSlackKnown ? mSlack - 2 : 0;
+    mTakenAt = mTick; // before the resimulation: its ticks have this snapshot's news
     const bool behind = mSynced && mLatestTick <= mTick && off < -3;
     if (!mProbe.Alone() && behind && -off <= kMaxFastForward && Saved(mLatestTick))
     {

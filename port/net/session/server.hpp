@@ -56,6 +56,7 @@ class Server
         uint32_t buttons = 0; // the input applied last (repeated while commands are late)
         uint32_t next = 0; // what the next tick runs with, as the game has it (the other clients get it forwarded)
         uint32_t late = 0; // ticks without their command (counted for the log)
+        uint32_t silent = 0; // ticks in a row without their command
         uint32_t ackTick = 0; // the newest snapshot the client has
         Snapshot sent[kRing]; // what was sent, by tick % kRing: the baselines
     };

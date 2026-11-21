@@ -5,6 +5,8 @@
 #include "../core/protocol.hpp"
 #include <chrono>
 #include <deque>
+#include <stdio.h>
+#include <stdlib.h>
 
 namespace
 {
@@ -13,6 +15,12 @@ class Conditioner : public net::Transport
   public:
     Conditioner(net::Transport* inner, const net::LinkShape& shape) : mInner(inner), mShape(shape), mStart(Now())
     {
+        // GTA2_NET_CUT=<every ms>:<ms>: the link is cut that long that often, every unreliable send lost (an outage)
+        const char* cut = getenv("GTA2_NET_CUT");
+        if (cut && sscanf(cut, "%d:%d", &mCutEveryMs, &mCutMs) != 2)
+        {
+            mCutEveryMs = mCutMs = 0;
+        }
     }
     ~Conditioner() override
     {
@@ -30,6 +38,10 @@ class Conditioner : public net::Transport
         if (!reliable && size > net::kMaxPayload)
         {
             return false; // the same refusal as the real one
+        }
+        if (!reliable && mCutEveryMs > 0 && (Now() - mStart) % mCutEveryMs >= mCutEveryMs - mCutMs)
+        {
+            return true; // the link is cut
         }
         if (!reliable && Lost())
         {
@@ -145,6 +157,7 @@ class Conditioner : public net::Transport
     net::LinkShape mShape;
     long long mStart;
     bool mBad = false;
+    int mCutEveryMs = 0, mCutMs = 0;
     uint32_t mSeed = 12345;
     std::deque<Held> mHeld;
 };

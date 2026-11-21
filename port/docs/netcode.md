@@ -70,8 +70,8 @@ and goes back to the network page as a single player again. So does a client tha
 kicked, or hasn't the next map's files, with why on the page; without the map's files a join fails the same way.
 
 **Connection.** The ping shows at the bottom right: the network's round trip alone (`kMsgPing`, answered at once,
-both polled between frames). With no snapshot for 0.7 s it shows **Connection interrupted** and plays on with the
-others' last inputs. When ENet drops the connection (after 5-10 s) it shows **Lost the server, reconnecting** and
+both polled between frames). With no snapshot for 0.7 s it shows **Connection interrupted** and plays on, the others'
+last inputs held for 5 ticks after the last snapshot, then without fire, then from 10 ticks on none. When ENet drops the connection (after 5-10 s) it shows **Lost the server, reconnecting** and
 connects again every 3 s under its name; the server gives a name its old slot back if it is free, at a restart zone.
 After 30 s, or back as another player or on another map, it goes back to the network page.
 
@@ -150,10 +150,11 @@ original's frame path in `winmain.cpp` (a step, then a frame): a server draws no
 
 - **Commands** carry the server tick they are for and repeat the last few, so a lost packet loses no input. The server
   buffers them per tick and repeats a player's last input when one is late (its controls only: a repeated key would
-  type twice). It reports the newest command tick it has, and the client keeps its commands about two ticks early. The client paces its
-  ticks to keep them there (a quarter faster when late, a tenth or a fifth slower when early); commands a few ticks
-  late are caught up by running the missing ticks at once, saved, and only more than 8 late or 20 early make it jump
-  (its saves lost until snapshots of the new ticks come).
+  type twice), for 6 ticks at most: a client silent longer plays nothing, its player stands until it is back. It
+  reports the newest command tick it has, and the client keeps its commands about two ticks early. The client paces
+  its ticks to keep them there (a quarter faster when late, a tenth or a fifth slower when early); commands a few
+  ticks late are caught up by running the missing ticks at once, saved, and only more than 8 late or 20 early make it
+  jump (its saves lost until snapshots of the new ticks come).
 - **Snapshots**, per client, every tick (`Server::SendSnapshot`): every player and the car each sits in, wherever they
   are, and everything within the client's interest area (24 blocks around its player; a camera sees 6 to 8). Each
   entity is a delta against the state that client acknowledged for it (per-entity baselines, so a snapshot can carry
@@ -500,6 +501,8 @@ off by default:
 | `GTA2_NET_REPLAYON=<frames>` | replay | the game runs on that many frames after the recording ends, nothing arriving |
 | `GTA2_NET_STATS=1` | client | the connection beside the ping, over the last second: the snapshots lost (the server sends one a tick), received per second, the ticks the game runs ahead of the newest, and the ticks resimulated per rollback |
 | `GTA2_NET_NOFORWARD=1` | client | other players predicted by their repeated input only, not the forwarded controls |
+| `GTA2_NET_HOLDALL=1` | client | other players' last input held through a stall, not let go |
+| `GTA2_NET_CUT=<every ms>:<ms>` | either end | with the link conditioner on (`--lag 1`): every unreliable send lost that long that often |
 | `GTA2_NET_BLEND=<0..1>`, `_BLEND_FAR`, `_BLEND_SELF` | client | how far a correction is blended in each tick: a small one (0.3), one near 2 blocks (0.5), the local player's own (0.5); 1: at once |
 | `GTA2_NET_COMPARE=1` | client | the comparison check |
 | `GTA2_NET_DIVERGE=<tick>[:<ticks>]` | client | the divergence check |

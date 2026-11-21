@@ -588,6 +588,8 @@ void net::Server::OnEvent(const TransportEvent& e)
     }
 }
 
+const uint32_t kHeldTicks = 6; // a late client's input is repeated this long at most
+
 // Inputs for the next tick: its command, or the last one again if it is late, or the arena bot's; nobody's slot
 // stands still
 void net::Server::SetNextInputs(const Snapshot& world)
@@ -607,11 +609,26 @@ void net::Server::SetNextInputs(const Snapshot& world)
         else if (s.used && s.cmdTick[next % kRing] == next)
         {
             s.buttons = s.cmdButtons[next % kRing];
+            if (s.silent > kHeldTicks)
+            {
+                float x = 0, y = 0;
+                engine::PlayerPosition((int)i, &x, &y);
+                printf("net: tick %u, player %zu back after %u ticks without commands, at (%.2f, %.2f)\n", mTick, i, s.silent, x, y);
+            }
+            s.silent = 0;
         }
         else if (s.used)
         {
             s.late++;
-            s.buttons &= 0xFFF; // the last one again, its controls only: a key event (chat) happens once
+            // The last one again, its controls only (a key event, the chat, happens once); a client silent longer than
+            // a late command's few ticks plays nothing: its player stands, rather than running on blind
+            s.buttons = ++s.silent > kHeldTicks ? 0 : s.buttons & 0xFFF;
+            if (s.silent == kHeldTicks + 1)
+            {
+                float x = 0, y = 0;
+                engine::PlayerPosition((int)i, &x, &y);
+                printf("net: tick %u, player %zu without commands for %u ticks: its input let go, at (%.2f, %.2f)\n", mTick, i, kHeldTicks, x, y);
+            }
         }
         // The results and the countdown: a player's key events (the chat) are all it has (round_state.hpp)
         const uint32_t buttons = InputsHeld(engine::CurrentRound().phase) ? s.buttons & kKeyEventBits : s.buttons;
