@@ -55,8 +55,8 @@ a join is turned away otherwise, with what differs on the network page (and prin
 
 On a LAN nobody forwards anything: the others join at the host's LAN address (`ip addr`, `ipconfig`: 192.168.x.y), the
 host's firewall still letting UDP 27920 in. A player whose name is taken, empty or longer than 15 characters plays under
-one the server gives ("PLAYER 2"). A server that ends (its window closed, Ctrl-C, a stop signal) tells its players, who go back to the network page
-with "the server closed"; one started again starts a new game, which they join again.
+one the server gives ("PLAYER 2"). A server that ends (its window closed, Ctrl-C, a stop signal) tells its players, who
+go back to the network page with "the server closed"; one started again starts a new game, which they join again.
 
 ## Playing
 
@@ -66,8 +66,9 @@ error on the page; welcomed, the frontend boots the network game as it boots a l
 conditioner's options apply to a join from the page too.
 
 **Leaving.** Escape in a network game is the client's: "Leave the game? Y / N" over the frame (not while a chat line is
-typed). Y or Enter (a pad's A) leaves; any other key is no. Leaving leaves the server and goes back to the network page as a single player again. So does a client that lost the server for good, was
-kicked, or hasn't the next map's files, with why on the page; without the map's files a join fails the same way.
+typed). Y or Enter (a pad's A) leaves; any other key is no. Leaving leaves the server and goes back to the network page
+as a single player again. So does a client that lost the server for good, was kicked, or hasn't the next map's files,
+with why on the page; without the map's files a join fails the same way.
 
 **Connection.** The ping shows at the bottom right: the network's round trip alone (`kMsgPing`, answered at once,
 both polled between frames). With no snapshot for 0.7 s it shows **Connection interrupted** and plays on, the others'
@@ -309,17 +310,18 @@ A little-endian bitstream (`core/bitstream.cpp`), never a copy of a struct: clie
 | `kMsgPing`, `kMsgPong` | unreliable | the client's clock, sent back at once |
 | `kMsgCommand`, `kMsgNotice` | reliable | a player's command; a line to show (a vote, a player ready) |
 
-ENet runs with `mtu` the link's MTU less IP and UDP's 28 bytes (`--mtu`, 1280 by default), two channels (never reliable data on the snapshot channel: under loss it delayed the
-snapshots), its throttle off (it dropped snapshots when the round trip rose) and a flush after every tick.
+ENet runs with `mtu` the link's MTU less IP and UDP's 28 bytes (`--mtu`, 1280 by default), two channels (never reliable
+data on the snapshot channel: under loss it delayed the snapshots), its throttle off (it dropped snapshots when the
+round trip rose) and a flush after every tick.
 
 ## Recordings
 
-Every client session is recorded (`session/recording.cpp`): the welcome, then per frame the packets, the round trip
-and the input, to `recordings/session-<n>.rec` (the newest 10, each stopped at 200 MB: one to a few hours; `GTA2_NET_RECORD=<file>` elsewhere, `off` none). A
-client does nothing but react to what arrives and to its own input, so `--replay <file>` plays the session again
-without a server, tick for tick, as fast as the game runs: a minute in about 2 s, the same every time. **F12, or the key
-under Esc, marks a moment** in play: the client and its replay print `net: mark <n> at frame <f>`, so a bug seen in
-play is "the last session, mark 2".
+Every client session is recorded (`session/recording.cpp`): the welcome, then per frame the packets, the round trip and
+the input, to `recordings/session-<n>.rec` (the newest 10, each stopped at 200 MB: one to a few hours;
+`GTA2_NET_RECORD=<file>` elsewhere, `off` none). A client does nothing but react to what arrives and to its own input,
+so `--replay <file>` plays the session again without a server, tick for tick, as fast as the game runs: a minute in
+about 2 s, the same every time. **F12, or the key under Esc, marks a moment** in play: the client and its replay print
+`net: mark <n> at frame <f>`, so a bug seen in play is "the last session, mark 2".
 
 ## Bots
 
@@ -565,10 +567,6 @@ own (`single`) and rollback in scenes with explosions (`explode`).
 
 ## Open
 
-- **A server's spawn area is its own screen's**: the bounds where it spawns and removes traffic and peds come from its
-  cameras' screen size and ZOOM, widened by each client's lead, not from each client's screen. A widescreen or
-  zoomed-out client can see cars and peds appear at its sides. Next: the client's screen size and zoom in its hello,
-  applied to that player's cameras on the server.
 - **Typing on the network page with a gamepad**: the address and name take the keyboard only.
 - **Other players at car doors**: most of the remaining large corrections of other players are with the server at a
   door. Next: a remote player the server has at a door put there at once instead of walked there by its predicted
