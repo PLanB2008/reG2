@@ -4,6 +4,7 @@
 #include "transport.hpp"
 #include "../core/protocol.hpp"
 #include <enet/enet.h>
+#include <unordered_map>
 
 namespace
 {
@@ -181,8 +182,20 @@ net::Transport* net::CreateClientTransport(const char* hostName, uint16_t port, 
         *error = "can't create a client host";
         return NULL;
     }
+    // A name is looked up once: a lookup blocks the frame (up to the resolver's timeout while the network is down), and
+    // a client reconnects every 3 s during an outage (Client::Reconnect)
+    static std::unordered_map<std::string, enet_uint32> sResolved;
     ENetAddress address;
-    if (enet_address_set_host(&address, hostName) != 0)
+    auto known = sResolved.find(hostName);
+    if (known != sResolved.end())
+    {
+        address.host = known->second;
+    }
+    else if (enet_address_set_host(&address, hostName) == 0)
+    {
+        sResolved[hostName] = address.host;
+    }
+    else
     {
         enet_host_destroy(host);
         *error = std::string("unknown host ") + hostName;
