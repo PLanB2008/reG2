@@ -208,6 +208,8 @@ void RestoreGame(const SavedWorld& in);
 bool Restorable(const SavedWorld& in); // saved with the rollback set as it is now
 // One tick without drawing or sound, with every player's buttons (count: players)
 void ResimTick(const uint32_t* buttons, int count);
+// Before resimulating the tick the frame loop just ran: the corrected game's places the frames draw from
+void ResimStepStart();
 
 // --- A client's view (replica.cpp, snapshot.cpp) ---
 

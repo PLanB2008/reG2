@@ -3,9 +3,13 @@
 #include "Car.hpp"
 #include "Game.hpp"
 #include "Hud.hpp"
+#include "Object_3C.hpp"
+#include "char.hpp"
 #include "Ped.hpp"
 #include "Player.hpp"
 #include "sprite.hpp"
+#include <math.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <vector>
@@ -79,6 +83,8 @@ struct Saved
 };
 
 Pose sPoses[kNumSprites];
+Pose sResimPoses[kNumSprites];
+bool sResimValid;
 Camera* spCamera;
 CameraPos sCameraPos;
 bool sValid;
@@ -115,6 +121,11 @@ std::vector<SavedPed> sSavedPeds;
 u32 sMoved;
 u32 sJumped;
 u32 sSnapped;
+s32 sSavedAt[kNumSprites]; // each sprite's index in sSaved, -1: none
+bool sOnOwner[kNumSprites]; // drawn on the car or ped it is on (ApplyAttached)
+bool sMeasure = getenv("GTA2_LOOP_TRACE") != NULL;
+u32 sObjOff;
+f32 sObjWorst;
 Camera* spAppliedCamera;
 u8 sCameraBytes[sizeof(Camera)];
 
@@ -192,6 +203,7 @@ void Save(Sprite& sprite)
     saved.mZCol = sprite.mZCol;
     saved.mVisual.Save(sprite.mpVisualShape);
     saved.mCollision.Save(sprite.mpCollisionShape != sprite.mpVisualShape ? sprite.mpCollisionShape : NULL);
+    sSavedAt[&sprite - gSpritePool->mPool.mPool] = static_cast<s32>(sSaved.size());
     sSaved.push_back(saved);
 }
 
@@ -274,18 +286,25 @@ void AttachedPlace(const AttachedSprite& a, Fix16 x, Fix16 y, Ang16 rot, Fix16* 
     }
 }
 
-// The objects on a car (its flames, smoke, lights, a roof turret) drawn where the car is drawn: lerped on their own,
-// an object made this step (drawn where the step put it) would be off the car. Not on a car that turned further than a
-// car steers in a step (a train's carriage at a corner, whose lights stay put while it is drawn turning)
+// The objects on a car (its flames, smoke, lights, a roof turret) or a ped (its fire) drawn where it is drawn: lerped on
+// their own, an object made this step (drawn where the step put it) would be off it. Not on a car that turned further
+// than a car steers in a step (a train's carriage at a corner, whose lights stay put while it is drawn turning)
 const s32 kMaxAttachedTurn = 90;
 
-void ApplyAttached(const std::vector<Pose>& carsAtStep, const std::vector<Car*>& cars)
+struct Owner
 {
-    for (size_t i = 0; i < cars.size(); i++)
+    Sprite* mpSprite;
+    SpriteList* mpList;
+    Pose mAtStep;
+};
+
+void ApplyAttached(const std::vector<Owner>& owners)
+{
+    for (size_t i = 0; i < owners.size(); i++)
     {
-        const Sprite* pCar = cars[i]->mCarSprite;
-        const Pose& step = carsAtStep[i];
-        const Pose& before = sPoses[pCar - gSpritePool->mPool.mPool];
+        const Sprite* pOwner = owners[i].mpSprite;
+        const Pose& step = owners[i].mAtStep;
+        const Pose& before = sPoses[pOwner - gSpritePool->mPool.mPool];
         if (before.mId != step.mId || Abs(TurnBetween(before.mRot, step.mRot)) > kMaxAttachedTurn)
         {
             continue;
@@ -295,21 +314,18 @@ void ApplyAttached(const std::vector<Pose>& carsAtStep, const std::vector<Car*>&
         stepY.mValue = step.mY;
         Ang16 stepRot;
         stepRot.rValue = step.mRot;
-        for (AttachedSprite* a = cars[i]->mAttachments.mP18; a; a = a->mpNext)
+        for (AttachedSprite* a = owners[i].mpList->mP18; a; a = a->mpNext)
         {
             Sprite* pSprite = a->mpSprite;
             if (!pSprite || !pSprite->AsObject2C())
             {
                 continue;
             }
-            // Only one the step put on the car (an object that left it keeps its own place)
+            // Only one the step put on it (an object that left it keeps its own place)
             Fix16 x, y;
             AttachedPlace(*a, stepX, stepY, stepRot, &x, &y);
-            const Saved* pSaved = NULL;
-            for (size_t k = 0; k < sSaved.size() && !pSaved; k++)
-            {
-                pSaved = sSaved[k].mpSprite == pSprite ? &sSaved[k] : NULL;
-            }
+            const s32 slot = static_cast<s32>(pSprite - gSpritePool->mPool.mPool);
+            const Saved* pSaved = sSavedAt[slot] >= 0 ? &sSaved[sSavedAt[slot]] : NULL;
             const Pose real = pSaved ? pSaved->mPose : PoseOf(*pSprite);
             if (Abs(real.mX - x.mValue) > 4 || Abs(real.mY - y.mValue) > 4)
             {
@@ -319,13 +335,59 @@ void ApplyAttached(const std::vector<Pose>& carsAtStep, const std::vector<Car*>&
             {
                 Save(*pSprite);
             }
-            AttachedPlace(*a, pCar->mXy.x, pCar->mXy.y, pCar->mRotation, &x, &y);
+            sOnOwner[slot] = true;
+            AttachedPlace(*a, pOwner->mXy.x, pOwner->mXy.y, pOwner->mRotation, &x, &y);
             pSprite->mXy.x = x;
             pSprite->mXy.y = y;
-            pSprite->mZpos = pCar->mZpos;
-            pSprite->mRotation = pCar->mRotation + a->mOffsetRot;
+            pSprite->mZpos = pOwner->mZpos;
+            pSprite->mRotation = pOwner->mRotation + a->mOffsetRot;
             pSprite->mRotation.Normalize();
             pSprite->InvalidateZColAndBBoxes();
+        }
+    }
+}
+
+bool IsCarOrPed(const Sprite& sprite)
+{
+    return sprite.mSpriteTypeEnum == sprite_types_enum::car_2 || sprite.mSpriteTypeEnum == sprite_types_enum::ped_3;
+}
+
+// Where a sprite is drawn from. After a network client's rollback the world before the step was another: a car's or a
+// ped's place in it is the one last drawn (the netcode blends their corrections in), anything else's is the corrected
+// game's, as the same slot and id may hold another object there (an explosion's particle where a flame's was)
+const Pose& FromPose(const Sprite& sprite, s32 i)
+{
+    return sResimValid && !IsCarOrPed(sprite) ? sResimPoses[i] : sPoses[i];
+}
+
+// GTA2_LOOP_TRACE's objs: the objects drawn other than between their places before and after the step in the game as
+// it is now (after a rollback, the corrected one), and the worst of them (blocks)
+void Measure(f32 alpha)
+{
+    sObjOff = 0;
+    sObjWorst = 0;
+    for (s32 i = 0; sMeasure && i < kNumSprites; i++)
+    {
+        const Sprite& sprite = gSpritePool->mPool.mPool[i];
+        if (!sprite.mInstanceId || IsCarOrPed(sprite) || sOnOwner[i])
+        {
+            continue;
+        }
+        const Pose cur = sSavedAt[i] >= 0 ? sSaved[sSavedAt[i]].mPose : PoseOf(sprite);
+        const Pose& from = sResimValid ? sResimPoses[i] : sPoses[i];
+        s32 x = cur.mX, y = cur.mY;
+        if (from.mId == cur.mId && Abs(cur.mX - from.mX) <= kMaxStepMove && Abs(cur.mY - from.mY) <= kMaxStepMove &&
+            Abs(cur.mZ - from.mZ) <= kMaxStepMove)
+        {
+            x = Lerp(from.mX, cur.mX, alpha);
+            y = Lerp(from.mY, cur.mY, alpha);
+        }
+        const f32 dx = static_cast<f32>(sprite.mXy.x.mValue - x), dy = static_cast<f32>(sprite.mXy.y.mValue - y);
+        const f32 off = sqrtf(dx * dx + dy * dy) / 16384.0f;
+        if (off > 1.0f / 16)
+        {
+            sObjOff++;
+            sObjWorst = off > sObjWorst ? off : sObjWorst;
         }
     }
 }
@@ -342,11 +404,21 @@ void Snapshot()
     {
         sPoses[i] = PoseOf(gSpritePool->mPool.mPool[i]);
     }
+    sResimValid = false;
     spCamera = ViewCamera();
     sCameraPos = spCamera->mCurPos;
     for (s32 i = 0; gHud_2B00 && i < kNumArrows; i++)
     {
         sArrows[i] = PoseOf(ArrowAt(i));
+    }
+}
+
+void SnapshotResim()
+{
+    sResimValid = sValid && gSpritePool;
+    for (s32 i = 0; sResimValid && i < kNumSprites; i++)
+    {
+        sResimPoses[i] = PoseOf(gSpritePool->mPool.mPool[i]);
     }
 }
 
@@ -374,6 +446,8 @@ void LaidMoving(Sprite* pSprite, s32 dx, s32 dy)
 void Apply(f32 alpha)
 {
     sSaved.clear();
+    memset(sSavedAt, 0xFF, sizeof(sSavedAt));
+    memset(sOnOwner, 0, sizeof(sOnOwner));
     spAppliedCamera = NULL;
     if (!sValid || !gSpritePool || ViewCamera() != spCamera)
     {
@@ -400,21 +474,32 @@ void Apply(f32 alpha)
             players[numPlayers++] = p;
         }
     }
-    std::vector<Car*> cars;
-    std::vector<Pose> carsAtStep;
+    std::vector<Owner> owners;
     for (Car* pCar = gCar_BC_Pool ? gCar_BC_Pool->mPool.mpPrev : NULL; pCar; pCar = pCar->mpNext)
     {
         if (pCar->mCarSprite && pCar->mAttachments.mP18)
         {
-            cars.push_back(pCar);
-            carsAtStep.push_back(PoseOf(*pCar->mCarSprite));
+            Owner owner = {pCar->mCarSprite, &pCar->mAttachments, PoseOf(*pCar->mCarSprite)};
+            owners.push_back(owner);
         }
     }
     for (s32 i = 0; i < kNumSprites; i++)
     {
-        ApplySprite(gSpritePool->mPool.mPool[i], sPoses[i], alpha);
+        Sprite& sprite = gSpritePool->mPool.mPool[i];
+        Char* pChar = sprite.mInstanceId ? sprite.AsCharB4() : NULL;
+        if (pChar && pChar->mObj2c.mP18)
+        {
+            Owner owner = {&sprite, &pChar->mObj2c, PoseOf(sprite)};
+            owners.push_back(owner);
+        }
     }
-    ApplyAttached(carsAtStep, cars);
+    for (s32 i = 0; i < kNumSprites; i++)
+    {
+        Sprite& sprite = gSpritePool->mPool.mPool[i];
+        ApplySprite(sprite, FromPose(sprite, i), alpha);
+    }
+    ApplyAttached(owners);
+    Measure(alpha);
     for (s32 i = 0; i < numPlayers; i++)
     {
         const PlayerSprite& p = players[i];
@@ -507,6 +592,12 @@ bool Steered(const Sprite* pSprite)
         rot = sSaved[k].mpSprite == pSprite ? sSaved[k].mPose.mRot : rot;
     }
     return sPoses[i].mId != pSprite->mInstanceId || Abs(TurnBetween(sPoses[i].mRot, rot)) <= kMaxAttachedTurn;
+}
+
+void ObjectCounts(u32* pOff, f32* pWorst)
+{
+    *pOff = sObjOff;
+    *pWorst = sObjWorst;
 }
 
 void TakeCounts(u32* pMoved, u32* pJumped, u32* pSnapped)

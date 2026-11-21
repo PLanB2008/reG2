@@ -3,6 +3,7 @@
 #include "internal.hpp"
 #include "world.hpp"
 #include "dev/dev.hpp"
+#include "port/src/interpolation.hpp"
 #include "Source/Game.hpp"
 #include "Source/Player.hpp"
 #include "Source/Car.hpp"
@@ -160,6 +161,11 @@ void net::engine::RestoreGame(const SavedWorld& in)
     RestoreReplicas(in.mImpl->replicas);
     SoundLogRestored(in.tick);
     sFirstResim = true;
+}
+
+void net::engine::ResimStepStart()
+{
+    PortInterp::SnapshotResim();
 }
 
 void net::engine::ResimTick(const uint32_t* buttons, int count)
