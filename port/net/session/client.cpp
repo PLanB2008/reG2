@@ -489,6 +489,7 @@ void net::Client::Reconcile(const Snapshot& snap)
         return (double)std::chrono::duration_cast<std::chrono::microseconds>(b - a).count();
     };
     const Clock::time_point start = Clock::now();
+    mStats.staleRestores += mStale[s % kSaves];
     engine::RestoreGame(*saved);
     mProbe.AfterRestore(snap);
     engine::Apply(snap);
@@ -508,7 +509,18 @@ void net::Client::Reconcile(const Snapshot& snap)
         mProbe.AfterResim();
         const Clock::time_point ticked = Clock::now();
         mStats.resimUs += us(mark, ticked);
-        engine::SaveGame(*mSaves[t % kSaves], t);
+        // Only the first ticks: the next snapshots restore those (a save is 3 MB, most of a rollback's time); the later
+        // ones keep their save of before, still a world of that tick, which a snapshot after a few lost ones restores
+        const int keep = Env().resimSaves;
+        if (keep <= 0 || t <= s + (uint32_t)keep)
+        {
+            engine::SaveGame(*mSaves[t % kSaves], t);
+            mStale[t % kSaves] = false;
+        }
+        else
+        {
+            mStale[t % kSaves] = true;
+        }
         mark = Clock::now();
         mStats.saveUs += us(ticked, mark);
         mStats.resimTicks++;
@@ -765,6 +777,7 @@ void net::Client::RecordTick()
 {
     mTick++;
     engine::SaveGame(*mSaves[mTick % kSaves], mTick);
+    mStale[mTick % kSaves] = false;
     TickRecord& rec = mHist[mTick % kRing];
     engine::PlayerPosition(mSlot, &rec.predX, &rec.predY);
     rec.shownTick = 0; // until RecordShown
@@ -1034,10 +1047,10 @@ void net::Client::PrintStats(const Snapshot& snap)
                mFrame, (st.restoreUs + st.resimUs + st.saveUs) / st.rollbacks / 1000, st.reconcileWorstUs / 1000, st.restoreUs / st.rollbacks / 1000,
                (float)st.resimTicks / st.rollbacks, st.resimUs / st.rollbacks / 1000, st.saveUs / st.rollbacks / 1000);
     }
-    if (st.jumps || st.fastForwards || st.plainApplies)
+    if (st.jumps || st.fastForwards || st.plainApplies || st.staleRestores)
     {
-        printf("net: frame %u, %u jumps, %u catch-ups at once, %u snapshots taken without their save\n", mFrame, st.jumps, st.fastForwards,
-               st.plainApplies);
+        printf("net: frame %u, %u jumps, %u catch-ups at once, %u snapshots taken without their save, %u on a save from before a correction\n",
+               mFrame, st.jumps, st.fastForwards, st.plainApplies, st.staleRestores);
     }
     std::string local;
     for (size_t i = 0; i < mLocalDeaths.size(); i++)
@@ -1306,6 +1319,7 @@ void net::Client::Step()
         {
             mSaves.emplace_back(new engine::SavedWorld());
         }
+        mStale.assign(kSaves, false);
         mRemote.assign(engine::PlayerCount(), 0);
         mRemoteSeen.assign(engine::PlayerCount(), 0);
     }

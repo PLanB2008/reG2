@@ -108,6 +108,7 @@ class Client
         CorrectionStats carsView[2];
         uint32_t carFrames = 0, carMismatch = 0; // frames x players, and those where in-car differs from the snapshot
         uint32_t jumps = 0, fastForwards = 0, plainApplies = 0; // Resync, FastForward, a snapshot taken without its save
+        uint32_t staleRestores = 0; // a snapshot's save from before the last correction (Reconcile saved its tick no more)
     };
     void Step(); // the frame's work: what arrived, the input, the snapshot, the commands
     int InView(float x, float y) const; // 0: within the local player's view and a block, 1: beyond
@@ -181,6 +182,7 @@ class Client
     bool mSynced = false;
     uint32_t mTick = 0;
     std::vector<std::unique_ptr<engine::SavedWorld>> mSaves;
+    std::vector<bool> mStale; // by mSaves' index: a resimulation went past its tick without saving it
     TickRecord mHist[kRing];
     std::vector<uint32_t> mRemote; // other players' last inputs, from snapshots
     std::vector<uint32_t> mRemoteSeen; // and as the newest snapshot had them

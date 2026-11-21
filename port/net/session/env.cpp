@@ -16,6 +16,7 @@ const net::SessionEnv& net::Env()
         e.noForward = getenv("GTA2_NET_NOFORWARD") && atoi(getenv("GTA2_NET_NOFORWARD"));
         e.holdAll = getenv("GTA2_NET_HOLDALL") && atoi(getenv("GTA2_NET_HOLDALL"));
         // Tuned on recordings (port/docs/netcode.md, "The client"): the other players shown a third nearer the server's
+        e.resimSaves = getenv("GTA2_NET_RESIMSAVES") ? atoi(getenv("GTA2_NET_RESIMSAVES")) : 4;
         e.blend = getenv("GTA2_NET_BLEND") ? (float)atof(getenv("GTA2_NET_BLEND")) : 0.3f;
         e.blendFar = getenv("GTA2_NET_BLEND_FAR") ? (float)atof(getenv("GTA2_NET_BLEND_FAR")) : 0.5f;
         e.blendSelf = getenv("GTA2_NET_BLEND_SELF") ? (float)atof(getenv("GTA2_NET_BLEND_SELF")) : 0.5f;

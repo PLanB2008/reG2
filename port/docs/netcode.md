@@ -190,7 +190,10 @@ original's frame path in `winmain.cpp` (a step, then a frame): a server draws no
   the controls the snapshot forwards for the ticks after it (the next tick's as the server runs it, then the commands
   it holds, up to 4), then the last of them repeated, a turn only once two in a row have it (a tap repeated turns far
   past the server's). `GTA2_NET_NOFORWARD=1` predicts by the repeated input alone (to compare on a replay).
-  Everything else moves on by the game's own simulation in those ticks.
+  Everything else moves on by the game's own simulation in those ticks. Of the resimulated ticks only the first 4 are
+  saved again (the next snapshots restore those; a save of the 3 MB world was three quarters of a rollback's time): the
+  later ones keep their save from before, a world of that tick still, which a snapshot after 4 lost ones would restore
+  (counted in the log).
 - **The blend**: what is shown, place and facing alike, moves a part of the way to the corrected state each tick: 0.3
   of a small error, rising to 0.5 of one near 2 blocks, and 0.5 of the local player's own (on foot or its car); more
   than 2 blocks off (a respawn, a car entered) jumps. Tuned on recordings by the display error (what a tick showed
@@ -512,6 +515,7 @@ off by default:
 | `GTA2_NET_NOFORWARD=1` | client | other players predicted by their repeated input only, not the forwarded controls |
 | `GTA2_NET_HOLDALL=1` | client | other players' last input held through a stall, not let go |
 | `GTA2_NET_CUT=<every ms>:<ms>` | either end | with the link conditioner on (`--lag 1`): every unreliable send lost that long that often |
+| `GTA2_NET_RESIMSAVES=<n>` | client | the resimulated ticks saved again after a rollback: the first n (4; 0: all) |
 | `GTA2_NET_BLEND=<0..1>`, `_BLEND_FAR`, `_BLEND_SELF` | client | how far a correction is blended in each tick: a small one (0.3), one near 2 blocks (0.5), the local player's own (0.5); 1: at once |
 | `GTA2_NET_COMPARE=1` | client | the comparison check |
 | `GTA2_NET_DIVERGE=<tick>[:<ticks>]` | client | the divergence check |
