@@ -29,3 +29,4 @@ bool gPortProtectsPlayers;
 bool (*gPortScoreBonusHook)(Player* pPlayer, s32 voice);
 bool gPortNoFireEngines;
 bool gPortLeavePromptShown;
+int gPortNetRoundPad;

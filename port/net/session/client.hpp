@@ -235,6 +235,7 @@ class Client
     uint32_t mChatTick = 0; // the snapshot KeepChatLines last looked at
     uint32_t mChatting = 0; // bit per player: typing a line in that snapshot
     uint32_t mRoundKeyFrame = 0, mBotSentFrame = 0;
+    uint32_t mMapCursor = 0; // the results' map under the cursor (0-based): Enter, or a gamepad's A, chooses it
     std::string mLeftWhy;
     uint32_t mPromptKeyFrame = 0;
     std::vector<bool> mWasWasted; // the test log: deaths this game carried out per player

@@ -715,13 +715,13 @@ uint32_t net::Client::ChooseInput(uint32_t recordedInput)
     // Enter says yes too: a gamepad's A while the prompt shows (port_QuitMessageShown)
     // While a chat line is typed, Escape is the line's (dropped: the game has no use for it there), and while the prompt
     // shows any other key says no, so typing on doesn't answer it
-    const uint32_t kKeyBits = 0x1FF000, kEscape = 0x01, kYes = 0x15, kEnter = 0x1C; // DIK_ESCAPE, _Y, _RETURN
+    const uint32_t kKeyBits = 0x1FF000, kEscape = 0x01, kEnter = 0x1C; // DIK_ESCAPE, DIK_RETURN
     const bool chatting = !mLeavePrompt && engine::TakeLocalChat().chatting;
     if (!mReplay && (local & kKeyDown) && (key == kEscape || mLeavePrompt))
     {
         if (mFrame != mPromptKeyFrame + 1 && !chatting) // held: once
         {
-            if (mLeavePrompt && (key == kYes || key == kEnter))
+            if (mLeavePrompt && (tolower(engine::TypedChar(local) & 0xFF) == 'y' || key == kEnter))
             {
                 printf("net: frame %u, left the game\n", mFrame);
                 mLeavePrompt = false;
@@ -1411,23 +1411,40 @@ void net::Client::SendCommand(const std::string& text)
     printf("net: frame %u, command %s\n", mFrame, text.c_str());
 }
 
-// F1 in the warmup (ready), Y or N while a vote is open; not while typing a chat line, whose keys they are then. The
-// keys go to neither the game here nor the server
+// F1 in the warmup (ready), else while a vote is open (yes); Y or N, as the keyboard's layout types them, while a vote
+// is open; in the results, the number keys, or Up, Down and Enter, choose the next map. A gamepad's Back is F1, its
+// d-pad and A in the results the arrows and Enter (SetRoundPad). Not while typing a chat line, whose keys they are
+// then. The keys go to neither the game here nor the server
 void net::Client::RoundKeys(uint32_t& local, uint32_t key)
 {
-    const uint32_t kKeyDown = 0x200000, kKeyBits = 0x1FF000, kF1 = 0x3B, kYes = 0x15, kNo = 0x31; // DIK_F1, DIK_Y, DIK_N
+    const uint32_t kKeyDown = 0x200000, kKeyBits = 0x1FF000, kF1 = 0x3B; // DIK_F1
+    const uint32_t kUp = 0xC8, kDown = 0xD0, kEnter = 0x1C, kPadEnter = 0x9C; // DIK_UP, DIK_DOWN, DIK_RETURN, DIK_NUMPADENTER
     const engine::Round& round = engine::CurrentRound();
-    const bool ready = key == kF1 && round.phase == kPhaseWarmup && round.minPlayers;
-    const bool vote = (key == kYes || key == kNo) && round.voteKind != kVoteNone;
-    // In the results, 1-9 chooses the next map (DIK_1 is 2 .. DIK_9 is 10)
-    const uint32_t map = key >= 0x02 && key <= 0x0A && round.phase == kPhaseResults && key - 1 <= mMaps.size() ? key - 1 : 0;
-    if ((!ready && !vote && !map) || engine::TakeLocalChat().chatting)
+    const int typed = tolower(engine::TypedChar(local) & 0xFF);
+    const bool voteOpen = round.voteKind != kVoteNone && !(mSlot < kRoundSlots && ((round.voteYes | round.voteNo) >> mSlot & 1));
+    const bool unready = round.phase == kPhaseWarmup && round.minPlayers && !(mSlot < kRoundSlots && (round.ready >> mSlot & 1));
+    const bool ready = key == kF1 && (unready || (round.phase == kPhaseWarmup && round.minPlayers && !voteOpen));
+    const bool yes = round.voteKind != kVoteNone && (typed == 'y' || (key == kF1 && !ready));
+    const bool no = round.voteKind != kVoteNone && typed == 'n';
+    const bool results = round.phase == kPhaseResults && !mMaps.empty();
+    const bool move = results && (key == kUp || key == kDown);
+    // In the results, 1-9 chooses the next map (DIK_1 is 2 .. DIK_9 is 10), Enter the one under the cursor
+    uint32_t map = key >= 0x02 && key <= 0x0A && results && key - 1 <= mMaps.size() ? key - 1 : 0;
+    map = results && (key == kEnter || key == kPadEnter) ? mMapCursor + 1 : map;
+    if ((!ready && !yes && !no && !map && !move) || engine::TakeLocalChat().chatting)
     {
         return;
     }
     if (mFrame != mRoundKeyFrame + 1) // held: once
     {
-        SendCommand(ready ? "/ready" : map ? "/map " + std::to_string(map) : key == kYes ? "/yes" : "/no");
+        if (move)
+        {
+            mMapCursor = (mMapCursor + (key == kDown ? 1 : (uint32_t)mMaps.size() - 1)) % (uint32_t)mMaps.size();
+        }
+        else
+        {
+            SendCommand(ready ? "/ready" : map ? "/map " + std::to_string(map) : yes ? "/yes" : "/no");
+        }
     }
     mRoundKeyFrame = mFrame;
     local &= ~(kKeyDown | kKeyBits);
@@ -1554,6 +1571,12 @@ void net::Client::ShowRound()
         }
         return n;
     };
+    if (r.phase != kPhaseResults)
+    {
+        mMapCursor = 0;
+    }
+    engine::SetRoundPad(r.phase == kPhaseResults && !mMaps.empty());
+    const bool pad = engine::PadMode();
     std::string banner;
     const bool hidden = !mConnected || mLeft || mLeavePrompt; // the leave prompt (ShowStatus) alone over the frame
     if (r.phase == kPhaseCountdown && !hidden)
@@ -1588,7 +1611,7 @@ void net::Client::ShowRound()
         {
             lines.push_back("You are ready");
         }
-        lines.push_back("F1 ready   F10 chat   Esc leave");
+        lines.push_back(pad ? "Back ready   Start leave" : "F1 ready   F10 chat   Esc leave");
     }
     else if (r.phase == kPhaseResults)
     {
@@ -1610,7 +1633,7 @@ void net::Client::ShowRound()
         lines.push_back("");
         lines.push_back("The next round in " + std::to_string(r.phaseLeft) + " s");
         lines.push_back("");
-        lines.push_back("\tNext map (press its number)\tVotes\t");
+        lines.push_back(pad ? "\tNext map (d-pad and A)\tVotes\t" : "\tNext map (its number, or arrows and Enter)\tVotes\t");
         for (size_t m = 0; m < mMaps.size(); m++)
         {
             int votes = 0;
@@ -1619,7 +1642,8 @@ void net::Client::ShowRound()
                 votes += r.mapChoice[i] == m + 1;
             }
             const bool mine = mSlot < kRoundSlots && r.mapChoice[mSlot] == m + 1;
-            lines.push_back(std::to_string(m + 1) + "\t" + mMaps[m] + "\t" + (votes ? std::to_string(votes) : std::string("-")) + "\t" + (mine ? "you" : ""));
+            const std::string name = m == mMapCursor ? "(" + mMaps[m] + ")" : mMaps[m]; // the font has no '>'
+            lines.push_back(std::to_string(m + 1) + "\t" + name + "\t" + (votes ? std::to_string(votes) : std::string("-")) + "\t" + (mine ? "you" : ""));
         }
     }
     if (r.voteKind != kVoteNone && !hidden)
@@ -1630,7 +1654,7 @@ void net::Client::ShowRound()
         const bool mine = mSlot < kRoundSlots && ((r.voteYes | r.voteNo) >> mSlot & 1);
         lines.push_back("");
         lines.push_back("Vote: " + what + "   " + std::to_string(bits(r.voteYes)) + " yes, " + std::to_string(bits(r.voteNo)) + " no   " +
-                        std::to_string(r.voteLeft) + " s" + (mine ? "" : "   Y / N"));
+                        std::to_string(r.voteLeft) + " s" + (mine ? "" : pad ? "   Back: yes" : "   Y / N"));
     }
     engine::SetNetPanel(lines);
 }

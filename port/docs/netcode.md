@@ -94,7 +94,7 @@ player's name, as far as all that fit agree; when several fit they show over the
 
 **Rounds** (`session/round_flow.cpp`): a match is rounds in phases, run by the server and shown on every client:
 
-1. **Warmup**: the map is played as usual. It ends when `--minplayers` are in and all are ready (F1 or `/ready`), or
+1. **Warmup**: the map is played as usual. It ends when `--minplayers` are in and all are ready (F1, a gamepad's Back, or `/ready`), or
    `--warmup` seconds after the minimum was reached (0: only when all are ready).
 2. **Countdown**, 5 s, large in the middle of the frame, in **a fresh game**: every round is a game of its own, started
    on the server and every client the way a map change starts one (on the same map, or the voted one), so scores,
@@ -107,7 +107,8 @@ player's name, as far as all that fit agree; when several fit they show over the
    (in a tag game, as the game's own results: the player who was "it" the longest); a tie at the time limit is a draw.
    A client shows the clock and the goal in the bottom corner ("9:42   FIRST TO 10").
 4. **Results** (`--results` s): the winner, a table of frags and deaths (and points first, sorted by them, in a points
-   game), and the maps with their votes (the number keys, or `/map N`).
+   game), and the maps with their votes (the number keys, Up, Down and Enter, a gamepad's
+   d-pad and A, or `/map N`).
    The world stands still meanwhile: a tick runs only the players' own (the chat goes on) and the HUD, and the
    inputs are key events only, on the server and every client (`gPortWorldStill`); its sounds stop as in a pause.
    Then the next round's fresh game, on the most chosen map (a tie: one of the tied, at random), else the rotation's next,
@@ -115,7 +116,8 @@ player's name, as far as all that fit agree; when several fit they show over the
 
 **Votes**: `/start` (end the warmup), `/map N` (change now; a round ends without a winner), `/kick NAME` (out, and the
 name turned away for 10 minutes). One at a time, open 20 s, decided by a majority of the people in the game (not
-voting counts as no; the caller votes yes); Y or N while it shows. `--votes` sets which are allowed.
+voting counts as no; the caller votes yes); Y or N while it shows (the keys that type them, so QWERTZ works), F1 or a
+gamepad's Back for yes. `--votes` sets which are allowed.
 
 With `--rounds off` (the default with `--arena`) the round starts at once and the next follows its end directly, in
 the same game (everyone respawned with no score: `engine::NewRound`).

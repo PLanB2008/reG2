@@ -29,6 +29,11 @@ bool port_ChatTyping()
     return port_GameRunning() && gGame_0x40->mLocalPlayer && gGame_0x40->mLocalPlayer->mIsChatting;
 }
 
+int port_NetRoundPad()
+{
+    return port_GameRunning() && !port_ChatTyping() ? gPortNetRoundPad : 0;
+}
+
 bool port_MenuUsesMouse()
 {
     return port_FrontendActive() || PortPauseMenu::IsOpen();

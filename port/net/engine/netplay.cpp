@@ -136,6 +136,7 @@ void net::engine::StopNetworkGame()
     bSkip_fire_engines = false;
     bSkip_buses = false;
     gPortNoFireEngines = false;
+    gPortNetRoundPad = 0;
     gPortKeepWantedPoints = false;
     gPortServerKillNotices = false;
     gPortServerKillAwards = false;

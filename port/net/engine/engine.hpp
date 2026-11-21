@@ -40,6 +40,9 @@ uint16_t TypedChar(uint32_t buttons); // a client's: the character its key press
 // The length of a network tick (the game's own setting offers 50, 40 or 33 ms)
 void SetTickMs(int ms);
 void ShowLeavePrompt(bool shown); // the client's "Leave the game?": the gamepad's A and B answer it (net_hooks.hpp)
+// The client's round keys on the gamepad: Back as F1, and in the results the d-pad and A as the arrows and Enter
+void SetRoundPad(bool results);
+bool PadMode(); // the gamepad gave the last input: the hints name its buttons
 void IdleWait(); // while the game waits for its next step: a millisecond's sleep when that is more than 1 ms away
 void SeedRandom(uint32_t seed); // the game's rand() state (a server's: clients take it from snapshots)
 // A network game's random draws: each entity's update and each server service its own (port/src/rand/owner.hpp)

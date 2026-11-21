@@ -222,6 +222,18 @@ void net::engine::ShowLeavePrompt(bool shown)
     gPortLeavePromptShown = shown;
 }
 
+bool port_PadMode(); // compat/src/pad.cpp
+
+void net::engine::SetRoundPad(bool results)
+{
+    gPortNetRoundPad = results ? 2 : 1;
+}
+
+bool net::engine::PadMode()
+{
+    return port_PadMode();
+}
+
 void net::engine::IdleWait()
 {
     // The game spins on its message loop and RunGameFrame until winmain.cpp's sMatchStartTime, as the original does,
