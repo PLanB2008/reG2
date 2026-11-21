@@ -17,7 +17,9 @@ struct SessionEnv
     int replayOn; // GTA2_NET_REPLAYON=<frames>: a replay runs on that long after the recording, nothing arriving
     uint32_t divergeTick, divergeTicks; // the divergence check: from that server tick on this game alone, for that many ticks
     int jerkLog; // 1: the jerk statistics, 2: and each jump
-    float blend; // how far a correction is blended in each frame (0.2; 1: at once)
+    float blend; // how far a small correction is blended in each tick (0.3; 1: at once)
+    float blendFar; // and one near 2 blocks (0.5), linearly between
+    float blendSelf; // and the local player's own, on foot or its car (0.5)
     const char* navDump; // the bots' map as a picture
     const char* testKill; // <tick>:<victim>:<killer>[,...]: server test kills
     const char* testArm; // <weapon>:<ammo>: every player kept armed on the server

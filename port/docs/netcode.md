@@ -179,8 +179,12 @@ original's frame path in `winmain.cpp` (a step, then a frame): a server draws no
   restores S, applies the server's state, and runs the ticks up to its own with its own inputs; other players repeat
   their last input, a turn only once two snapshots in a row have it (a tap repeated turns far past the server's).
   Everything else moves on by the game's own simulation in those ticks.
-- **The blend**: what is shown, place and facing alike, moves a part of the way to the corrected state each frame (`GTA2_NET_BLEND`, 0.2);
-  more than 2 blocks off (a respawn, a car entered) jumps.
+- **The blend**: what is shown, place and facing alike, moves a part of the way to the corrected state each tick: 0.3
+  of a small error, rising to 0.5 of one near 2 blocks, and 0.5 of the local player's own (on foot or its car); more
+  than 2 blocks off (a respawn, a car entered) jumps. Tuned on recordings by the display error (what a tick showed
+  against the server's tick, players included, in the client's log): against 0.2 for all, the other players are shown
+  a third nearer the server's place, the local player half as far off, and they move no jerkier but at 60 ms of lag,
+  where steps changing by over 0.15 blocks/tick^2 go from 0.05% to 0.11% of the frames.
 - **What a client runs** (`engine/client_mode.cpp`): a client simulates what moves, not what decides. The game's own
   debug switches turn the rest off, set again every frame:
 
@@ -489,7 +493,7 @@ off by default:
 | `GTA2_NET_RECORD=<file>\|off` | client | the recording's file (default `recordings/session-<n>.rec`) |
 | `GTA2_NET_REPLAYON=<frames>` | replay | the game runs on that many frames after the recording ends, nothing arriving |
 | `GTA2_NET_STATS=1` | client | the connection beside the ping, over the last second: the snapshots lost (the server sends one a tick), received per second, the ticks the game runs ahead of the newest, and the ticks resimulated per rollback |
-| `GTA2_NET_BLEND=<0..1>` | client | how far a correction is blended in each tick (0.2; 1: at once) |
+| `GTA2_NET_BLEND=<0..1>`, `_BLEND_FAR`, `_BLEND_SELF` | client | how far a correction is blended in each tick: a small one (0.3), one near 2 blocks (0.5), the local player's own (0.5); 1: at once |
 | `GTA2_NET_COMPARE=1` | client | the comparison check |
 | `GTA2_NET_DIVERGE=<tick>[:<ticks>]` | client | the divergence check |
 | `GTA2_NET_CORRLOG=1` | client | corrections over half a block or 45 degrees |

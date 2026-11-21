@@ -26,6 +26,24 @@ struct ClientConfig
 };
 
 // Corrections of what is shown, for the log
+// The display error of a kind, in blocks
+struct ShownError
+{
+    double sum = 0;
+    uint32_t count = 0;
+    float max = 0;
+    void Add(float e)
+    {
+        sum += e;
+        count++;
+        max = e > max ? e : max;
+    }
+    float Mean() const
+    {
+        return count ? (float)(sum / count) : 0.0f;
+    }
+};
+
 struct CorrectionStats
 {
     uint32_t count = 0, jumps = 0;
@@ -69,6 +87,7 @@ class Client
         uint32_t shownTick = 0; // the tick <predX>, <predY> and <shown> are for (0: none)
         float predX = 0, predY = 0; // where the local player was predicted to be
         std::vector<engine::ReplicaPos> shown; // where the mapped cars and peds were shown (the display error)
+        std::vector<engine::ReplicaPos> players; // and the players (id: player + 1)
     };
     // For the log, every 300 frames
     struct Stats
@@ -79,6 +98,7 @@ class Client
         double shownErrorSum = 0;
         uint32_t shownErrorCount = 0;
         float shownErrorMax = 0;
+        ShownError others, self; // the display error of the other players, and of the local player
         uint32_t carFrames = 0, carMismatch = 0; // frames x players, and those where in-car differs from the snapshot
     };
     void Step(); // the frame's work: what arrived, the input, the snapshot, the commands
@@ -102,6 +122,7 @@ class Client
     void MeasureShownError(const Snapshot& snap);
     void TakePlayerStates(const Snapshot& snap);
     void Blend(const std::vector<engine::Pose>& shown);
+    void RecordShown(); // what this tick shows, once its snapshot's correction is blended in (the display error)
     void PrintStats(const Snapshot& snap);
     int PacedTickMs() const;
     void SetNextInputs(uint32_t local);

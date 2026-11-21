@@ -315,7 +315,7 @@ uint32_t net::Client::Lead() const
     return (mRtt / 2 + mTickMs - 1) / mTickMs + 2;
 }
 
-// The display error: what tick S showed of the cars and peds against the server's S
+// The display error: what tick S showed of the cars, peds and players against the server's S
 void net::Client::MeasureShownError(const Snapshot& snap)
 {
     const TickRecord& rec = mHist[snap.tick % kRing];
@@ -323,22 +323,59 @@ void net::Client::MeasureShownError(const Snapshot& snap)
     {
         return;
     }
+    auto error = [&](const engine::ReplicaPos& shown, float* pError) {
+        for (const EntityState& e : snap.entities) // sorted by id
+        {
+            if (e.id == shown.id)
+            {
+                const float dx = engine::Blocks(e.f[0]) - shown.x, dy = engine::Blocks(e.f[1]) - shown.y;
+                *pError = sqrtf(dx * dx + dy * dy);
+                return true;
+            }
+            if (e.id > shown.id)
+            {
+                break;
+            }
+        }
+        return false;
+    };
+    float e = 0;
     for (const engine::ReplicaPos& shown : rec.shown)
     {
-        size_t j = 0;
-        while (j < snap.entities.size() && snap.entities[j].id != shown.id)
+        if (error(shown, &e))
         {
-            j++;
-        }
-        if (j < snap.entities.size())
-        {
-            const float dx = engine::Blocks(snap.entities[j].f[0]) - shown.x, dy = engine::Blocks(snap.entities[j].f[1]) - shown.y;
-            const float e = sqrtf(dx * dx + dy * dy);
             mStats.shownErrorSum += e;
             mStats.shownErrorCount++;
             mStats.shownErrorMax = e > mStats.shownErrorMax ? e : mStats.shownErrorMax;
         }
     }
+    for (const engine::ReplicaPos& shown : rec.players)
+    {
+        if (error(shown, &e) && e <= 2) // further: a respawn or a car entered, which jumps
+        {
+            (shown.id == (uint32_t)mSlot + 1 ? mStats.self : mStats.others).Add(e);
+        }
+    }
+}
+
+void net::Client::RecordShown()
+{
+    TickRecord& rec = mHist[mTick % kRing];
+    if (rec.tick != mTick)
+    {
+        return;
+    }
+    engine::ReplicaPositions(rec.shown);
+    rec.players.clear();
+    for (int i = 0; i < engine::PlayerCount(); i++)
+    {
+        float x, y;
+        if (engine::PlayerPosition(i, &x, &y))
+        {
+            rec.players.push_back(engine::ReplicaPos{(uint32_t)i + 1, x, y});
+        }
+    }
+    rec.shownTick = mTick;
 }
 
 // The other players' inputs (we predict them with these), the marker, and the prediction error: where we had ourselves
@@ -421,8 +458,8 @@ void net::Client::Reconcile(const Snapshot& snap)
 // before the next snapshot's resimulation; more than 2 blocks off (a respawn, a car entered) jumps.
 void net::Client::Blend(const std::vector<engine::Pose>& shown)
 {
-    const float alpha = Env().blend;
-    if (alpha >= 1 || alpha <= 0)
+    const SessionEnv& env = Env();
+    if ((env.blend >= 1 || env.blend <= 0) && (env.blendSelf >= 1 || env.blendSelf <= 0))
     {
         return;
     }
@@ -434,6 +471,14 @@ void net::Client::Blend(const std::vector<engine::Pose>& shown)
         before[p.id] = &p;
     }
     const int32_t kFar = 2 << 14;
+    uint32_t selfCar = 0; // the car the local player drives, as the newest snapshot has it
+    for (const EntityState& e : mReceived[mLatestTick % kRing].entities)
+    {
+        if (e.id == (uint32_t)mSlot + 1)
+        {
+            selfCar = engine::PlayerCarId(e);
+        }
+    }
     for (const engine::Pose& n : now)
     {
         auto it = before.find(n.id);
@@ -457,6 +502,13 @@ void net::Client::Blend(const std::vector<engine::Pose>& shown)
         if (jumped || abs(dz) > kFar || (!dx && !dy && !dz && !dr))
         {
             continue;
+        }
+        // A larger part of a larger error (it shows the wrong place longer), and its own part for the local player
+        const float error = sqrtf((float)dx * dx + (float)dy * dy) / (float)kFar;
+        const float alpha = n.id == (uint32_t)mSlot + 1 || (selfCar && n.id == selfCar) ? env.blendSelf : env.blend + (env.blendFar - env.blend) * (error < 1 ? error : 1);
+        if (alpha >= 1 || alpha <= 0)
+        {
+            continue; // the corrected state as it is
         }
         const engine::Pose p = {n.id, b.x + (int32_t)(dx * alpha), b.y + (int32_t)(dy * alpha), b.z + (int32_t)(dz * alpha),
                                 ((b.rot + (int32_t)(dr * alpha)) % 1440 + 1440) % 1440};
@@ -638,8 +690,7 @@ void net::Client::RecordTick()
     engine::SaveGame(*mSaves[mTick % kSaves], mTick);
     TickRecord& rec = mHist[mTick % kRing];
     engine::PlayerPosition(mSlot, &rec.predX, &rec.predY);
-    engine::ReplicaPositions(rec.shown);
-    rec.shownTick = mTick;
+    rec.shownTick = 0; // until RecordShown
 }
 
 void net::Client::HandleEvents(const std::vector<TransportEvent>& events)
@@ -841,6 +892,8 @@ void net::Client::PrintStats(const Snapshot& snap)
            "%.1f ticks resimulated each, prediction error up to %.2f blocks, cars and peds shown %.2f blocks off (up to %.2f)\n",
            mFrame, mTick, mLatestTick, mSlack, snap.entities.size(), cars, peds, st.rollbacks, st.rollbacks ? (float)st.resimTicks / st.rollbacks : 0.0f,
            st.maxError, st.shownErrorCount ? (float)(st.shownErrorSum / st.shownErrorCount) : 0.0f, st.shownErrorMax);
+    printf("net: frame %u, players shown off the server's: the others %.3f blocks on average (up to %.2f), ourselves %.3f (up to %.2f)\n",
+           mFrame, st.others.Mean(), st.others.max, st.self.Mean(), st.self.max);
     std::string local;
     for (size_t i = 0; i < mLocalDeaths.size(); i++)
     {
@@ -1124,6 +1177,10 @@ void net::Client::Step()
     {
         TakeSnapshot();
         AnnounceRound();
+    }
+    if (mSynced)
+    {
+        RecordShown();
     }
     mProbe.Jerk(mFrame, mSlot, mSynced, mReceived[mLatestTick % kRing], mReceived[(mLatestTick - 1) % kRing]);
     engine::SetTickMs(mReplay ? 1 : PacedTickMs()); // every frame: a restore brings back the game's tick length too (a replay: no waiting)
