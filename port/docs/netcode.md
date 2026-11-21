@@ -44,7 +44,8 @@ a join is turned away otherwise, with what differs on the network page (and prin
 
 1. **The host** starts a server: `./reg2 --server --map downtown-6p` (`--players`, `--maps` and the rest above). It has no
    window and prints its log; on Windows, where nothing shows it, add `--window` (closing the window ends it) or end it
-   in the Task Manager. The menu can't start one yet. Then it joins it like the others, at `127.0.0.1`.
+   in the Task Manager. The menu can't start one yet. Then it joins it like the others, at `127.0.0.1`. From the same
+   folder too: a server writes its own log (`reG2-server.log`) and never writes gta2_registry.ini, the client's settings.
 2. **Its network**: the server listens on **UDP 27920** (`--port` for another). Over the internet the host's router
    forwards that port to the host's machine (port forwarding, in the router's settings: UDP, 27920, to the machine's
    LAN address), and its firewall lets it in: Windows asks the first time the server starts (allow it on private and,

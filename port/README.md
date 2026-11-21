@@ -123,7 +123,7 @@ data (`data/fstyle.sty`), and writes its settings and saves there:
 It holds `data/` (the game's data, the music in `data/GTAudio/`), `gta2_registry.ini` (settings),
 `gta2gl.ini` (renderer options), `player/` (saves and high scores) and `test/` (replays, logs).
 
-After an error message or, on Windows, a crash, `reG2.log` (the start-up steps, the OpenGL driver,
+After an error message or, on Windows, a crash, `reG2.log` (a network server's: `reG2-server.log`; the start-up steps, the OpenGL driver,
 errors, message boxes and the crash report) is written next to the executable when that folder is
 writable, else in the per-user folder, and the message gives its path. A run without an error
 writes no log.

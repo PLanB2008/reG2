@@ -18,6 +18,7 @@
     #include <unistd.h>
 #endif
 
+void port_RegistryReadOnly(); // compat/src/registry.cpp: gta2_registry.ini read, never written
 
 namespace
 {
@@ -226,6 +227,8 @@ int NetMain_Init(std::vector<std::string>& args)
     std::string error;
     if (o.server)
     {
+        // A client in the same folder saves the settings: a server's whole-file rewrites would undo its changes
+        port_RegistryReadOnly();
         if (!o.window)
         {
             SDL_SetEnvironmentVariable(SDL_GetEnvironment(), "GTA2_HEADLESS", "1", true); // what port_Headless reads
