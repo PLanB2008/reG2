@@ -183,7 +183,7 @@ void net::Server::OnHello(uint32_t peer, BitReader& r)
         Reject reject;
         reject.reason = refusal;
         WriteReject(w, reject);
-        printf("net: turned away a client: %s\n", refusal.c_str());
+        printf("net: turned away a client: %s\n", Printable(refusal).c_str());
     }
     else if (SlotOfPeer(peer) < 0)
     {
@@ -329,7 +329,7 @@ void net::Server::OnReceive(const TransportEvent& e)
     }
     else if (slot >= 0 && type == kMsgLeave && ReadText(r, why))
     {
-        printf("net: player %d (%s) leaves: %s\n", slot, mSlots[slot].name.c_str(), why.c_str());
+        printf("net: player %d (%s) leaves: %s\n", slot, mSlots[slot].name.c_str(), Printable(why).c_str());
     }
     else if (slot >= 0 && type == kMsgCommand)
     {
@@ -797,7 +797,7 @@ void net::Server::OnCommand(int slot, BitReader& r)
         ReportSent(slot, text);
         return;
     }
-    printf("net: player %d (%s): %s\n", slot, mSlots[slot].name.c_str(), text.c_str());
+    printf("net: player %d (%s): %s\n", slot, mSlots[slot].name.c_str(), Printable(text).c_str());
     RoundActions actions;
     mRounds.Command(mTick, slot, text, mRoundPlayers, actions);
     Carry(actions);

@@ -209,7 +209,7 @@ bool net::Client::OnWelcome(const TransportEvent& e, engine::NetworkGame* pGame,
     {
         Reject reject;
         ReadReject(r, reject);
-        *error = reject.reason;
+        *error = Printable(reject.reason);
         return false;
     }
     Welcome welcome;
@@ -850,21 +850,21 @@ void net::Client::HandleEvents(const std::vector<TransportEvent>& events)
                 if (ReadText(r, text))
                 {
                     engine::ShowHudMessage(text.c_str());
-                    printf("net: frame %u, notice: %s\n", mFrame, text.c_str());
+                    printf("net: frame %u, notice: %s\n", mFrame, Printable(text).c_str());
                 }
             }
             else if (type == kMsgReject && mConnected && ReadReject(r, reject))
             {
-                printf("net: frame %u, the server put us out: %s\n", mFrame, reject.reason.c_str());
+                printf("net: frame %u, the server put us out: %s\n", mFrame, Printable(reject.reason).c_str());
                 const bool shown = reject.reason == "kicked by vote" || reject.reason == "the server closed";
                 LeaveToMenu(shown ? reject.reason.c_str() : "the server put us out");
             }
             else if (type == kMsgReject && !mConnected && ReadReject(r, reject))
             {
-                printf("net: frame %u, the server won't have us back: %s\n", mFrame, reject.reason.c_str());
+                printf("net: frame %u, the server won't have us back: %s\n", mFrame, Printable(reject.reason).c_str());
                 if (reject.reason != "the server is full")
                 {
-                    LeaveToMenu(reject.reason.c_str()); // another build, kicked: no use trying again
+                    LeaveToMenu(Printable(reject.reason).c_str()); // another build, kicked: no use trying again
                     return;
                 }
                 mTransport.reset(); // and try again: it may be full only for now

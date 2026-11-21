@@ -73,6 +73,16 @@ std::string net::PlayerName(const std::string& asked, const std::vector<std::str
     }
 }
 
+std::string net::Printable(const std::string& s)
+{
+    std::string out = s;
+    for (char& c : out)
+    {
+        c = c >= ' ' && c <= '~' ? c : '?';
+    }
+    return out;
+}
+
 bool net::BareFileName(const std::string& name, const char* ext)
 {
     const size_t extLen = strlen(ext);

@@ -105,6 +105,10 @@ const size_t kMaxName = 15; // the game's player names (Player::mPlayerName)
 // ("PLAYER 2") if a name in <taken> is the same but for case
 std::string PlayerName(const std::string& asked, const std::vector<std::string>& taken);
 
+// <s> to print to a terminal or the log: each byte outside printable ASCII a '?', so that a peer's text sends no
+// escape sequences
+std::string Printable(const std::string& s);
+
 // A file name a server sends or a map's .mmp gives: only a bare name in data/, [A-Za-z0-9_-]{1,20} then <ext> (".gmp",
 // any case; "" for a map's name, whose .mmp the client opens), so that nothing from the network names a path
 const size_t kMaxFileName = 20;

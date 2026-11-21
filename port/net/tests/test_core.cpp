@@ -412,6 +412,17 @@ void TestFileNames()
     w.maps.push_back("../../../../home/x/.ssh/id_ed25519");
     CHECK(net::BadMapName(w) == "vote map");
 }
+
+// Network text to print: printable ASCII kept, anything else (escape sequences, controls, high bytes) a '?'
+void TestPrintable()
+{
+    CHECK(net::Printable("hello, world ~!") == "hello, world ~!");
+    CHECK(net::Printable("") == "");
+    CHECK(net::Printable("\x1b]52;c;ZXZpbA==\x07") == "?]52;c;ZXZpbA==?");
+    CHECK(net::Printable("\x1b[2Jtitle\r\n\t\x7f") == "?[2Jtitle????");
+    CHECK(net::Printable(std::string("a\0b", 3)) == "a?b");
+    CHECK(net::Printable("caf\xc3\xa9 \x9b") == "caf?? ?");
+}
 } // namespace
 
 // A message cut into parts and put together again, in any order, is the message
@@ -495,6 +506,7 @@ int main()
     TestCrc();
     TestNames();
     TestFileNames();
+    TestPrintable();
     printf("messages ok\n");
     printf("net core tests passed\n");
     return 0;
