@@ -3911,7 +3911,21 @@ void sound_obj::ServiceSoundEffects()
     {
         mnActiveSampleQueue = mnActiveSampleQueue != 1;
         ClearRequestedQueue();
+#if defined(GTA2_PORT)
+        // Port: a network client's sound log (port/net/engine/sound_log.cpp) notes what this frame asks for and adds
+        // what its resimulated ticks owe
+        if (gPortSoundRequestsHook)
+        {
+            gPortSoundRequestsHook(false);
+        }
         InterrogateAudioEntities();
+        if (gPortSoundRequestsHook)
+        {
+            gPortSoundRequestsHook(true);
+        }
+#else
+        InterrogateAudioEntities();
+#endif
         AddReleasingSounds();
         AdjustSamplesVolume();
         ProcessActiveQueues();

@@ -255,6 +255,11 @@ bool ScoreBonus(Player* p, s32 voice); // gPortScoreBonusHook: a server counts i
 void ResetHudScores(Player* p); // the HUD's money, frags and multiplier as at a game's start (slots.cpp)
 
 // A client's game (client_mode.cpp)
+// The client's sound log (sound_log.cpp): a restore of that tick, a resimulated tick's sound without the mixer (applied:
+// what a snapshot's Apply left, before its first tick), the network game's end
+void SoundLogRestored(uint32_t tick);
+void SoundLogResimTick(bool applied);
+void SoundLogStop();
 void ProtectPlayers(); // player peds take no damage on a client: their health and deaths are the server's
 void SeenByAll(); // every ped and car counts as seen: no removal off screen on a client
 

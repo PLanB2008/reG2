@@ -122,6 +122,7 @@ void net::engine::StopNetworkGame()
     gLeftForMenu = false;
     gActive = false;
     gPortWorldStill = NULL;
+    SoundLogStop();
     gPortTagTimeCounts = false;
     gPortChatChar = NULL;
     gPortScoreBonusHook = NULL;
