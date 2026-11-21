@@ -29,7 +29,8 @@
 #include "winmain.hpp" // for gLighting
 #include "block_face.hpp"
 #if defined(GTA2_PORT)
-// Port: SHADOWS SOFT, the day and night cycle and TWIN STICK's strafe legs.
+// Port: SHADOWS SOFT, the day and night cycle, TWIN STICK's strafe legs and HEAT HAZE's flames.
+#include "../port/src/heat_haze.hpp"
 #include "../port/src/shadows.hpp"
 #include "../port/src/day_night.hpp"
 #include "../port/src/twin_stick.hpp"
@@ -1261,10 +1262,15 @@ void Sprite::Draw()
     }
 
 #if defined(GTA2_PORT)
+    // Port: HEAT HAZE, a flame also goes into the heat mask.
+    PortHeatHaze::HeatSprite(this);
     // Port: TWIN STICK strafe legs, the player's walk drawn with the legs toward the move and the torso at the aim.
     if (!PortTwinStick::DrawLegs(this, pTexture, Sprite::ComputeDrawFlags(), gSpriteVerts, 8))
 #endif
     pgbh_DrawQuad(Sprite::ComputeDrawFlags(), pTexture, gSpriteVerts, 255);
+#if defined(GTA2_PORT)
+    PortHeatHaze::HeatSprite(NULL);
+#endif
 
 #if defined(GTA2_PORT)
     // Port: the DAY-NIGHT CYCLE, no car lights by day.

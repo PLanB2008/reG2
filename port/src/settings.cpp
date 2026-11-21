@@ -52,8 +52,8 @@ const Id kGameSettings[] = {kLanguage, kTextSpeed, kExplodingScores, kBlood,
 const s32 kNumGameSettings = sizeof(kGameSettings) / sizeof(kGameSettings[0]);
 #if defined(GTA2_PORT_SDL)
 const Id kGraphicsSettings[] = {kPreset,
-                                kLightingGroup, kPerPixelLighting, kShadows, kHeadlights, kLightEffects, kBloom,
-                                kImageGroup, kTrueColour, kTextureFilter, kAntiAliasing};
+                                kLightingGroup, kPerPixelLighting, kShadows, kAmbientOcclusion, kFireEffects, kHeadlights,
+                                kLightEffects, kBloom, kImageGroup, kTrueColour, kTextureFilter, kAntiAliasing};
 const Id kDisplaySettings[] = {kScreenGroup, kFullScreen, kDisplayMode, kVsync, kFrameLimit, kShowFps,
                                kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea};
 #else
@@ -70,7 +70,7 @@ namespace
 const wchar_t* const kNames[kCount] = {L"SOUND EFFECTS", L"MUSIC", L"3D SOUND", L"TEXT SPEED", L"LANGUAGE",
                                        L"FULL SCREEN", L"BRIGHTNESS", L"LIGHTING", L"EXPLODING SCORES", L"FRAME LIMIT",
                                        L"TRUE COLOUR", L"BLOOM", L"PIXEL LIGHTING", L"CAR HEADLIGHTS",
-                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"STRAFE ANIMATION", L"VIBRATION", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS", L"FRENZY RESPAWN", L"INFINITE LIVES"};
+                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"STRAFE ANIMATION", L"VIBRATION", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS", L"FRENZY RESPAWN", L"INFINITE LIVES", L"AMBIENT OCCLUSION", L"FIRE EFFECTS", L"CROSSHAIR"};
 const wchar_t* const kGroupNames[kGroupsEnd - kCount - 1] = {L"SAVES", L"DIFFICULTY", L"TIME OF DAY", L"LIGHTING", L"IMAGE", L"SCREEN", L"VIEW"};
 
 struct Language
@@ -199,6 +199,11 @@ const Translation kTranslations[] = {
     {L"THE ORIGINAL'S RUN, THE LEGS FACING THE AIM", NULL,
      {L"LA COURSE DE L'ORIGINAL, LES JAMBES VERS LA VISEE", L"DER LAUF DES ORIGINALS, DIE BEINE ZUM ZIEL",
       L"LA CORSA DELL'ORIGINALE, LE GAMBE VERSO LA MIRA", L"LA CARRERA DEL ORIGINAL, LAS PIERNAS HACIA LA MIRA"}},
+    {L"A RING SHOWS WHERE YOU AIM", NULL,
+     {L"UN ANNEAU MONTRE OU VOUS VISEZ", L"EIN RING ZEIGT, WOHIN DU ZIELST", L"UN ANELLO MOSTRA DOVE MIRI", L"UN ANILLO MUESTRA ADONDE APUNTAS"}},
+    {L"NO RING: THE PLAYER FACES WHERE YOU AIM", NULL,
+     {L"PAS D'ANNEAU : LE JOUEUR SE TOURNE VERS LA VISEE", L"KEIN RING: DIE FIGUR SCHAUT ZUM ZIEL", L"NESSUN ANELLO: IL GIOCATORE GUARDA VERSO LA MIRA",
+      L"SIN ANILLO: EL JUGADOR MIRA HACIA DONDE APUNTAS"}},
     {L"THE VIEW STAYS ON THE PLAYER", NULL,
      {L"LA VUE RESTE SUR LE JOUEUR", L"DIE ANSICHT BLEIBT BEIM SPIELER", L"LA VISTA RESTA SUL GIOCATORE",
       L"LA VISTA SE QUEDA EN EL JUGADOR"}},
@@ -211,6 +216,12 @@ const Translation kTranslations[] = {
     {L"LIGHT FROM FIRES, EXPLOSIONS, GUNFIRE AND BRAKE LIGHTS", NULL,
      {L"LUMIERE DES FEUX, EXPLOSIONS, TIRS ET FEUX STOP", L"LICHT VON FEUER, EXPLOSIONEN, SCHÜSSEN UND BREMSLICHTERN",
       L"LUCE DI FUOCHI, ESPLOSIONI, SPARI E LUCI DEI FRENI", L"LUZ DE FUEGOS, EXPLOSIONES, DISPAROS Y LUCES DE FRENO"}},
+    {L"HEAT HAZE, SMOKE AND EMBERS AROUND FIRES", NULL,
+     {L"AIR CHAUD, FUMEE ET BRAISES AUTOUR DES FEUX", L"HITZEFLIMMERN, RAUCH UND GLUT UM FEUER",
+      L"ARIA CALDA, FUMO E BRACI INTORNO AI FUOCHI", L"AIRE CALIENTE, HUMO Y BRASAS EN LOS FUEGOS"}},
+    {L"SOFT SHADE IN CORNERS AND AT THE FOOT OF WALLS", NULL,
+     {L"OMBRE DOUCE DANS LES COINS ET AU PIED DES MURS", L"WEICHER SCHATTEN IN ECKEN UND AM FUSS DER WÄNDE",
+      L"OMBRA MORBIDA NEGLI ANGOLI E AI PIEDI DEI MURI", L"SOMBRA SUAVE EN LAS ESQUINAS Y AL PIE DE LOS MUROS"}},
     {L"THE ORIGINAL'S LOOK: EVERY OPTION BELOW OFF", NULL,
      {L"L'ASPECT DE L'ORIGINAL : TOUTES LES OPTIONS CI-DESSOUS COUPEES", L"DER LOOK DES ORIGINALS: ALLE OPTIONEN DARUNTER AUS",
       L"L'ASPETTO DELL'ORIGINALE: TUTTE LE OPZIONI SOTTO SPENTE", L"EL ASPECTO DEL ORIGINAL: TODAS LAS OPCIONES DE ABAJO DESACTIVADAS"}},
@@ -300,6 +311,8 @@ const Translation kTranslations[] = {
     {L"ANISOTROPIC", NULL, {L"ANISOTROPE", L"ANISOTROP", L"ANISOTROPICO", L"ANISOTRÓPICO"}},
     {L"ANTI-ALIASING", NULL, {L"ANTICRENELAGE", L"KANTENGLÄTTUNG", L"ANTI-ALIASING", L"ANTIALIASING"}},
     {L"SHADOWS", NULL, {L"OMBRES", L"SCHATTEN", L"OMBRE", L"SOMBRAS"}},
+    {L"AMBIENT OCCLUSION", NULL, {L"OCCLUSION AMBIANTE", L"UMGEBUNGSVERDECKUNG", L"OCCLUSIONE AMBIENTALE", L"OCLUSIÓN AMBIENTAL"}},
+    {L"FIRE EFFECTS", NULL, {L"EFFETS DE FEU", L"FEUEREFFEKTE", L"EFFETTI DEL FUOCO", L"EFECTOS DE FUEGO"}},
     {L"SOFT", NULL, {L"DOUCES", L"WEICH", L"MORBIDE", L"SUAVES"}},
     {L"PRESET", NULL, {L"PRESET", L"VOREINSTELLUNG", L"PRESET", L"PREAJUSTE"}},
     {L"CLASSIC", NULL, {L"CLASSIQUE", L"KLASSISCH", L"CLASSICO", L"CLÁSICO"}},
@@ -334,6 +347,7 @@ const Translation kTranslations[] = {
     {L"CONTROLS", NULL, {L"COMMANDES", L"STEUERUNG", L"COMANDI", L"CONTROLES"}},
     {L"AIM CAMERA", NULL, {L"CAMERA DE VISEE", L"ZIELKAMERA", L"CAMERA DI MIRA", L"CÁMARA DE MIRA"}},
     {L"STRAFE ANIMATION", NULL, {L"ANIMATION DE STRAFE", L"STRAFE-ANIMATION", L"ANIMAZIONE STRAFE", L"ANIMACIÓN DE STRAFE"}},
+    {L"CROSSHAIR", NULL, {L"VISEUR", L"FADENKREUZ", L"MIRINO", L"PUNTO DE MIRA"}},
     {L"VIBRATION", NULL, {L"VIBRATIONS", L"VIBRATION", L"VIBRAZIONE", L"VIBRACIÓN"}},
     {L"TWIN STICK", NULL, {L"DOUBLE STICK", L"TWIN-STICK", L"DOPPIO STICK", L"DOBLE STICK"}},
     {L"DEFAULT KEYS", NULL, {L"CONTROLES PAR DEFAUT", L"STANDARDSTEUERUNG", L"COMANDI PREDEFINITI", L"CONTROLES PREDETERMINADOS"}},
@@ -464,6 +478,8 @@ const char* ScreenName(Id id)
             return "port_aim_camera";
         case kStrafeAnimation:
             return "port_strafe_animation";
+        case kCrosshair:
+            return "port_crosshair";
         case kVibration:
             return "port_vibration";
         case kBlood:
@@ -480,14 +496,29 @@ const char* ScreenName(Id id)
             return "port_kf_respawn";
         case kInfiniteLives:
             return "port_infinite_lives";
+        case kAmbientOcclusion:
+            return "gl_ambient_occlusion";
+        case kFireEffects:
+            return "gl_fire_effects";
         default:
             return "car_headlights";
     }
 }
 
+#if defined(GTA2_PORT_SDL)
+s32 PresetDefault(Id id);
+#endif
+
 // The game's own settings are on by default; the port's graphics additions off.
 s32 ScreenDefault(Id id)
 {
+#if defined(GTA2_PORT_SDL)
+    const s32 preset = PresetDefault(id);
+    if (preset >= 0)
+    {
+        return preset;
+    }
+#endif
     if (id == kFrameLimit)
     {
         return 30;
@@ -508,13 +539,15 @@ s32 ScreenDefault(Id id)
     {
         return 1;
     }
-    return id == kLighting || id == kExplodingScores || id == kVsync || id == kClock || id == kAimCamera || id == kStrafeAnimation || id == kBlood || id == kUpdateCheck ? 1 : 0;
+    return id == kLighting || id == kExplodingScores || id == kVsync || id == kClock || id == kAimCamera || id == kStrafeAnimation || id == kCrosshair || id == kBlood || id == kUpdateCheck ? 1 : 0;
 }
 
 s32 Screen(Id id)
 {
     return gRegistry.Get_Screen_Setting(ScreenName(id), ScreenDefault(id));
 }
+
+const s32 kMaxBloom = 5;
 
 // Steps of the camera zoom: 0 is the original's, each step closer magnifies by kZoomStep.
 const s32 kMinZoom = -5;
@@ -616,9 +649,10 @@ struct PresetValue
     Id mId;
     s32 mValue[2];
 };
-const PresetValue kPresetValues[] = {{kTrueColour, {0, 1}},   {kBloom, {0, 3}},        {kPerPixelLighting, {0, 1}},
+const PresetValue kPresetValues[] = {{kTrueColour, {0, 1}},   {kBloom, {0, 2}},        {kPerPixelLighting, {0, 1}},
                                      {kTextureFilter, {0, 2}}, {kAntiAliasing, {0, 4}}, {kShadows, {0, 1}},
-                                     {kHeadlights, {0, 1}},    {kLightEffects, {0, 1}}};
+                                     {kHeadlights, {0, 1}},    {kLightEffects, {0, 1}}, {kAmbientOcclusion, {0, 1}},
+                                     {kFireEffects, {0, 1}}};
 const s32 kNumPresetValues = sizeof(kPresetValues) / sizeof(kPresetValues[0]);
 
 // As the menu shows them: anti-aliasing at what the renderer can do, the others as their lines read them.
@@ -631,7 +665,7 @@ s32 PresetSetting(Id id)
         case kTextureFilter:
             return Clamp(Screen(id), 0, kNumTextureFilters - 1);
         case kBloom:
-            return Clamp(Screen(id), 0, 10);
+            return Clamp(Screen(id), 0, kMaxBloom);
         default:
             return Screen(id) != 0;
     }
@@ -640,6 +674,48 @@ s32 PresetSetting(Id id)
 s32 PresetTarget(const PresetValue& value, s32 preset)
 {
     return value.mId == kAntiAliasing ? kMsaaValues[MsaaIndex(value.mValue[preset])] : value.mValue[preset];
+}
+
+// Leaves out the settings added to ENHANCED, or changed in it, since setups were first made.
+bool OtherPresetValuesEnhanced()
+{
+    for (s32 i = 0; i < kNumPresetValues; i++)
+    {
+        if (kPresetValues[i].mId != kAmbientOcclusion && kPresetValues[i].mId != kFireEffects && kPresetValues[i].mId != kBloom && PresetSetting(kPresetValues[i].mId) != PresetTarget(kPresetValues[i], kEnhanced))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+// The preset last chosen; a setup from before it was saved is ENHANCED where its GRAPHICS settings are.
+s32 LastPreset()
+{
+    static bool sGuessing;
+    s32 preset = gRegistry.Get_Screen_Setting("gl_preset", -1);
+    if (preset < 0 && !sGuessing)
+    {
+        sGuessing = true;
+        preset = OtherPresetValuesEnhanced() ? kEnhanced : kClassic;
+        sGuessing = false;
+        gRegistry.Set_Screen_Setting("gl_preset", preset);
+    }
+    return preset;
+}
+
+// A GRAPHICS setting never saved takes the last preset's value; -1 for the others.
+s32 PresetDefault(Id id)
+{
+    for (s32 i = 0; i < kNumPresetValues; i++)
+    {
+        if (kPresetValues[i].mId == id)
+        {
+            const s32 preset = LastPreset();
+            return preset < 0 ? -1 : PresetTarget(kPresetValues[i], preset);
+        }
+    }
+    return -1;
 }
 
 Preset CurrentPreset()
@@ -755,7 +831,7 @@ Id Requirement(Id id)
     {
         return kLighting;
     }
-    return id == kAimCamera || id == kStrafeAnimation ? kControls : kCount;
+    return id == kAimCamera || id == kStrafeAnimation || id == kCrosshair ? kControls : kCount;
 }
 
 bool Enabled(Id id)
@@ -803,6 +879,10 @@ bool AimCamera()
 bool StrafeAnimation()
 {
     return TwinStick() && Screen(kStrafeAnimation) != 0;
+}
+bool Crosshair()
+{
+    return Screen(kCrosshair) != 0;
 }
 bool Vibration()
 {
@@ -880,12 +960,18 @@ const wchar_t* Help(Id id)
         case kStrafeAnimation:
             return Screen(id) ? L"EXPERIMENTAL: THE LEGS FOLLOW YOUR MOVE, NOT YOUR AIM"
                               : L"THE ORIGINAL'S RUN, THE LEGS FACING THE AIM";
+        case kCrosshair:
+            return Screen(id) ? L"A RING SHOWS WHERE YOU AIM" : L"NO RING: THE PLAYER FACES WHERE YOU AIM";
         case kVibration:
             return L"THE PAD SHAKES WHEN YOU ARE HIT, IN EXPLOSIONS AND IN CRASHES";
         case kHeadlights:
             return L"BEAMS OF LIGHT AHEAD OF CARS AFTER DARK";
         case kLightEffects:
             return L"LIGHT FROM FIRES, EXPLOSIONS, GUNFIRE AND BRAKE LIGHTS";
+        case kAmbientOcclusion:
+            return L"SOFT SHADE IN CORNERS AND AT THE FOOT OF WALLS";
+        case kFireEffects:
+            return L"HEAT HAZE, SMOKE AND EMBERS AROUND FIRES";
 #if defined(GTA2_PORT_SDL)
         case kPreset:
         {
@@ -940,6 +1026,16 @@ bool LightEffects()
     return Enabled(kLightEffects) && Screen(kLightEffects) != 0;
 }
 
+bool AmbientOcclusion()
+{
+    return Screen(kAmbientOcclusion) != 0;
+}
+
+bool FireEffects()
+{
+    return Screen(kFireEffects) != 0;
+}
+
 // The original's max_frame_rate is not read: off, it ran the game as fast as the machine.
 s32 MaxFps()
 {
@@ -971,8 +1067,8 @@ bool Range(Id id, s32* pMin, s32* pMax, s32* pValue)
             return true;
         case kBloom:
             *pMin = 0;
-            *pMax = 10;
-            *pValue = Clamp(Screen(id), 0, 10);
+            *pMax = kMaxBloom;
+            *pValue = Clamp(Screen(id), 0, kMaxBloom);
             return true;
         case kZoom:
             *pMin = kMinZoom;
@@ -1007,7 +1103,7 @@ bool Range(Id id, s32* pMin, s32* pMax, s32* pValue)
 void ApplyRenderOptions()
 {
 #if defined(GTA2_PORT_SDL)
-    port_SetRenderOptions(Screen(kTrueColour) != 0, Screen(kBloom), Screen(kPerPixelLighting) != 0,
+    port_SetRenderOptions(Screen(kTrueColour) != 0, Clamp(Screen(kBloom), 0, kMaxBloom), Screen(kPerPixelLighting) != 0,
                           Clamp(Screen(kTextureFilter), 0, kNumTextureFilters - 1), kMsaaValues[MsaaIndex()], Screen(kShadows) != 0);
 #endif
 }
@@ -1020,6 +1116,7 @@ void ApplyStyle(Style style)
     {
         gRegistry.Set_Screen_Setting(ScreenName(kPresetValues[i].mId), PresetTarget(kPresetValues[i], enhanced ? kEnhanced : kClassic));
     }
+    gRegistry.Set_Screen_Setting("gl_preset", enhanced ? kEnhanced : kClassic);
     ApplyRenderOptions();
     // The original's dusk, or the day-night cycle as its settings are.
     gRegistry.Set_Screen_Setting(ScreenName(kLighting), enhanced ? 2 : 1);
@@ -1236,7 +1333,7 @@ void Change(Id id, s32 delta)
             break;
         }
         case kBloom:
-            gRegistry.Set_Screen_Setting(ScreenName(id), Clamp(Screen(id) + delta, 0, 10));
+            gRegistry.Set_Screen_Setting(ScreenName(id), Clamp(Screen(id) + delta, 0, kMaxBloom));
             ApplyRenderOptions();
             break;
         case kHeadlights:
@@ -1244,11 +1341,14 @@ void Change(Id id, s32 delta)
         case kClock:
         case kAimCamera:
         case kStrafeAnimation:
+        case kCrosshair:
         case kVibration:
         case kShowFps:
         case kAutosave:
         case kRetry:
         case kKfRespawn:
+        case kAmbientOcclusion:
+        case kFireEffects:
             gRegistry.Set_Screen_Setting(ScreenName(id), Screen(id) ? 0 : 1);
             break;
         case kInfiniteLives:
@@ -1288,6 +1388,7 @@ void Change(Id id, s32 delta)
             {
                 gRegistry.Set_Screen_Setting(ScreenName(kPresetValues[i].mId), PresetTarget(kPresetValues[i], preset));
             }
+            gRegistry.Set_Screen_Setting("gl_preset", preset);
             ApplyRenderOptions();
             break;
         }

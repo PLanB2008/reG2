@@ -101,6 +101,9 @@ u32 sMaxFps = 30;
 FILE* spTrace;
 bool sStats;
 u32 sStepCount;
+// Logic steps the world moved in (not paused), and whether the last one did.
+u32 sWorldSteps;
+bool sWorldMoved;
 u32 sStatsSteps;
 u32 sStatsDraws;
 unsigned long long sStatsStart;
@@ -414,6 +417,8 @@ void AfterStep()
     }
     sStepsSinceDraw++;
     sStepCount++;
+    sWorldMoved = !gGame_0x40 || !gGame_0x40->IsPaused();
+    sWorldSteps += sWorldMoved ? 1 : 0;
     sStatsSteps++;
     port_CountGameStep();
     Trace('S');
@@ -480,5 +485,10 @@ f32 DrawAlpha()
 f32 StepNotElapsed()
 {
     return 1.0f - DrawAlpha();
+}
+
+f64 WorldSeconds()
+{
+    return (sWorldSteps + static_cast<f64>(sWorldMoved ? DrawAlpha() : 1.0f)) * 0.033;
 }
 } // namespace PortFrameLoop

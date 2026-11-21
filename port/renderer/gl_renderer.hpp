@@ -81,8 +81,13 @@ class GLRenderer : public IRenderer
     u32 GetVertexCount() const { return mVertices; }
     const RenderOptions& Options() const { return mOptions; }
     void SetLights(const RLight* pLights, s32 count, const f32* pAmbient, f32 unlitAmbient);
+    void SetOcclusion(const u8* pCells, s32 width, s32 height, s32 depth, f32 strength);
+    void DrawHaze(const RHazeParams& params);
+    void AddHeat(const RVertex* pVerts, s32 count, RTexture* pTex, f32 level);
 
   private:
+    void FreeHaze();
+    bool HazeProgram();
     void Flush();
     void BindTarget();
     void ApplyState(u32 state);
@@ -172,8 +177,59 @@ class GLRenderer : public IRenderer
     s32 mNumLights;
     f32 mAmbient[3];
     f32 mUnlitAmbient;
+    // Ambient occlusion (SetOcclusion): the map's blocks as a 3D texture, the occlusion baked from them for the four
+    // sides and for up (kAoBakeFS), the grid of the baked volumes, and the strength, 0 when off.
+    GLuint mOccTex;
+    GLuint mAoTex[2];
+    GLuint mAoFbo;
+    s32 mAoGrid[3];
+    f32 mAoStrength;
+    GLuint mAoBakeProgram;
+    GLint mUniBakeOccScale;
+    GLint mUniBakeZ;
+    GLint mUniAoGrid;
+    GLint mUniAo;
+    GLint mUniAoDebug;
     f32 mGamma[3];
     u32 mDrawCalls;
     u32 mUploads;
     u32 mVertices;
+
+    // Heat haze (haze.cpp): the copy of the scene colour it displaces.
+    GLenum mColourFormat = GL_RGB565;
+    GLuint mHazeProgram = 0;
+    bool mHazeFailed = false;
+    GLuint mHazeFbo = 0;
+    GLuint mHazeTex = 0;
+    GLuint mHazeMaskTex = 0; // the soft shadow mask's copy, distorted with the scene by the heat mask
+    GLuint mHazeNoise = 0;
+    GLuint mHazeNoiseSampler = 0;
+    s32 mHazeW = 0;
+    s32 mHazeH = 0;
+    GLenum mHazeFormat = 0;
+    GLint mUniHazeGrid = -1, mUniHazeWave = -1, mUniHazeFlow = -1, mUniHazeClip = -1, mUniHazeRise = -1, mUniHazeDebug = -1;
+    // The heat mask: hot triangles of the frame (AddHeat), drawn at a quarter of the target's size.
+    struct HeatDraw
+    {
+        RTexture* mpTex;
+        s32 mFirst, mCount;
+    };
+    struct HeatVertex
+    {
+        f32 x, y, u, v;
+        u32 level; // in the top byte
+    };
+    std::vector<HeatVertex> mHeatVerts;
+    std::vector<HeatVertex> mHeatSorted;
+    std::vector<HeatDraw> mHeatDraws;
+    GLuint mHeatProgram = 0;
+    GLuint mHeatVao = 0;
+    GLuint mHeatVbo = 0;
+    GLuint mHeatFbo[2] = {0, 0}; // the flames, then the heat field gathered from them
+    GLuint mHeatTex[2] = {0, 0};
+    GLuint mGatherProgram = 0;
+    GLint mUniGather = -1;
+    s32 mHeatW = 0;
+    s32 mHeatH = 0;
+    GLint mUniHeatScale = -1;
 };
