@@ -50,6 +50,7 @@ class Server
         bool used = false;
         uint32_t peer = 0;
         std::string name;
+        uint32_t token = 0; // the welcome's: a reconnect shows it to have this slot back as it was
         uint32_t lastCmdTick = 0; // the newest command tick received (late ones too)
         uint32_t cmdTick[kRing] = {}; // received commands by tick % kRing
         uint32_t cmdButtons[kRing] = {};
@@ -81,6 +82,7 @@ class Server
     void OnHello(uint32_t peer, BitReader& r);
     std::string Refusal(const Hello& hello, bool read) const; // why a hello's client can't play here ("": it can)
     int FreeSlot(const std::string& name) const; // the slot a joining <name> gets (mSlots.size(): none)
+    int ReturningSlot(const Hello& hello) const; // the slot a reconnect's token is for, in use or not (-1: none)
     void OnCommands(int slot, BitReader& r);
     void StartGameOnce();
     void PollTransport();

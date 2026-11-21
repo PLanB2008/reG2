@@ -154,6 +154,19 @@ int net::Server::FreeSlot(const std::string& name) const
     return unclaimed < (int)mSlots.size() ? unclaimed : any;
 }
 
+// A client back after its connection dropped, whose old connection may not have timed out here yet
+int net::Server::ReturningSlot(const Hello& hello) const
+{
+    for (size_t i = 0; hello.token && hello.session == mSession && i < mSlots.size(); i++)
+    {
+        if (mSlots[i].token == hello.token && mSlots[i].peer != kArenaPeer)
+        {
+            return (int)i;
+        }
+    }
+    return -1;
+}
+
 void net::Server::OnHello(uint32_t peer, BitReader& r)
 {
     Hello hello;
@@ -177,9 +190,10 @@ void net::Server::OnHello(uint32_t peer, BitReader& r)
                 taken.push_back(s.name);
             }
         }
-        std::string name = PlayerName(hello.name, std::vector<std::string>());
-        int slot = FreeSlot(name);
-        if (slot < (int)mSlots.size() && mSlots[slot].name != name)
+        const int back = ReturningSlot(hello);
+        std::string name = back >= 0 ? mSlots[back].name : PlayerName(hello.name, std::vector<std::string>());
+        int slot = back >= 0 ? back : FreeSlot(name);
+        if (back < 0 && slot < (int)mSlots.size() && mSlots[slot].name != name)
         {
             name = PlayerName(name, taken); // a new player: a name nobody in the game has
         }
@@ -199,10 +213,17 @@ void net::Server::OnHello(uint32_t peer, BitReader& r)
         else
         {
             Slot& s = mSlots[slot];
+            const bool stillIn = back >= 0 && s.used; // its old connection hasn't timed out: dropped, the player stays
+            if (stillIn)
+            {
+                mTransport->Disconnect(s.peer);
+            }
+            const uint32_t token = back >= 0 ? s.token : std::random_device{}() | 1;
             s = Slot();
             s.used = true;
             s.peer = peer;
             s.name = name;
+            s.token = token;
             Welcome welcome;
             welcome.slot = (uint8_t)slot;
             welcome.players = (uint8_t)mSlots.size();
@@ -220,10 +241,16 @@ void net::Server::OnHello(uint32_t peer, BitReader& r)
             welcome.print = mPrint;
             welcome.serverTick = mTick;
             welcome.maps = mRounds.Maps();
+            welcome.token = token;
+            welcome.game = (uint16_t)(engine::MapChangePending() ? engine::GameGeneration() + 1 : engine::GameGeneration());
             WriteWelcome(w, welcome);
-            engine::PutInGame(slot, true); // a fresh start at the next restart zone
+            if (!stillIn)
+            {
+                engine::PutInGame(slot, back < 0); // at the next restart zone; a new player with an empty score
+            }
             engine::SetPlayerName(slot, name.c_str());
-            printf("net: %s joined as player %d%s\n", name.c_str(), slot, name != hello.name ? (" (asked for \"" + hello.name + "\")").c_str() : "");
+            printf("net: %s %s player %d%s\n", name.c_str(), back >= 0 ? "is back as" : "joined as", slot,
+                   name != hello.name ? (" (asked for \"" + hello.name + "\")").c_str() : "");
         }
     }
     if (w.ByteCount()) // a second hello from a client already in: nothing to say
@@ -506,6 +533,9 @@ void net::Server::StartGameOnce()
     // The map script made a ped for every slot: those without a client are out, ped and all, until one joins
     for (size_t i = 0; i < mSlots.size(); i++)
     {
+        // Every slot starts a game with a fresh score and HUD, a map change's new game too: one away comes back to
+        // this game's, not the last one's
+        engine::FreshScores((int)i);
         if (!mSlots[i].used)
         {
             engine::NeverInGame((int)i); // and its ped
@@ -516,9 +546,7 @@ void net::Server::StartGameOnce()
             {
                 engine::PutInGame((int)i, true);
             }
-            // Every game's players start with the game's names and a fresh HUD: a map change's new game too
             engine::SetPlayerName((int)i, mSlots[i].name.c_str());
-            engine::FreshScores((int)i);
         }
     }
     if (mConfig.seed)
@@ -580,8 +608,10 @@ void net::Server::OnEvent(const TransportEvent& e)
         {
             printf("net: player %d (%s) left\n", slot, mSlots[slot].name.c_str());
             const std::string name = mSlots[slot].name;
+            const uint32_t token = mSlots[slot].token;
             mSlots[slot] = Slot();
             mSlots[slot].name = name; // kept for its return
+            mSlots[slot].token = token;
             engine::TakeOutOfGame(slot);
             mRounds.Left(slot);
         }

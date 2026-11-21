@@ -39,6 +39,7 @@ void net::Client::Welcomed(const Welcome& welcome, engine::NetworkGame* pGame)
 {
     mSlot = welcome.slot;
     mSession = welcome.session;
+    mToken = welcome.token;
     mConfig.name = welcome.name; // a reconnect asks for it: the server keeps our slot under it
     mMaps = welcome.maps;
     mConnected = true;
@@ -801,8 +802,10 @@ void net::Client::HandleEvents(const std::vector<TransportEvent>& events)
         {
             Hello hello;
             hello.build = mConfig.build;
-            hello.name = mConfig.name; // the server gives us our slot back by it
+            hello.name = mConfig.name;
             hello.carInfo = engine::DataFileCrc("nyc.gci");
+            hello.session = mSession; // the server gives us our slot back by them, with its score
+            hello.token = mToken;
             BitWriter w;
             WriteHello(w, hello);
             mTransport->Send(0, kChannelReliable, w.Data().data(), w.ByteCount(), true);
@@ -829,19 +832,26 @@ void net::Client::OnMapChange(BitReader& r)
     MapChange m;
     if (ReadMapChange(r, m))
     {
-        std::string missing;
-        if (!HaveMap(m.gmp, m.sty, m.scr, &missing) || !SameMap(m.map, m.gmp, m.sty, m.scr, m.print, &missing))
-        {
-            printf("net: frame %u, %s\n", mFrame, missing.c_str());
-            SendLeave(missing);
-            LeaveToMenu(missing.c_str());
-            return;
-        }
-        printf("net: frame %u, the next map: %s\n", mFrame, m.scr.c_str());
-        engine::ChangeMap(m.gmp, m.sty, m.scr, 90);
-        mScr = m.scr;
-        mServerGame = m.game; // from now on: the old game's snapshots would put its things into the next map's
+        ChangeGame(m.map, m.gmp, m.sty, m.scr, m.print, m.game, 90);
     }
+}
+
+bool net::Client::ChangeGame(const std::string& map, const std::string& gmp, const std::string& sty, const std::string& scr, const MapPrint& print,
+                             int game, int pauseTicks)
+{
+    std::string missing;
+    if (!HaveMap(gmp, sty, scr, &missing) || !SameMap(map, gmp, sty, scr, print, &missing))
+    {
+        printf("net: frame %u, %s\n", mFrame, missing.c_str());
+        SendLeave(missing);
+        LeaveToMenu(missing.c_str());
+        return false;
+    }
+    printf("net: frame %u, the next map: %s\n", mFrame, scr.c_str());
+    engine::ChangeMap(gmp, sty, scr, pauseTicks);
+    mScr = scr;
+    mServerGame = game; // from now on: the old game's snapshots would put its things into the next map's
+    return true;
 }
 
 void net::Client::StartOver()
@@ -1118,11 +1128,16 @@ void net::Client::Rejoined(const Welcome& welcome)
         LeaveToMenu("the server was restarted");
         return;
     }
-    if (welcome.version != kProtocolVersion || welcome.slot != mSlot || welcome.scr != mScr)
+    if (welcome.version != kProtocolVersion || welcome.slot != mSlot)
     {
-        printf("net: frame %u, the server has us back as player %d on %s, not %d on %s: start the game again to play on\n", mFrame,
-               welcome.slot, welcome.scr.c_str(), mSlot, mScr.c_str());
-        LeaveToMenu("the server started another game");
+        printf("net: frame %u, the server has us back as player %d, not %d: start the game again to play on\n", mFrame, welcome.slot, mSlot);
+        LeaveToMenu("the server has us back as another player");
+        return;
+    }
+    // The server's game went on to another (a round's fresh game, another map) while we were away: that one here too
+    if ((welcome.scr != mScr || (mServerGame >= 0 && welcome.game != mServerGame)) &&
+        !ChangeGame(welcome.map, welcome.gmp, welcome.sty, welcome.scr, welcome.print, welcome.game, 1))
+    {
         return;
     }
     printf("net: frame %u, back in as player %d\n", mFrame, mSlot);
@@ -1130,7 +1145,7 @@ void net::Client::Rejoined(const Welcome& welcome)
     mSynced = false;
     mNewSnapshot = false;
     mLatestTick = 0;
-    mServerGame = -1; // the server's newest, which may have started while we were away (a round's fresh game)
+    mServerGame = welcome.game;
     mLastSnapshotMs = NowMs();
     for (Snapshot& s : mReceived)
     {

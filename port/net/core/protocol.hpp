@@ -8,7 +8,7 @@
 
 namespace net
 {
-const uint32_t kProtocolVersion = 26;
+const uint32_t kProtocolVersion = 27;
 const uint16_t kDefaultPort = 27920;
 const size_t kMaxPayload = 1372; // the largest unreliable ENet packet that isn't fragmented at mtu 1400 (port/docs/netcode.md, "Wire format")
 const uint8_t kChannelUnreliable = 0; // snapshots, commands
@@ -48,6 +48,7 @@ struct Hello
     std::string build; // port_BuildId (port/src/build_id.hpp): a server takes only its own
     std::string name; // empty, too long or taken: the server gives one
     uint32_t carInfo = 0; // data/nyc.gci's CRC-32 (the cars' physics, every map's)
+    uint32_t session = 0, token = 0; // a reconnect: the welcome's, so the server gives the slot back as it was (0: a join)
 };
 
 // What a client needs to start the same network game as the server
@@ -68,6 +69,8 @@ struct Welcome
     MapPrint print; // the server's copy of gmp, sty and scr
     uint32_t serverTick = 0;
     std::vector<std::string> maps; // the maps a vote can choose, by number (the round's state in the world entity counts them)
+    uint32_t token = 0; // this slot's: a reconnect's hello shows it to have the slot back with its score
+    uint16_t game = 0; // the server's game to take snapshots of (its snapshots' world.game): the next one during a map change
 };
 
 struct Reject

@@ -79,6 +79,8 @@ void net::WriteHello(BitWriter& w, const Hello& m)
     WriteString(w, m.build);
     WriteString(w, m.name);
     w.Bits(m.carInfo, 32);
+    w.Bits(m.session, 32);
+    w.Bits(m.token, 32);
 }
 
 bool net::ReadHello(BitReader& r, Hello& m)
@@ -86,6 +88,11 @@ bool net::ReadHello(BitReader& r, Hello& m)
     m.version = r.VarU();
     const bool ok = ReadString(r, m.build) && ReadString(r, m.name);
     m.carInfo = r.Bits(32);
+    if (r.BitsLeft() >= 64) // an older build's hello ends here: still read, so the refusal can name its build
+    {
+        m.session = r.Bits(32);
+        m.token = r.Bits(32);
+    }
     return ok && !r.Overflow();
 }
 
@@ -127,6 +134,8 @@ void net::WriteWelcome(BitWriter& w, const Welcome& m)
     {
         WriteString(w, m.maps[i]);
     }
+    w.Bits(m.token, 32);
+    w.Bits(m.game, 16);
 }
 
 bool net::ReadWelcome(BitReader& r, Welcome& m)
@@ -148,6 +157,8 @@ bool net::ReadWelcome(BitReader& r, Welcome& m)
     {
         ok = ReadString(r, m.maps[i]);
     }
+    m.token = r.Bits(32);
+    m.game = (uint16_t)r.Bits(16);
     return ok && !r.Overflow() && m.slot < m.players && m.players <= 6; // the game has 6 player slots
 }
 

@@ -120,6 +120,10 @@ class Client
     void FastForward(int ticks); // the ticks a jump forward skips, run at once, saved
     void AnnounceRound();
     void OnMapChange(BitReader& r);
+    // The server's game on <scr> (number <game>): this one ends after <pauseTicks> and that one starts; false, and we
+    // left to the menu, if this machine hasn't the map's files as the server has them
+    bool ChangeGame(const std::string& map, const std::string& gmp, const std::string& sty, const std::string& scr, const MapPrint& print,
+                    int game, int pauseTicks);
     void StartOver(); // a new game (the next map): synced again from its first snapshot
     void Resync(const Snapshot& snap);
     void Reconcile(const Snapshot& snap);
@@ -200,6 +204,7 @@ class Client
     long long mJoinWaitMs = 0; // joining: since when we wait (6 s each for the connection and the welcome)
     std::string mScr; // the map's script (a rejoin must find the same)
     uint32_t mSession = 0; // the server's run (a rejoin must find the same: a restarted server has another game)
+    uint32_t mToken = 0; // our slot's (the welcome's): a rejoin's hello shows it to have the slot back as it was
     std::unique_ptr<engine::NavMap> mNavMap; // built once the game has its map
     BotView mBotView;
     int mMarks = 0; // mark key presses (F12 or the key under Esc) (ChooseInput)

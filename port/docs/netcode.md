@@ -13,7 +13,7 @@ DirectPlay sat (`NetPlay`), and the few changes to `Source/` are port-only hooks
 
 What works: 1-6 players on the game's multiplayer maps, frags, points and tag games, police, traffic, trains and ambient peds,
 joining and leaving mid-game, rounds with warmup, results and votes, map rotations, chat with commands, reconnecting,
-a frontend page to join, bots (scripted and trained), recordings that replay without a server. Protocol 26.
+a frontend page to join, bots (scripted and trained), recordings that replay without a server. Protocol 27.
 
 ## Running
 
@@ -71,9 +71,12 @@ kicked, or hasn't the next map's files, with why on the page; without the map's 
 
 **Connection.** The ping shows at the bottom right: the network's round trip alone (`kMsgPing`, answered at once,
 both polled between frames). With no snapshot for 0.7 s it shows **Connection interrupted** and plays on, the others'
-last inputs held for 5 ticks after the last snapshot, then without fire, then from 10 ticks on none. When ENet drops the connection (after 5-10 s) it shows **Lost the server, reconnecting** and
-connects again every 3 s under its name; the server gives a name its old slot back if it is free, at a restart zone.
-After 30 s, or back as another player or on another map, it goes back to the network page.
+last inputs held for 5 ticks after the last snapshot, then without fire, then from 10 ticks on none. When ENet drops
+the connection (after 5-10 s) it shows **Lost the server, reconnecting** and connects again every 3 s with its slot's
+token (the welcome's): the server gives the slot back with its score and ammo, also while it still has the old
+connection (dropped then, the player stays where it is), else at a restart zone. A game the server went on to
+meanwhile (a round's fresh game, another map) starts here as a map change does. After 30 s it goes back to the
+network page. A new join under the name of a player who left takes that slot, with an empty score.
 
 **Chat** is the game's own: F10 starts a line, each key types into it, Enter ends it, and every machine shows
 "name: line_" while it is typed. The key events reach the server in the commands, so the server's player types the
@@ -296,7 +299,7 @@ A little-endian bitstream (`core/bitstream.cpp`), never a copy of a struct: clie
 
 | Message | Channel | |
 |---|---|---|
-| `kMsgHello`, `kMsgWelcome`, `kMsgReject` | reliable | the join: the protocol version, the build, the name, `nyc.gci`'s CRC-32; the server's session, the slot and name, the game's settings, the map with its files' CRC-32s (gmp, sty and scr), the maps a vote chooses from |
+| `kMsgHello`, `kMsgWelcome`, `kMsgReject` | reliable | the join: the protocol version, the build, the name, `nyc.gci`'s CRC-32 (and a reconnect's session and token); the server's session, the slot, its token and name, the game's settings, the map with its files' CRC-32s (gmp, sty and scr) and the game to take snapshots of, the maps a vote chooses from |
 | `kMsgLeave` | reliable | why a client leaves (its copy of the map differs) |
 | `kMsgCommands` | unreliable | the last few commands (tick and input bits, each delta-coded against the one before) and the newest snapshot the client has |
 | `kMsgSnapshot`, `kMsgSnapshotPart` | unreliable | server tick, the baseline it is made against, the other players' forwarded controls, entities with field masks and changed fields (`core/snapshot.cpp`) |

@@ -256,6 +256,8 @@ void TestMessages()
     w.print.scr = 9;
     w.serverTick = 123456;
     w.maps = {"mp1-6p", "mp2-6p", "downtown-6p"};
+    w.token = 0xC0FFEE11;
+    w.game = 513;
     net::BitWriter bw;
     net::WriteWelcome(bw, w);
     net::BitReader br(bw.Data().data(), bw.ByteCount());
@@ -264,18 +266,21 @@ void TestMessages()
     CHECK(net::ReadWelcome(br, got));
     CHECK(got.slot == 2 && got.players == 6 && got.gameType == 3 && got.fragLimit == 25 && got.gmp == w.gmp &&
           got.scr == w.scr && got.serverTick == 123456 && got.maps == w.maps && got.session == w.session && got.name == w.name &&
-          got.map == w.map && got.print.gmp == w.print.gmp && got.print.sty == 7 && got.print.scr == 9);
+          got.map == w.map && got.print.gmp == w.print.gmp && got.print.sty == 7 && got.print.scr == 9 && got.token == w.token &&
+          got.game == 513);
 
     net::Hello hello;
     hello.build = "0.1.0-dev 1a2b3c4d5e";
     hello.name = "me";
     hello.carInfo = 0xFFFFFFFF;
+    hello.session = 0x12345678;
+    hello.token = 0x9ABCDEF0;
     net::BitWriter hw2;
     net::WriteHello(hw2, hello);
     net::BitReader hr2(hw2.Data().data(), hw2.ByteCount());
     net::Hello hgot;
     CHECK(hr2.Bits(8) == net::kMsgHello && net::ReadHello(hr2, hgot) && hgot.version == net::kProtocolVersion && hgot.build == hello.build &&
-          hgot.name == "me" && hgot.carInfo == 0xFFFFFFFF);
+          hgot.name == "me" && hgot.carInfo == 0xFFFFFFFF && hgot.session == hello.session && hgot.token == hello.token);
 
     // A command and a notice: a line of text each, cut at 120 characters
     for (net::MsgType type : {net::kMsgCommand, net::kMsgNotice})
