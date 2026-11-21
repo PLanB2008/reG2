@@ -101,6 +101,7 @@ class Client
         ShownError others, self; // the display error of the other players, and of the local player
         double restoreUs = 0, resimUs = 0, saveUs = 0, reconcileWorstUs = 0; // the rollbacks' time
         uint32_t carFrames = 0, carMismatch = 0; // frames x players, and those where in-car differs from the snapshot
+        uint32_t jumps = 0, fastForwards = 0, plainApplies = 0; // Resync, FastForward, a snapshot taken without its save
     };
     void Step(); // the frame's work: what arrived, the input, the snapshot, the commands
     void Welcomed(const Welcome& welcome, engine::NetworkGame* pGame);
@@ -115,6 +116,8 @@ class Client
     void RecordTick();
     void HandleEvents(const std::vector<TransportEvent>& events);
     void TakeSnapshot();
+    bool Saved(uint32_t tick) const; // the save of that tick, to reconcile a snapshot of it
+    void FastForward(int ticks); // the ticks a jump forward skips, run at once, saved
     void AnnounceRound();
     void OnMapChange(BitReader& r);
     void StartOver(); // a new game (the next map): synced again from its first snapshot

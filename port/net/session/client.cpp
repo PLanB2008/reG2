@@ -16,6 +16,8 @@
 namespace
 {
 const int kSaves = 32; // ticks a snapshot may be behind and still be reconciled (about 1 s)
+const int kMaxFastForward = 8; // ticks our commands may come late and be caught up at once (FastForward); more: a jump
+const int kMaxAhead = 20; // ticks our commands may be early beyond two before a jump back; from 12 on, slower pacing
 const int kStallMs = 700; // no snapshot for this long: the connection is out (ENet drops it after 5 to 10 s)
 const int kReconnectMs = 3000; // between attempts to connect again
 const int kGiveUpMs = 30000; // reconnecting this long: the server is gone, back to the menu
@@ -430,6 +432,7 @@ void net::Client::Reconcile(const Snapshot& snap)
     {
         engine::Apply(snap); // too old (or too new, or saved with another rollback set) to reconcile: take it as it is
         mProbe.AfterPlainApply(snap);
+        mStats.plainApplies += mSynced;
         engine::ApplyScores(snap);
         return;
     }
@@ -835,10 +838,40 @@ void net::Client::StartOver()
 }
 
 // Not running ahead of the server (yet, or any more), or far off: jump to where we should be
+bool net::Client::Saved(uint32_t tick) const
+{
+    const engine::SavedWorld* saved = tick <= mTick && tick + kSaves > mTick ? mSaves[tick % kSaves].get() : NULL;
+    return saved && saved->valid && saved->tick == tick && engine::Restorable(*saved);
+}
+
+// Our commands came late: the ticks they lack, as live ticks with the input held now (sent as commands for them), each
+// saved, as the frame loop runs a few steps at once after a stall
+void net::Client::FastForward(int ticks)
+{
+    const uint32_t local = mHist[mTick % kRing].tick == mTick ? mHist[mTick % kRing].buttons : 0;
+    std::vector<uint32_t> buttons(mRemote);
+    buttons[mSlot] = local;
+    for (int i = 0; i < ticks; i++)
+    {
+        SetNextInputs(local);
+        engine::ResimTick(buttons.data(), (int)buttons.size());
+        RecordTick();
+    }
+    mSlackKnown = false; // until a snapshot answers commands for the new ticks
+    mJumpTick = mTick;
+    mStats.fastForwards++;
+    printf("net: frame %u, our commands came late: %d ticks run at once\n", mFrame, ticks);
+}
+
 void net::Client::Resync(const Snapshot& snap)
 {
     const int off = mSynced && mSlackKnown ? mSlack - 2 : 0;
     mTick = !mSynced || mLatestTick > mTick ? mLatestTick + Lead() : mTick - off;
+    if (mSynced)
+    {
+        mStats.jumps++;
+        printf("net: frame %u, a jump to tick %u (our commands %d ticks off two early)\n", mFrame, mTick, off);
+    }
     mSynced = true;
     mSlackKnown = false; // until a snapshot answers commands for the new ticks
     mJumpTick = mTick;
@@ -881,9 +914,17 @@ void net::Client::TakeSnapshot()
         return;
     }
     // How far our commands are from two ticks early. ENet's round trip doesn't see a link conditioner, and the server's
-    // word is better anyway: it says which tick's command it had last
+    // word is better anyway: it says which tick's command it had last. Late by a few ticks: the snapshot reconciles on
+    // its save and the ticks the commands lack are run at once, so the saves go on; else a jump (Resync), which loses
+    // every save and with them the prediction until snapshots of the new ticks come. Far ahead is paced back slowly
     const int off = mSynced && mSlackKnown ? mSlack - 2 : 0;
-    if (!mProbe.Alone() && (!mSynced || mLatestTick > mTick || off < -3 || off > 12))
+    const bool behind = mSynced && mLatestTick <= mTick && off < -3;
+    if (!mProbe.Alone() && behind && -off <= kMaxFastForward && Saved(mLatestTick))
+    {
+        Reconcile(snap);
+        FastForward(-off);
+    }
+    else if (!mProbe.Alone() && (!mSynced || mLatestTick > mTick || behind || off > kMaxAhead))
     {
         Resync(snap);
     }
@@ -918,6 +959,11 @@ void net::Client::PrintStats(const Snapshot& snap)
                "their saves %.2f\n",
                mFrame, (st.restoreUs + st.resimUs + st.saveUs) / st.rollbacks / 1000, st.reconcileWorstUs / 1000, st.restoreUs / st.rollbacks / 1000,
                (float)st.resimTicks / st.rollbacks, st.resimUs / st.rollbacks / 1000, st.saveUs / st.rollbacks / 1000);
+    }
+    if (st.jumps || st.fastForwards || st.plainApplies)
+    {
+        printf("net: frame %u, %u jumps, %u catch-ups at once, %u snapshots taken without their save\n", mFrame, st.jumps, st.fastForwards,
+               st.plainApplies);
     }
     std::string local;
     for (size_t i = 0; i < mLocalDeaths.size(); i++)
@@ -956,7 +1002,8 @@ int net::Client::PacedTickMs() const
     {
         return mTickMs;
     }
-    return mSlack < 1 ? mTickMs - mTickMs / 10 : mSlack > 4 ? mTickMs + mTickMs / 10 : mTickMs;
+    // Late: a quarter faster; far ahead: a fifth slower, before it comes to a jump (kMaxAhead)
+    return mSlack < 1 ? mTickMs * 3 / 4 : mSlack - 2 > 12 ? mTickMs + mTickMs / 5 : mSlack > 4 ? mTickMs + mTickMs / 10 : mTickMs;
 }
 
 // The next tick's inputs: ours (predicted and sent), the others' last known

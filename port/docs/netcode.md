@@ -150,7 +150,10 @@ original's frame path in `winmain.cpp` (a step, then a frame): a server draws no
 
 - **Commands** carry the server tick they are for and repeat the last few, so a lost packet loses no input. The server
   buffers them per tick and repeats a player's last input when one is late (its controls only: a repeated key would
-  type twice). It reports the newest command tick it has, and the client keeps its commands about two ticks early.
+  type twice). It reports the newest command tick it has, and the client keeps its commands about two ticks early. The client paces its
+  ticks to keep them there (a quarter faster when late, a tenth or a fifth slower when early); commands a few ticks
+  late are caught up by running the missing ticks at once, saved, and only more than 8 late or 20 early make it jump
+  (its saves lost until snapshots of the new ticks come).
 - **Snapshots**, per client, every tick (`Server::SendSnapshot`): every player and the car each sits in, wherever they
   are, and everything within the client's interest area (24 blocks around its player; a camera sees 6 to 8). Each
   entity is a delta against the state that client acknowledged for it (per-entity baselines, so a snapshot can carry
