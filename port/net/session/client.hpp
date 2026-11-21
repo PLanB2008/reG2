@@ -154,6 +154,7 @@ class Client
     void RoundKeys(uint32_t& local, uint32_t key); // F1 ready in the warmup, Y / N on an open vote
     void CompleteChat(uint32_t& local, uint32_t key); // Tab in a command line: completed (CompleteCommand)
     void WatchChat(); // a chat line typed to its end that starts with '/' goes as a command
+    void KeepChatLines(); // the lines players ended, kept over the frame for a while (the game shows them while typed)
     void ShowRound(); // the warmup, countdown, results and an open vote over the frame
     void BotRound(); // a bot readies up and votes
     uint32_t BotMapChoice() const; // the map a bot votes for in the results (1-based)
@@ -229,6 +230,8 @@ class Client
     };
     std::vector<ScoreRow> mResultsRows; // the scores as the results began
     bool mWasChatting = false;
+    uint32_t mChatTick = 0; // the snapshot KeepChatLines last looked at
+    uint32_t mChatting = 0; // bit per player: typing a line in that snapshot
     uint32_t mRoundKeyFrame = 0, mBotSentFrame = 0;
     std::string mLeftWhy;
     uint32_t mPromptKeyFrame = 0;

@@ -85,6 +85,8 @@ same line, and the player entity carries it to the other clients. A key types th
 layout gives with shift (`port_TypedChar`): the game's own tables (`data/keyboard`) have one character per key and no
 shift. The server's copy of a line, which has no keyboard, types the character each press typed on its client, sent
 with the command (`gPortChatChar`), so the others read what was typed on any layout (the game's US table when none came).
+The game shows a line only while it is typed; a client keeps the last 5 ended lines (but commands) over the frame for
+10 s each, from the received snapshots (`KeepChatLines`). The warmup's panel and notice name the keys.
 
 **Commands** are chat lines starting with `/`, sent to the server when typed to their end: `/ready`, `/start`,
 `/map N` (or a name), `/kick NAME`, `/yes`, `/no`. Tab completes the command, then a map from the welcome's list or a

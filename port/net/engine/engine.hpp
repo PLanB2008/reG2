@@ -139,6 +139,8 @@ struct LocalChat
 };
 LocalChat TakeLocalChat();
 void PutLocalChat(const LocalChat& chat);
+// A player entity's chat line, and whether it is still being typed (the game keeps the line once Enter ends it)
+bool PlayerChat(const EntityState& e, std::string* pLine);
 
 // --- Rounds (rounds.cpp, netplay.cpp, slots.cpp, world_entity.cpp): the frag and time limits are the netcode's (the game gets none it would end on), a
 // round that reaches one starts the next on the same map. The server keeps the round; snapshots carry it ---
@@ -148,6 +150,8 @@ Round& CurrentRound();
 void NewRound(); // every slot in the game respawned with no score, weapons or power-ups
 void FreshScores(int slot); // its frags, points and HUD (money, frags, multiplier) as at a game's start (a new game's players)
 void ShowHudMessage(const char* text); // a line over the frame for a few seconds (overlay.cpp, with the status lines)
+// A chat line someone sent, over the frame above the lines being typed: the last 5, each for 10 s (overlay.cpp)
+void AddChatLine(const std::string& line);
 // Lines drawn over the frame until changed, centred near the top (the round's warmup, votes, results; overlay.cpp)
 void SetNetPanel(const std::vector<std::string>& lines);
 // One line drawn large in the middle of the frame (the game's message font) until changed; empty: none

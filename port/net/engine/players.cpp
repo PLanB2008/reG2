@@ -584,6 +584,25 @@ int net::engine::PlayerHealth(const EntityState& e)
     return e.type == kEntityPlayer ? e.f[kPlayerHealth] : 0;
 }
 
+bool net::engine::PlayerChat(const EntityState& e, std::string* pLine)
+{
+    pLine->clear();
+    if (e.type != kEntityPlayer)
+    {
+        return false;
+    }
+    for (int n = 0; n < 78; n++)
+    {
+        const char c = (char)(((uint32_t)e.f[kPlayerChat + n / 4] >> (8 * (n % 4))) & 0xFF);
+        if (!c)
+        {
+            break;
+        }
+        *pLine += c;
+    }
+    return e.f[kPlayerChatting] != 0;
+}
+
 int net::engine::PlayerPoints(const EntityState& e)
 {
     return e.type == kEntityPlayer ? e.f[kPlayerPoints] : 0;

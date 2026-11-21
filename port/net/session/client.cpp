@@ -1339,6 +1339,7 @@ void net::Client::Step()
         ShowStatus();
         ShowRound();
         WatchChat();
+        KeepChatLines();
         mProbe.Say(mFrame, mConnected, [this](const std::string& command) { SendCommand(command); });
         BotRound();
     }
@@ -1469,6 +1470,36 @@ void net::Client::WatchChat()
     mWasChatting = chat.chatting != 0;
 }
 
+// A line ends in a received snapshot (a resimulated one would end it again); commands stay out
+void net::Client::KeepChatLines()
+{
+    if (mLatestTick == mChatTick)
+    {
+        return;
+    }
+    mChatTick = mLatestTick;
+    uint32_t chatting = 0;
+    for (const EntityState& e : mReceived[mLatestTick % kRing].entities)
+    {
+        int p = 0;
+        uint32_t b = 0;
+        std::string line;
+        if (!engine::PlayerOf(e, &p, &b) || p < 0 || p >= 32)
+        {
+            continue;
+        }
+        if (engine::PlayerChat(e, &line))
+        {
+            chatting |= 1u << p;
+        }
+        else if ((mChatting >> p & 1) && !line.empty() && line[0] != '/')
+        {
+            engine::AddChatLine(engine::PlayerName(p) + ": " + line);
+        }
+    }
+    mChatting = chatting;
+}
+
 void net::Client::ShowRound()
 {
     const engine::Round& r = engine::CurrentRound();
@@ -1530,7 +1561,11 @@ void net::Client::ShowRound()
             lines.push_back(std::to_string(ready) + " of " + std::to_string(rows.size()) + " ready" +
                             (r.phaseLeft ? ", the round starts in " + std::to_string(r.phaseLeft) + " s anyway" : ""));
         }
-        lines.push_back(mSlot < kRoundSlots && (r.ready >> mSlot & 1) ? "You are ready" : "Press F1 when ready");
+        if (mSlot < kRoundSlots && (r.ready >> mSlot & 1))
+        {
+            lines.push_back("You are ready");
+        }
+        lines.push_back("F1 ready   F10 chat   Esc leave");
     }
     else if (r.phase == kPhaseResults)
     {
