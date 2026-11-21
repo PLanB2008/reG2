@@ -267,6 +267,7 @@ Car* MapCar(Pass& a, const EntityState& e)
 void ApplyCar(Pass& a, const EntityState& e)
 {
     a.seen.insert(e.id);
+    const bool fresh = !gCars.count(e.id); // made or adopted below: never seen alive under this id
     Car* car = MapCar(a, e);
     if (!car || EntityAge(e))
     {
@@ -294,7 +295,7 @@ void ApplyCar(Pass& a, const EntityState& e)
     }
     SetCarPhysics(car, e); // a player's car too: its place came with the player
     ApplyCarAi(car, e);
-    const bool wreckHereOnly = !SetCarState(car, e);
+    const bool wreckHereOnly = !SetCarState(car, e, fresh);
     if (wreckHereOnly && a.playerIn.count(car) && !a.referenced.count(car) && !car->IsTrainModel())
     {
         // A player in it gets out first: driven on, the wreck has lost its roof turret (Car::HandleRoofTurretRotation
@@ -572,10 +573,11 @@ void net::engine::ApplyCarsAndPeds(const Snapshot& snap)
 void net::engine::PrintReplicaLog()
 {
     PrintTrainLog();
-    if (gExplosionsCarried + gWrecksReplaced)
+    if (gExplosionsCarried + gWrecksReplaced + gWrecksMade)
     {
-        printf("net: %d explosions the server had carried out, %d wrecks of this game's own made again\n", gExplosionsCarried, gWrecksReplaced);
-        gExplosionsCarried = gWrecksReplaced = 0;
+        printf("net: %d explosions the server had carried out, %d wrecks of this game's own made again, %d of the server's made as wrecks\n",
+               gExplosionsCarried, gWrecksReplaced, gWrecksMade);
+        gExplosionsCarried = gWrecksReplaced = gWrecksMade = 0;
     }
     const CarStateDiffs& d = gCarStateDiffs;
     if (d.damage + d.fireAbove + d.fireBelow + d.wreckHereOnly + d.wreckThereOnly)

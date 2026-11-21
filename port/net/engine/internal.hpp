@@ -269,8 +269,10 @@ void SetCarPhysics(Car* car, const EntityState& e); // the physics the snapshot 
 // out (the game's own), damage, dents, lights, horn and colour are set. False: it is a wreck here and not there (it has
 // to be made again)
 bool IsWrecked(const Car* car);
-bool SetCarState(Car* car, const EntityState& e);
-extern int gExplosionsCarried, gWrecksReplaced; // for the log
+// fresh: made or adopted for this entity in this apply, so a wreck there is made one here without blowing up
+bool SetCarState(Car* car, const EntityState& e, bool fresh = false);
+void ExplodeAsServer(Car* car); // a car blown up as the server's was (gPortCarMayExplode lets it)
+extern int gExplosionsCarried, gWrecksReplaced, gWrecksMade; // for the log
 // For the log: how each car's state here compared with the snapshot's, before it was applied
 struct CarStateDiffs
 {

@@ -55,7 +55,7 @@ bool net::engine::CarHasPhysics(const EntityState& e)
     return e.f[kCarPhysics + kCp1X] != 0;
 }
 
-int net::engine::gExplosionsCarried, net::engine::gWrecksReplaced;
+int net::engine::gExplosionsCarried, net::engine::gWrecksReplaced, net::engine::gWrecksMade;
 net::engine::CarStateDiffs net::engine::gCarStateDiffs;
 
 namespace
@@ -189,7 +189,28 @@ int net::engine::FireLevel(int32_t damage)
     return damage >= 25000 ? 4 : damage >= 16000 ? 3 : 0;
 }
 
-bool net::engine::SetCarState(Car* car, const EntityState& e)
+// A car the server blew up blows up here, as from its damage (Car::AddDamage)
+void net::engine::ExplodeAsServer(Car* car)
+{
+    gServerExplosion = true;
+    car->HandleCarExplosion(explosion_type::item_19);
+    gServerExplosion = false;
+    gExplosionsCarried++;
+}
+
+// A car made here for a wreck of the server's: the end of Car::HandleCarExplosion and its wreck countdown, without the
+// explosion, the kills and the score (it blew up before this client saw it)
+static void MakeWreck(Car* car)
+{
+    car->mAttachments.ExpireAttachedFlames();
+    car->mAttachments.DestroyAllAttached();
+    car->mDamage = 32001;
+    car->SetEngineDamaged();
+    car->TurnToWreck();
+    net::engine::gWrecksMade++;
+}
+
+bool net::engine::SetCarState(Car* car, const EntityState& e, bool fresh)
 {
     const bool there = e.f[kCarWrecked] != 0, here = IsWrecked(car);
     CarStateDiffs& d = gCarStateDiffs;
@@ -205,10 +226,14 @@ bool net::engine::SetCarState(Car* car, const EntityState& e)
     }
     if (there && !here)
     {
-        gServerExplosion = true;
-        car->HandleCarExplosion(explosion_type::item_19); // as a car blows up from its damage (Car::AddDamage)
-        gServerExplosion = false;
-        gExplosionsCarried++;
+        if (fresh)
+        {
+            MakeWreck(car);
+        }
+        else
+        {
+            ExplodeAsServer(car);
+        }
         return true;
     }
     if (!there && here)
