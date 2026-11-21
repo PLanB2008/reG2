@@ -348,7 +348,10 @@ void LogDataCheck(const char* what, const DataCheck& check)
     }
     const std::string state =
         check.mMissing.empty() ? "complete" : "missing " + std::to_string(check.mMissing.size()) + " files: " + missing;
-    SDL_Log("%s: %s, music %d of %d tracks", what, state.c_str(), check.mMusicFound, check.mMusicTotal);
+    const std::string music = !check.mMusicTotal ? "" // a server's check: no music
+                                                  : ", music " + std::to_string(check.mMusicFound) + " of " +
+                                                        std::to_string(check.mMusicTotal) + " tracks";
+    SDL_Log("%s: %s%s", what, state.c_str(), music.c_str());
 }
 // The questions until the game has its data: false to quit.
 bool SetupLoop(const std::string& gameDir)
@@ -488,7 +491,7 @@ void port_SetWindowIcon(SDL_Window* pWindow)
 #endif
 }
 
-bool port_PrepareGameFolder(bool forceSetup)
+bool port_PrepareGameFolder(bool forceSetup, bool server)
 {
     bool perUser;
     const char* why = "";
@@ -510,8 +513,21 @@ bool port_PrepareGameFolder(bool forceSetup)
             fs::create_directories(sub, ec);
         }
     }
-    const DataCheck check = CheckGameData(".");
+    const DataCheck check = CheckGameData(".", server);
     LogDataCheck("Game data", check);
+    if (server)
+    {
+        // No setup: it asks questions in windows, and a server has nobody to answer them
+        for (const std::string& rel : check.mMissing)
+        {
+            SDL_Log("Server: no %s in %s", rel.c_str(), PathToUtf8(fs::absolute(dir, ec)).c_str());
+        }
+        if (!check.mMissing.empty())
+        {
+            SDL_Log("Server: that is the %s; GTA2_DIR=<folder> for another (the one holding data/)", why);
+        }
+        return check.mMissing.empty();
+    }
     if (!perUser || (!forceSetup && check.mMissing.empty()))
     {
         SDL_Log("Setup skipped: %s", perUser ? "the game data is there" : "not the per-user folder");

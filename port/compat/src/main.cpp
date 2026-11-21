@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 #include "../../net/net_main.hpp"
-#include "../../src/net_hooks.hpp" // gPortCrashHook
+#include "../../src/net_hooks.hpp" // gPortCrashHook, gPortServer
 #if !defined(_WIN32)
     #include <execinfo.h>
     #include <pthread.h>
@@ -29,21 +29,22 @@ static bool IsSetupArg(const char* arg)
 // registry and data files.
 static void EnterGameFolder(int argc, char** argv)
 {
+    bool forceSetup = false;
+    for (int i = 1; i < argc; i++)
+    {
+        forceSetup |= IsSetupArg(argv[i]);
+        gPortServer |= !strcmp(argv[i], "--server");
+    }
     // Before the setup's windows and the game's: on Linux the id matches the packages' desktop file.
     SDL_SetAppMetadata("reG2", GTA2_VERSION, GTA2_APP_ID);
     port_StartLog(argc, argv);
 #if defined(_WIN32)
     port_InstallCrashHandler();
 #endif
-    bool forceSetup = false;
-    for (int i = 1; i < argc; i++)
+    if (!port_PrepareGameFolder(forceSetup, gPortServer))
     {
-        forceSetup |= IsSetupArg(argv[i]);
-    }
-    if (!port_PrepareGameFolder(forceSetup))
-    {
-        port_LogExit(0);
-        exit(0);
+        port_LogExit(gPortServer);
+        exit(gPortServer); // a player who left the setup quit: 0
     }
 }
 
