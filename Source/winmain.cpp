@@ -2484,7 +2484,14 @@ s32 __stdcall GameWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lp
             }
             else
             {
-                if (!bQuit && sMinimizedState != 2 && !sbVideoModeResetPending)
+#if defined(GTA2_PORT)
+                // Port: a network game runs on minimised (gPortIdleHook: the netcode polls), else a minimised server
+                // stops everyone's game and a minimised client holds its keys there
+                const bool bMinimisedStop = sMinimizedState == 2 && !gPortIdleHook;
+#else
+                const bool bMinimisedStop = sMinimizedState == 2;
+#endif
+                if (!bQuit && !bMinimisedStop && !sbVideoModeResetPending)
                 {
                     if (bDoFrontEnd)
                     {
