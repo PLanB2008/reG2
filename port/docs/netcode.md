@@ -179,10 +179,9 @@ command, applies snapshots and rolls back. Between frames both poll the network 
   |---|---|---|
   | players, cars, peds, objects (movement, physics, collisions, weapons) | runs | the prediction |
   | traffic and ambient ped spawning, despawning | off | only the server creates and removes entities |
-  | scripts, police, ambulance, fire engines, buses | off | they create entities; the results arrive as state |
-  | generators, the garage, emergency crews | run, idle | scripts switch generators on and park cars in the garage (a client's generators make nothing: measured on mp1-6p), the police and the ambulance send crews |
-  | the map script's level start | its look and sound only | its shading level, ambient light and sounds (`gPortScriptCommandRuns`); the rest is stepped over |
-  | scripts after the level start, police, ambulance, firefighters, emergency crews, generators, garages | off | they create entities; the results arrive as state |
+  | the map script's level start | its look and sound only | its shading level, ambient light and sounds, and the cars it puts on car transporters (`gPortScriptCommandRuns`); the rest is stepped over |
+  | scripts after the level start, police, ambulance, fire engines, buses | off | they create entities; the results arrive as state (the police's as the world entity's) |
+  | generators, the garage, emergency crews | run, idle | scripts switch generators on and park cars in the garage, the police and the ambulance send crews |
   | doors, cranes, crushers, trains, traffic lights | runs | predicted, corrected by snapshots (the lights' phase is in the world entity, each train has one of its own) |
   | particles, tile animations, lights, HUD, sound | runs | cosmetic; a resimulated tick runs without the sound service, then takes what it left (shots, impacts, voice lines, sound events, radio reports), so a restore doesn't play them again; what no live tick played (a snapshot's death, another player's shot the prediction missed, by ammo) is given to the next live tick |
 

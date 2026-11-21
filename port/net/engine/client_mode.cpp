@@ -59,6 +59,7 @@ bool ClientScriptCommandRuns(u16 type)
         case SCRCMD_SET_SHADING_LEV:
         case SCRCMD_SET_AMBIENT:
         case SCRCMD_CREATE_SOUND:
+        case SCRCMD_PUT_CAR_ON_TRAILER: // the level start's cars on car transporters, declared on both sides
             return true;
         default:
             return false;
