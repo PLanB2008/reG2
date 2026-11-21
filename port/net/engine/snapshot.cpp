@@ -183,6 +183,40 @@ void net::engine::SetPlayerInput(int player, uint32_t buttons)
     }
 }
 
+unsigned short port_TypedChar(int dik); // compat/src/dinput.cpp: the character a key's last press typed, with shift
+
+namespace
+{
+struct Typed
+{
+    s32 dik;
+    u16 typed;
+};
+Typed gTyped[MAX_PLAYERS];
+const uint32_t kKeyDown = 0x200000; // a key event's press, its DirectInput code in bits 12-20 (Source/input_bits.hpp)
+
+u16 ChatChar(Player* pPlayer, s32 dik)
+{
+    const int i = pPlayer ? pPlayer->mPlayerIdx : -1;
+    return i >= 0 && i < MAX_PLAYERS && gTyped[i].dik == dik ? gTyped[i].typed : 0;
+}
+} // namespace
+
+void net::engine::SetPlayerTyped(int player, uint32_t buttons, uint16_t typed)
+{
+    if (player >= 0 && player < MAX_PLAYERS)
+    {
+        gTyped[player].dik = buttons & kKeyDown ? (s32)((buttons >> 12) & 0x1FF) : -1;
+        gTyped[player].typed = typed;
+        gPortChatChar = ChatChar;
+    }
+}
+
+uint16_t net::engine::TypedChar(uint32_t buttons)
+{
+    return buttons & kKeyDown ? port_TypedChar((int)((buttons >> 12) & 0x1FF)) : 0;
+}
+
 void net::engine::ShowLeavePrompt(bool shown)
 {
     gPortLeavePromptShown = shown;

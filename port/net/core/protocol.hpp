@@ -90,7 +90,9 @@ struct InputCmd
 {
     uint32_t tick; // the server tick it is for
     uint32_t buttons; // the game's input bits (Source/input_bits.hpp), 22 bits
+    uint16_t typed; // with a key press: the character it typed in the client's keyboard layout (0: none), for the chat
 };
+const uint32_t kKeyDownBit = 0x200000; // a key event's press (Source/input_bits.hpp)
 
 const size_t kMaxName = 15; // the game's player names (Player::mPlayerName)
 // <asked> as a player's name: printable ASCII, at most kMaxName, "PLAYER" if that leaves nothing, and with a number

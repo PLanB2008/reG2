@@ -24,6 +24,7 @@ bool gPortKeepWantedPoints;
 bool gPortServerKillNotices;
 bool gPortServerKillAwards;
 bool gPortTagTimeCounts;
+u16 (*gPortChatChar)(Player*, s32);
 bool gPortProtectsPlayers;
 bool (*gPortScoreBonusHook)(Player* pPlayer, s32 voice);
 bool gPortNoFireEngines;

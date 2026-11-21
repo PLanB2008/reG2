@@ -54,6 +54,8 @@ class Server
         uint32_t lastCmdTick = 0; // the newest command tick received (late ones too)
         uint32_t cmdTick[kRing] = {}; // received commands by tick % kRing
         uint32_t cmdButtons[kRing] = {};
+        uint16_t cmdTyped[kRing] = {};
+        uint16_t typed = 0; // what the input applied last typed (InputCmd::typed)
         uint32_t buttons = 0; // the input applied last (repeated while commands are late)
         uint32_t next = 0; // what the next tick runs with, as the game has it (the other clients get it forwarded)
         uint32_t late = 0; // ticks without their command (counted for the log)

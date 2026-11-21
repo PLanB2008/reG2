@@ -285,6 +285,7 @@ void net::Server::OnCommands(int slot, BitReader& r)
         {
             s.cmdTick[cmds[i].tick % kRing] = cmds[i].tick;
             s.cmdButtons[cmds[i].tick % kRing] = WithoutEscape(cmds[i].buttons);
+            s.cmdTyped[cmds[i].tick % kRing] = cmds[i].typed;
         }
     }
 }
@@ -639,6 +640,7 @@ void net::Server::SetNextInputs(const Snapshot& world)
         else if (s.used && s.cmdTick[next % kRing] == next)
         {
             s.buttons = s.cmdButtons[next % kRing];
+            s.typed = s.cmdTyped[next % kRing];
             if (s.silent > kHeldTicks)
             {
                 float x = 0, y = 0;
@@ -653,6 +655,7 @@ void net::Server::SetNextInputs(const Snapshot& world)
             // The last one again, its controls only (a key event, the chat, happens once); a client silent longer than
             // a late command's few ticks plays nothing: its player stands, rather than running on blind
             s.buttons = ++s.silent > kHeldTicks ? 0 : s.buttons & 0xFFF;
+            s.typed = 0;
             if (s.silent == kHeldTicks + 1)
             {
                 float x = 0, y = 0;
@@ -664,6 +667,7 @@ void net::Server::SetNextInputs(const Snapshot& world)
         const uint32_t buttons = InputsHeld(engine::CurrentRound().phase) ? s.buttons & kKeyEventBits : s.buttons;
         s.next = s.used ? buttons : 0;
         engine::SetPlayerInput((int)i, s.next);
+        engine::SetPlayerTyped((int)i, s.next, s.typed);
     }
 }
 

@@ -312,10 +312,11 @@ void TestMessages()
     CHECK(net::ReadMapChange(mr, mgot) && mgot.gmp == mc.gmp && mgot.sty == mc.sty && mgot.scr == mc.scr && mgot.game == 513 && mgot.map == mc.map &&
           mgot.print.sty == 12345 && mgot.print.gmp == 0);
 
-    net::InputCmd cmds[5] = {{100, 1}, {101, 1}, {102, 0x10}, {103, 0x3FFFFF}, {104, 0x3FFFFF}};
+    // The last two have a key press: what it typed follows each (0xE9: an AZERTY's é)
+    net::InputCmd cmds[5] = {{100, 1, 0}, {101, 1, 0}, {102, 0x10, 0}, {103, 0x3FFFFF, 0xE9}, {104, 0x3FFFFF, 'q'}};
     net::BitWriter cw;
     net::WriteCommands(cw, 98, cmds, 5);
-    CHECK(cw.ByteCount() <= 16); // 8 + 8 + 4 + 8 + 3 x 23 + 2 bits
+    CHECK(cw.ByteCount() <= 20); // 8 + 8 + 4 + 8 + 3 x 23 + 2 + 2 x 16 bits
     net::BitReader cr(cw.Data().data(), cw.ByteCount());
     CHECK(cr.Bits(8) == net::kMsgCommands);
     uint32_t ack = 0;
@@ -324,7 +325,7 @@ void TestMessages()
     CHECK(ack == 98);
     for (int i = 0; i < 5; i++)
     {
-        CHECK(back[i].tick == cmds[i].tick && back[i].buttons == cmds[i].buttons);
+        CHECK(back[i].tick == cmds[i].tick && back[i].buttons == cmds[i].buttons && back[i].typed == cmds[i].typed);
     }
 
     net::SnapshotHeader h = {5000, 4990, 4998}, hb;

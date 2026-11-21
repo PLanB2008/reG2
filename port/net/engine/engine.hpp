@@ -34,6 +34,9 @@ bool GameRunning(); // a game with its players exists
 int PlayerCount();
 uint32_t LocalInput(); // what this machine's controls give for the next tick
 void SetPlayerInput(int player, uint32_t buttons); // for the next tick
+// A server's: what the player's client typed with the next tick's key press (0: the game's table), for its chat line
+void SetPlayerTyped(int player, uint32_t buttons, uint16_t typed);
+uint16_t TypedChar(uint32_t buttons); // a client's: the character its key press in <buttons> typed here (0: none)
 // The length of a network tick (the game's own setting offers 50, 40 or 33 ms)
 void SetTickMs(int ms);
 void ShowLeavePrompt(bool shown); // the client's "Leave the game?": the gamepad's A and B answer it (net_hooks.hpp)

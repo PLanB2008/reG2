@@ -221,6 +221,10 @@ void net::WriteCommands(BitWriter& w, uint32_t ackTick, const InputCmd* cmds, in
         {
             w.Bits(cmds[i].buttons, 22);
         }
+        if (cmds[i].buttons & kKeyDownBit)
+        {
+            w.Bits(cmds[i].typed, 16);
+        }
     }
 }
 
@@ -245,6 +249,7 @@ int net::ReadCommands(BitReader& r, uint32_t* pAckTick, InputCmd* cmds, int max)
     {
         cmds[i].tick = last - (uint32_t)(count - 1 - i);
         cmds[i].buttons = r.Bool() && i ? cmds[i - 1].buttons : r.Bits(22);
+        cmds[i].typed = cmds[i].buttons & kKeyDownBit ? (uint16_t)r.Bits(16) : 0;
     }
     return r.Overflow() ? -1 : count;
 }

@@ -84,6 +84,7 @@ class Client
     struct TickRecord
     {
         uint32_t tick = 0, buttons = 0; // the input used for the tick (tick: 0 until there is one)
+        uint16_t typed = 0; // what its key press typed here (InputCmd::typed)
         uint32_t shownTick = 0; // the tick <predX>, <predY> and <shown> are for (0: none)
         float predX = 0, predY = 0; // where the local player was predicted to be
         std::vector<engine::ReplicaPos> shown; // where the mapped cars and peds were shown (the display error)

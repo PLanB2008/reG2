@@ -82,7 +82,8 @@ network page. A new join under the name of a player who left takes that slot, wi
 "name: line_" while it is typed. The key events reach the server in the commands, so the server's player types the
 same line, and the player entity carries it to the other clients. A key types the character the system's keyboard
 layout gives with shift (`port_TypedChar`): the game's own tables (`data/keyboard`) have one character per key and no
-shift. The server's copy of a line, which has no keyboard, types with the game's table (US, no shift).
+shift. The server's copy of a line, which has no keyboard, types the character each press typed on its client, sent
+with the command (`gPortChatChar`), so the others read what was typed on any layout (the game's US table when none came).
 
 **Commands** are chat lines starting with `/`, sent to the server when typed to their end: `/ready`, `/start`,
 `/map N` (or a name), `/kick NAME`, `/yes`, `/no`. Tab completes the command, then a map from the welcome's list or a
@@ -301,7 +302,7 @@ A little-endian bitstream (`core/bitstream.cpp`), never a copy of a struct: clie
 |---|---|---|
 | `kMsgHello`, `kMsgWelcome`, `kMsgReject` | reliable | the join: the protocol version, the build, the name, `nyc.gci`'s CRC-32 (and a reconnect's session and token); the server's session, the slot, its token and name, the game's settings, the map with its files' CRC-32s (gmp, sty and scr) and the game to take snapshots of, the maps a vote chooses from |
 | `kMsgLeave` | reliable | why a client leaves (its copy of the map differs) |
-| `kMsgCommands` | unreliable | the last few commands (tick and input bits, each delta-coded against the one before) and the newest snapshot the client has |
+| `kMsgCommands` | unreliable | the last few commands (tick and input bits, each delta-coded against the one before; a key press with the character it typed) and the newest snapshot the client has |
 | `kMsgSnapshot`, `kMsgSnapshotPart` | unreliable | server tick, the baseline it is made against, the other players' forwarded controls, entities with field masks and changed fields (`core/snapshot.cpp`) |
 | `kMsgMapChange` | reliable | the next map, after a round, with its files' CRC-32s |
 | `kMsgPing`, `kMsgPong` | unreliable | the client's clock, sent back at once |
@@ -416,7 +417,7 @@ The netcode's hooks, declared in `port/src/net_hooks.hpp`; those in `Source/` ar
 | `ScriptThread.cpp` | `gPortScriptCommandRuns` | a client runs the level start's look and sound commands, and steps over the rest |
 | `Car.cpp` | `gPortCarMayExplode` | a client's car the server sends blows up when a snapshot says the server's did, not on its own prediction |
 | `Car.cpp` | `Car::TryHonkHorn` | a train's lead without a driver (a player got out of a carriage that stood still) doesn't read it |
-| `Hud.cpp` | `port_TypedChar` (`port/compat/src/dinput.cpp`) | the chat types the keyboard layout's characters |
+| `Hud.cpp` | `port_TypedChar` (`port/compat/src/dinput.cpp`), `gPortChatChar` | the chat types the keyboard layout's characters; a server, those its clients typed |
 | `Hud.cpp` | `gPortServerKillNotices` | a client's kill notices are the server's deaths only |
 | `TagGame.cpp` | `gPortTagTimeCounts` | the tag game counts the "it" seconds without the game's time limit, which the original counts by |
 | `PlayerScoreTracker.cpp` | `gPortServerKillAwards`, `gPortScoreBonusHook` | a client's kills award no points or bonuses: the scores are the server's, and a bonus's message and voice are its player's client's, from the server |

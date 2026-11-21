@@ -1057,6 +1057,7 @@ void net::Client::SetNextInputs(uint32_t local)
     const uint32_t next = mTick + 1;
     mHist[next % kRing].tick = next;
     mHist[next % kRing].buttons = local;
+    mHist[next % kRing].typed = engine::TypedChar(local);
     for (size_t i = 0; i < mRemote.size(); i++)
     {
         engine::SetPlayerInput((int)i, (int)i == mSlot ? local : RemoteInput((int)i, next));
@@ -1075,6 +1076,7 @@ void net::Client::SendCommands()
         {
             cmds[n].tick = t;
             cmds[n].buttons = mHist[t % kRing].buttons;
+            cmds[n].typed = mHist[t % kRing].typed;
             n++;
         }
         else
