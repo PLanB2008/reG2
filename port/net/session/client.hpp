@@ -22,7 +22,7 @@ struct ClientConfig
     uint16_t port = kDefaultPort;
     std::string name; // empty: the server gives one (PlayerName)
     std::string bot; // a bot brain plays instead of the controls ("simple"); empty: a person
-    int lagMs = 0, jitterMs = 0, lossPercent = 0; // the link conditioner (tests)
+    LinkShape link; // the link conditioner (tests)
 };
 
 // Corrections of what is shown, for the log

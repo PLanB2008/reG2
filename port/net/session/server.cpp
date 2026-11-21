@@ -70,9 +70,9 @@ bool net::Server::Start(const ServerConfig& config, std::string* error)
     {
         return false;
     }
-    if (config.lagMs || config.jitterMs || config.lossPercent)
+    if (config.link.Any())
     {
-        mTransport.reset(CreateConditioner(mTransport.release(), config.lagMs, config.jitterMs, config.lossPercent));
+        mTransport.reset(CreateConditioner(mTransport.release(), config.link));
     }
     if (config.arena.size() > mSlots.size())
     {

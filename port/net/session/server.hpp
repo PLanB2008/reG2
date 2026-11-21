@@ -27,7 +27,7 @@ struct ServerConfig
     engine::NetworkGame game; // game.players: the player slots
     float interestRadius = 24.0f; // blocks around a client's player that its snapshots cover (players: always)
     int packets = 4; // a snapshot's packets at most (--packets, 1..8): a busy area's goes in parts
-    int lagMs = 0, jitterMs = 0, lossPercent = 0; // the link conditioner (tests)
+    LinkShape link; // the link conditioner (tests)
     std::vector<std::string> arena; // bot brains playing the first slots on the server itself (--arena)
     uint32_t endTick = 0; // the arena's result printed and the server ended at this tick (--ticks; 0: never)
     uint32_t seed = 0; // the game's random state at the start (--seed; 0: the game's own)

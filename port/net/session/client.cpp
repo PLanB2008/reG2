@@ -78,9 +78,9 @@ bool net::Client::BeginConnect(const ClientConfig& config, std::string* error)
     {
         return false;
     }
-    if (config.lagMs || config.jitterMs || config.lossPercent)
+    if (config.link.Any())
     {
-        mTransport.reset(CreateConditioner(mTransport.release(), config.lagMs, config.jitterMs, config.lossPercent));
+        mTransport.reset(CreateConditioner(mTransport.release(), config.link));
     }
     mHelloSent = false;
     mJoinWaitMs = NowMs();
@@ -1020,9 +1020,9 @@ void net::Client::Reconnect()
     printf("net: frame %u, connecting to %s:%u again (attempt %d)\n", mFrame, mConfig.host.c_str(), mConfig.port, mReconnects);
     std::string error;
     mTransport.reset(CreateClientTransport(mConfig.host.c_str(), mConfig.port, &error));
-    if (mTransport && (mConfig.lagMs || mConfig.jitterMs || mConfig.lossPercent))
+    if (mTransport && mConfig.link.Any())
     {
-        mTransport.reset(CreateConditioner(mTransport.release(), mConfig.lagMs, mConfig.jitterMs, mConfig.lossPercent));
+        mTransport.reset(CreateConditioner(mTransport.release(), mConfig.link));
     }
 }
 

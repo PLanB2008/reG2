@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <thread>
+#include <vector>
 
 
 namespace
@@ -32,6 +33,62 @@ bool WaitFor(net::Transport* a, net::Transport* b, net::Transport* on, net::Tran
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     return false;
+}
+
+// Counts what gets through, for the conditioner's losses
+class Counter : public net::Transport
+{
+  public:
+    std::vector<int> mSeen; // the first byte of each send that got through
+    bool Poll(net::TransportEvent&) override
+    {
+        return false;
+    }
+    bool Send(uint32_t, uint8_t, const void* data, size_t, bool) override
+    {
+        mSeen.push_back(*(const int*)data);
+        return true;
+    }
+    void Flush() override
+    {
+    }
+    void Disconnect(uint32_t) override
+    {
+    }
+    uint32_t RoundTripMs(uint32_t) const override
+    {
+        return 0;
+    }
+};
+
+// 20000 unreliable sends through a conditioner without delay: the rate lost and the mean length of a run of losses
+void Losses(int lossPercent, int lossBurst, double* pRate, double* pBurst)
+{
+    Counter* counter = new Counter();
+    net::LinkShape shape;
+    shape.lossPercent = lossPercent;
+    shape.lossBurst = lossBurst;
+    net::Transport* t = net::CreateConditioner(counter, shape);
+    const int n = 20000;
+    for (int i = 0; i < n; i++)
+    {
+        t->Send(0, net::kChannelUnreliable, &i, sizeof(i), false);
+    }
+    t->Flush();
+    int lost = 0, runs = 0, prev = -1;
+    for (int seen : counter->mSeen)
+    {
+        if (seen != prev + 1)
+        {
+            lost += seen - prev - 1;
+            runs++;
+        }
+        prev = seen;
+    }
+    lost += n - 1 - prev;
+    *pRate = 100.0 * lost / n;
+    *pBurst = runs ? (double)lost / runs : 0;
+    delete t;
 }
 } // namespace
 
@@ -85,6 +142,13 @@ int main()
     }
     CHECK(failed);
     delete lone;
+    // The conditioner: independent losses come one at a time, bursts at the same mean rate in runs of about N
+    double rate = 0, burst = 0;
+    Losses(10, 0, &rate, &burst);
+    CHECK(rate > 8.5 && rate < 11.5 && burst < 1.3);
+    Losses(10, 5, &rate, &burst);
+    printf("conditioner: 10%% in bursts of 5: %.1f%% lost, runs of %.1f\n", rate, burst);
+    CHECK(rate > 8 && rate < 12 && burst > 4 && burst < 6);
     printf("net transport tests passed\n");
     return 0;
 }
