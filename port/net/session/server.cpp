@@ -328,6 +328,30 @@ std::vector<net::Server::Item> net::Server::PriceArea(const std::vector<const En
     return items;
 }
 
+// The next tick's controls of every other player in the game, then the commands we hold for the ticks after it, as far as
+// they follow on
+net::ForwardedInputs net::Server::Forwarded(int slot) const
+{
+    ForwardedInputs f;
+    const bool held = InputsHeld(engine::CurrentRound().phase);
+    for (int i = 0; i < (int)mSlots.size() && i < kMaxForwardSlots; i++)
+    {
+        const Slot& o = mSlots[i];
+        if (i == slot || !o.used || !engine::SlotInGame(i))
+        {
+            continue;
+        }
+        f.controls[i][0] = (uint16_t)(o.next & 0xFFF);
+        int n = 1;
+        for (uint32_t t = mTick + 2; n < kMaxForwarded && o.peer != kArenaPeer && o.cmdTick[t % kRing] == t; t++)
+        {
+            f.controls[i][n++] = (uint16_t)(held ? 0 : o.cmdButtons[t % kRing] & 0xFFF);
+        }
+        f.count[i] = (uint8_t)n;
+    }
+    return f;
+}
+
 // Fit the snapshot into its packets by priority, as Quake 3's successors do. The entities the client has stay in every
 // snapshot: one left out would be removed there (and cost a whole new one later). Each gets this tick's state, or, when
 // there is no room, the state the client already has with its age (the ticks since it was new) - a few bits; the
@@ -349,7 +373,13 @@ bool net::Server::Fill(Slot& s, const Snapshot& fixed, std::vector<Item>& items,
     }
     std::sort(order.begin(), order.end(), [&](size_t a, size_t b) { return items[a].priority > items[b].priority; });
     const size_t room = mConfig.packets == 1 ? kMaxPayload : (size_t)mConfig.packets * (kMaxPayload - kPartHeader); // bytes
-    size_t budget = room * 8 - 96; // the header, the entry count, a margin
+    const ForwardedInputs forwarded = Forwarded((int)(&s - &mSlots[0]));
+    size_t forwardedBits = 4;
+    for (int i = 0; i < kMaxForwardSlots; i++)
+    {
+        forwardedBits += forwarded.count[i] ? 5 + 13 * forwarded.count[i] : 0;
+    }
+    size_t budget = room * 8 - 96 - forwardedBits; // the header, the entry count, a margin, the forwarded controls
     for (;;)
     {
         size_t bits = fixedBits;
@@ -385,7 +415,7 @@ bool net::Server::Fill(Slot& s, const Snapshot& fixed, std::vector<Item>& items,
         engine::SetSnapshotReach(candidate, mConfig.interestRadius); // nothing it has goes missing
         SortById(candidate);
         w = BitWriter();
-        SnapshotHeader h = {mTick, base ? base->tick : mTick, s.lastCmdTick};
+        SnapshotHeader h = {mTick, base ? base->tick : mTick, s.lastCmdTick, forwarded};
         WriteSnapshotHeader(w, h);
         WriteDelta(w, schema, base ? *base : kEmpty, candidate, Env().snapCheck);
         if (w.ByteCount() <= room || budget < 2048)
@@ -585,7 +615,8 @@ void net::Server::SetNextInputs(const Snapshot& world)
         }
         // The results and the countdown: a player's key events (the chat) are all it has (round_state.hpp)
         const uint32_t buttons = InputsHeld(engine::CurrentRound().phase) ? s.buttons & kKeyEventBits : s.buttons;
-        engine::SetPlayerInput((int)i, s.used ? buttons : 0);
+        s.next = s.used ? buttons : 0;
+        engine::SetPlayerInput((int)i, s.next);
     }
 }
 

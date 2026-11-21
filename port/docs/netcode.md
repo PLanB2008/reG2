@@ -13,7 +13,7 @@ DirectPlay sat (`NetPlay`), and the few changes to `Source/` are port-only hooks
 
 What works: 1-6 players on the game's multiplayer maps, frags, points and tag games, police, traffic, trains and ambient peds,
 joining and leaving mid-game, rounds with warmup, results and votes, map rotations, chat with commands, reconnecting,
-a frontend page to join, bots (scripted and trained), recordings that replay without a server. Protocol 25.
+a frontend page to join, bots (scripted and trained), recordings that replay without a server. Protocol 26.
 
 ## Running
 
@@ -179,8 +179,10 @@ original's frame path in `winmain.cpp` (a step, then a frame): a server draws no
 ### The client
 
 - **Prediction** (`engine/rollback.cpp`): the client saves the game after every tick. On a snapshot of tick S it
-  restores S, applies the server's state, and runs the ticks up to its own with its own inputs; other players repeat
-  their last input, a turn only once two snapshots in a row have it (a tap repeated turns far past the server's).
+  restores S, applies the server's state, and runs the ticks up to its own with its own inputs; other players take
+  the controls the snapshot forwards for the ticks after it (the next tick's as the server runs it, then the commands
+  it holds, up to 4), then the last of them repeated, a turn only once two in a row have it (a tap repeated turns far
+  past the server's). `GTA2_NET_NOFORWARD=1` predicts by the repeated input alone (to compare on a replay).
   Everything else moves on by the game's own simulation in those ticks.
 - **The blend**: what is shown, place and facing alike, moves a part of the way to the corrected state each tick: 0.3
   of a small error, rising to 0.5 of one near 2 blocks, and 0.5 of the local player's own (on foot or its car); more
@@ -294,7 +296,7 @@ A little-endian bitstream (`core/bitstream.cpp`), never a copy of a struct: clie
 | `kMsgHello`, `kMsgWelcome`, `kMsgReject` | reliable | the join: the protocol version, the build, the name, `nyc.gci`'s CRC-32; the server's session, the slot and name, the game's settings, the map with its files' CRC-32s (gmp, sty and scr), the maps a vote chooses from |
 | `kMsgLeave` | reliable | why a client leaves (its copy of the map differs) |
 | `kMsgCommands` | unreliable | the last few commands (tick and input bits, each delta-coded against the one before) and the newest snapshot the client has |
-| `kMsgSnapshot`, `kMsgSnapshotPart` | unreliable | server tick, the baseline it is made against, entities with field masks and changed fields (`core/snapshot.cpp`) |
+| `kMsgSnapshot`, `kMsgSnapshotPart` | unreliable | server tick, the baseline it is made against, the other players' forwarded controls, entities with field masks and changed fields (`core/snapshot.cpp`) |
 | `kMsgMapChange` | reliable | the next map, after a round, with its files' CRC-32s |
 | `kMsgPing`, `kMsgPong` | unreliable | the client's clock, sent back at once |
 | `kMsgCommand`, `kMsgNotice` | reliable | a player's command; a line to show (a vote, a player ready) |
@@ -497,6 +499,7 @@ off by default:
 | `GTA2_NET_RECORD=<file>\|off` | client | the recording's file (default `recordings/session-<n>.rec`) |
 | `GTA2_NET_REPLAYON=<frames>` | replay | the game runs on that many frames after the recording ends, nothing arriving |
 | `GTA2_NET_STATS=1` | client | the connection beside the ping, over the last second: the snapshots lost (the server sends one a tick), received per second, the ticks the game runs ahead of the newest, and the ticks resimulated per rollback |
+| `GTA2_NET_NOFORWARD=1` | client | other players predicted by their repeated input only, not the forwarded controls |
 | `GTA2_NET_BLEND=<0..1>`, `_BLEND_FAR`, `_BLEND_SELF` | client | how far a correction is blended in each tick: a small one (0.3), one near 2 blocks (0.5), the local player's own (0.5); 1: at once |
 | `GTA2_NET_COMPARE=1` | client | the comparison check |
 | `GTA2_NET_DIVERGE=<tick>[:<ticks>]` | client | the divergence check |

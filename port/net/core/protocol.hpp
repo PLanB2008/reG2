@@ -8,7 +8,7 @@
 
 namespace net
 {
-const uint32_t kProtocolVersion = 25;
+const uint32_t kProtocolVersion = 26;
 const uint16_t kDefaultPort = 27920;
 const size_t kMaxPayload = 1372; // the largest unreliable ENet packet that isn't fragmented at mtu 1400 (port/docs/netcode.md, "Wire format")
 const uint8_t kChannelUnreliable = 0; // snapshots, commands
@@ -111,13 +111,23 @@ bool ReadMapChange(BitReader& r, MapChange& m);
 void WriteCommands(BitWriter& w, uint32_t ackTick, const InputCmd* cmds, int count);
 int ReadCommands(BitReader& r, uint32_t* pAckTick, InputCmd* cmds, int max); // -1 if malformed
 
-// Snapshot header: its tick, the tick of the baseline it is a delta to (its own tick: none, a full snapshot), and the newest command tick
-// the server has applied for this client; the delta (snapshot.hpp) follows
+// Snapshot header: its tick, the tick of the baseline it is a delta to (its own tick: none, a full snapshot), the newest command tick
+// the server has applied for this client
+// and, per other player, the controls the server has for the ticks after it (the next one's as it will run, then the
+// commands it holds): what a client predicts that player with before it repeats the last
+const int kMaxForwarded = 4;
+const int kMaxForwardSlots = 8;
+struct ForwardedInputs
+{
+    uint8_t count[kMaxForwardSlots] = {}; // ticks known after the snapshot's, per slot
+    uint16_t controls[kMaxForwardSlots][kMaxForwarded] = {}; // the low 12 bits of the input, for tick + 1 + k
+};
 struct SnapshotHeader
 {
     uint32_t tick;
     uint32_t baseTick;
     uint32_t lastCmdTick;
+    ForwardedInputs forwarded;
 };
 // A snapshot message bigger than one packet goes in parts (up to kMaxParts): its tick, the part's index and how many,
 // then a piece of the message's bytes. A client puts them together, in order, once it has all of them
@@ -125,6 +135,6 @@ const int kMaxParts = 8;
 const size_t kPartHeader = 8; // the most a part's header takes, in bytes
 void WriteSnapshotParts(const std::vector<uint8_t>& message, uint32_t tick, std::vector<std::vector<uint8_t>>& parts);
 bool ReadSnapshotPart(BitReader& r, uint32_t* pTick, int* pIndex, int* pCount, std::vector<uint8_t>& piece);
-void WriteSnapshotHeader(BitWriter& w, const SnapshotHeader& h);
+void WriteSnapshotHeader(BitWriter& w, const SnapshotHeader& h); // then the delta (snapshot.hpp)
 bool ReadSnapshotHeader(BitReader& r, SnapshotHeader& h);
 } // namespace net

@@ -173,6 +173,10 @@ class Client
     TickRecord mHist[kRing];
     std::vector<uint32_t> mRemote; // other players' last inputs, from snapshots
     std::vector<uint32_t> mRemoteSeen; // and as the newest snapshot had them
+    ForwardedInputs mForwarded[kRing]; // the other players' controls after each snapshot's tick (its header's)
+    ForwardedInputs mKnown; // those of the snapshot the game took last, for the ticks after <mKnownTick>
+    uint32_t mKnownTick = 0;
+    uint32_t RemoteInput(int player, uint32_t tick) const; // what we predict another player's tick with
 
     std::unique_ptr<BotBrain> mBot;
     std::unique_ptr<ClientRecorder> mRecorder;

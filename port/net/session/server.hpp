@@ -54,6 +54,7 @@ class Server
         uint32_t cmdTick[kRing] = {}; // received commands by tick % kRing
         uint32_t cmdButtons[kRing] = {};
         uint32_t buttons = 0; // the input applied last (repeated while commands are late)
+        uint32_t next = 0; // what the next tick runs with, as the game has it (the other clients get it forwarded)
         uint32_t late = 0; // ticks without their command (counted for the log)
         uint32_t ackTick = 0; // the newest snapshot the client has
         Snapshot sent[kRing]; // what was sent, by tick % kRing: the baselines
@@ -96,6 +97,7 @@ class Server
     void PrintStats(const Snapshot& world);
     void SendSnapshot(int slot, Slot& s, const Snapshot& world);
     std::vector<Item> PriceArea(const std::vector<const EntityState*>& area, const Snapshot* base, float x, float y) const;
+    ForwardedInputs Forwarded(int slot) const; // the other players' controls after this tick, for <slot>'s snapshot
     bool Fill(Slot& s, const Snapshot& fixed, std::vector<Item>& items, const Snapshot* base, BitWriter& w);
     void Transmit(const Slot& s, const BitWriter& w);
     int SlotOfPeer(uint32_t peer) const;

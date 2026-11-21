@@ -323,11 +323,20 @@ void TestMessages()
     }
 
     net::SnapshotHeader h = {5000, 4990, 4998}, hb;
+    h.forwarded.count[1] = 3;
+    h.forwarded.controls[1][0] = 0x101;
+    h.forwarded.controls[1][1] = 0x101;
+    h.forwarded.controls[1][2] = 0xFFF;
+    h.forwarded.count[5] = 1;
+    h.forwarded.controls[5][0] = 0x020;
     net::BitWriter hw;
     net::WriteSnapshotHeader(hw, h);
     net::BitReader hr(hw.Data().data(), hw.ByteCount());
     CHECK(hr.Bits(8) == net::kMsgSnapshot);
     CHECK(net::ReadSnapshotHeader(hr, hb) && hb.tick == 5000 && hb.baseTick == 4990 && hb.lastCmdTick == 4998);
+    CHECK(hb.forwarded.count[0] == 0 && hb.forwarded.count[1] == 3 && hb.forwarded.count[5] == 1);
+    CHECK(hb.forwarded.controls[1][0] == 0x101 && hb.forwarded.controls[1][1] == 0x101 && hb.forwarded.controls[1][2] == 0xFFF);
+    CHECK(hb.forwarded.controls[5][0] == 0x020);
 }
 
 // zlib's CRC-32, in one go or in pieces

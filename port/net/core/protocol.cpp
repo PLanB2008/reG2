@@ -244,6 +244,33 @@ void net::WriteSnapshotHeader(BitWriter& w, const SnapshotHeader& h)
     w.VarU(h.tick);
     w.VarU(h.tick - h.baseTick); // 0..: how far back the baseline is (0: none)
     w.VarU(h.lastCmdTick);
+    // Per slot with any: the slot, how many, and each one as the one before (1 bit) or its 12 bits
+    int slots = 0;
+    for (int i = 0; i < kMaxForwardSlots; i++)
+    {
+        slots += h.forwarded.count[i] > 0;
+    }
+    w.Bits((uint32_t)slots, 4);
+    for (int i = 0; i < kMaxForwardSlots; i++)
+    {
+        const int n = h.forwarded.count[i] > kMaxForwarded ? kMaxForwarded : h.forwarded.count[i];
+        if (!n)
+        {
+            continue;
+        }
+        w.Bits((uint32_t)i, 3);
+        w.Bits((uint32_t)(n - 1), 2);
+        for (int k = 0; k < n; k++)
+        {
+            const uint32_t c = h.forwarded.controls[i][k] & 0xFFF;
+            const bool same = k > 0 && c == (h.forwarded.controls[i][k - 1] & 0xFFFu);
+            w.Bits(same ? 1 : 0, 1);
+            if (!same)
+            {
+                w.Bits(c, 12);
+            }
+        }
+    }
 }
 
 bool net::ReadSnapshotHeader(BitReader& r, SnapshotHeader& h)
@@ -251,6 +278,18 @@ bool net::ReadSnapshotHeader(BitReader& r, SnapshotHeader& h)
     h.tick = r.VarU();
     const uint32_t back = r.VarU();
     h.lastCmdTick = r.VarU();
+    h.forwarded = ForwardedInputs();
+    const uint32_t slots = r.Bits(4);
+    for (uint32_t j = 0; j < slots && !r.Overflow(); j++)
+    {
+        const uint32_t i = r.Bits(3);
+        const int n = (int)r.Bits(2) + 1;
+        for (int k = 0; k < n; k++)
+        {
+            h.forwarded.controls[i][k] = (uint16_t)(r.Bits(1) && k > 0 ? h.forwarded.controls[i][k - 1] : r.Bits(12));
+        }
+        h.forwarded.count[i] = (uint8_t)n;
+    }
     if (r.Overflow() || back > h.tick)
     {
         return false;

@@ -308,6 +308,7 @@ void net::Client::OnSnapshot(BitReader& r)
     }
     snap.tick = h.tick;
     mReceived[h.tick % kRing] = snap;
+    mForwarded[h.tick % kRing] = h.forwarded;
     mLatestTick = h.tick;
     mLink.snapshots++;
     mSlack = (int)h.lastCmdTick - (int)(h.tick + 1);
@@ -390,6 +391,8 @@ void net::Client::RecordShown()
 void net::Client::TakePlayerStates(const Snapshot& snap)
 {
     const TickRecord& rec = mHist[snap.tick % kRing];
+    mKnown = Env().noForward ? ForwardedInputs() : mForwarded[snap.tick % kRing];
+    mKnownTick = snap.tick;
     for (const EntityState& e : snap.entities)
     {
         int player = 0;
@@ -399,8 +402,12 @@ void net::Client::TakePlayerStates(const Snapshot& snap)
             continue;
         }
         // A turn is repeated only once held: a tap repeated would turn the ped far past the server's
+        // Past the controls the server forwarded, the last of them is held, a turn only if the one before had it too
         const uint32_t turn = kBtnLeft | kBtnRight;
-        mRemote[player] = (buttons & ~turn) | (buttons & mRemoteSeen[player] & turn);
+        const int n = player < kMaxForwardSlots ? mKnown.count[player] : 0;
+        const uint32_t last = n ? mKnown.controls[player][n - 1] : buttons;
+        const uint32_t before = n > 1 ? mKnown.controls[player][n - 2] : n ? buttons & 0xFFF : mRemoteSeen[player];
+        mRemote[player] = (last & ~turn) | (last & before & turn);
         mRemoteSeen[player] = buttons;
         if (player == mSlot)
         {
@@ -413,6 +420,17 @@ void net::Client::TakePlayerStates(const Snapshot& snap)
             mStats.maxError = err > mStats.maxError ? err : mStats.maxError;
         }
     }
+}
+
+// The server's forwarded controls for that tick if it sent them, else the held input
+uint32_t net::Client::RemoteInput(int player, uint32_t tick) const
+{
+    const uint32_t k = tick - mKnownTick - 1;
+    if (player < kMaxForwardSlots && tick > mKnownTick && k < mKnown.count[player])
+    {
+        return mKnown.controls[player][k];
+    }
+    return mRemote[player];
 }
 
 // A snapshot of tick S: back to the game as it was after S, the server's state on top, then the ticks since then
@@ -454,6 +472,10 @@ void net::Client::Reconcile(const Snapshot& snap)
     std::vector<uint32_t> buttons(mRemote);
     for (uint32_t t = s + 1; t <= mTick; t++)
     {
+        for (size_t i = 0; i < buttons.size(); i++)
+        {
+            buttons[i] = RemoteInput((int)i, t);
+        }
         buttons[mSlot] = mHist[t % kRing].tick == t ? mHist[t % kRing].buttons : 0;
         engine::ResimTick(buttons.data(), (int)buttons.size());
         mProbe.AfterResim();
@@ -788,6 +810,7 @@ void net::Client::HandleEvents(const std::vector<TransportEvent>& events)
                 printf("net: frame %u, lost the server\n", mFrame);
                 mReconnects = 0;
                 std::fill(mRemote.begin(), mRemote.end(), 0u); // the others stand still meanwhile
+                mKnown = ForwardedInputs();
             }
             mConnected = false;
             mTransport.reset();
@@ -832,6 +855,8 @@ void net::Client::StartOver()
     }
     std::fill(mRemote.begin(), mRemote.end(), 0u);
     std::fill(mRemoteSeen.begin(), mRemoteSeen.end(), 0u);
+    mKnown = ForwardedInputs();
+    mKnownTick = 0;
     mBot.reset(); // and its map of the old one
     mNavMap.reset();
     printf("net: frame %u, a new game\n", mFrame);
@@ -1014,7 +1039,7 @@ void net::Client::SetNextInputs(uint32_t local)
     mHist[next % kRing].buttons = local;
     for (size_t i = 0; i < mRemote.size(); i++)
     {
-        engine::SetPlayerInput((int)i, (int)i == mSlot ? local : mRemote[i]);
+        engine::SetPlayerInput((int)i, (int)i == mSlot ? local : RemoteInput((int)i, next));
     }
 }
 
