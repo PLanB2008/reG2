@@ -30,6 +30,18 @@ long long NowMs()
 
 } // namespace
 
+// The names a server (or a recording) gives its map's files: bare names in data/ only (BareFileName), else <error> says
+// which, and nothing is opened by them
+static bool PlainNames(const std::string& bad, const char* from, std::string* error)
+{
+    if (bad.empty())
+    {
+        return true;
+    }
+    *error = std::string(from) + "'s " + bad + " name isn't a plain file name in data/: refused";
+    return false;
+}
+
 void net::CorrectionStats::Print(uint32_t frame, const char* what) const
 {
     printf("net: frame %u, %s' corrections: %u, %.2f blocks on average, up to %.2f, %u over 2 blocks (jumped)\n", frame, what, count,
@@ -74,6 +86,10 @@ bool net::Client::StartReplay(const char* path, engine::NetworkGame* pGame, std:
     if (!mReplay->Open(path, &welcome))
     {
         *error = std::string("not a recording: ") + path;
+        return false;
+    }
+    if (!PlainNames(BadMapName(welcome), "the recording", error))
+    {
         return false;
     }
     Welcomed(welcome, pGame);
@@ -202,7 +218,7 @@ bool net::Client::OnWelcome(const TransportEvent& e, engine::NetworkGame* pGame,
         *error = "a welcome we don't understand";
         return false;
     }
-    if (!HaveMap(welcome.gmp, welcome.sty, welcome.scr, error) || !SameMap(welcome.map, welcome.gmp, welcome.sty, welcome.scr, welcome.print, error))
+    if (!PlainNames(BadMapName(welcome), "the server", error) || !HaveMap(welcome.gmp, welcome.sty, welcome.scr, error) || !SameMap(welcome.map, welcome.gmp, welcome.sty, welcome.scr, welcome.print, error))
     {
         SendLeave(*error);
         Leave();
@@ -896,7 +912,7 @@ bool net::Client::ChangeGame(const std::string& map, const std::string& gmp, con
                              int game, int pauseTicks)
 {
     std::string missing;
-    if (!HaveMap(gmp, sty, scr, &missing) || !SameMap(map, gmp, sty, scr, print, &missing))
+    if (!PlainNames(BadMapName(map, gmp, sty, scr), "the server", &missing) || !HaveMap(gmp, sty, scr, &missing) || !SameMap(map, gmp, sty, scr, print, &missing))
     {
         printf("net: frame %u, %s\n", mFrame, missing.c_str());
         SendLeave(missing);

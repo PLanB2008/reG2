@@ -367,6 +367,51 @@ void TestNames()
     CHECK(net::PlayerName("ABCDEFGHIJKLMNO", {"abcdefghijklmno"}) == "ABCDEFGHIJKLM 2");
     CHECK(net::PlayerName("bob", {"alice"}) == "bob");
 }
+
+// File names from the network: a bare name in data/ with its extension, nothing that could be a path
+void TestFileNames()
+{
+    for (const char* ok : {"wil.sty", "MP1-comp.gmp", "Industrial-6P.SCR", "downtown-6P.scr", "a_b-c.sty", "abcdefghijklmnopqrst.gmp"})
+    {
+        const char* dot = strrchr(ok, '.');
+        CHECK(net::BareFileName(ok, dot));
+    }
+    CHECK(net::BareFileName("downtown-6p", ""));
+    const std::string hostile[] = {
+        "", ".sty", "abcdefghijklmnopqrstu.sty", std::string(300, 'a') + ".sty", "../wil.sty", "..\\wil.sty", "a/../wil.sty",
+        "audio" + std::string(120, '/') + "../wil.sty", "x\\wil.sty", "/etc/passwd", "C:\\gta2\\data\\wil.sty", "\\\\host\\share\\wil.sty",
+        "wil.sty.sty", "wil..sty", "wil sty.sty", "w\x01il.sty", "wil\x1b[2J.sty", std::string("wi\0l.sty", 8), "wil.sty\n", "wil.gmp",
+        "wil.st", "wil", "w\xe9l.sty", "~/wil.sty", "wil:x.sty"};
+    for (const std::string& name : hostile)
+    {
+        CHECK(!net::BareFileName(name, ".sty"));
+    }
+    for (const char* name : {"", "..", ".", "../x", "a/b", "a\\b", "/x", "a.mmp", "abcdefghijklmnopqrstu", "a\x7f"})
+    {
+        CHECK(!net::BareFileName(name, ""));
+    }
+    CHECK(net::BadMapName("mp1-6p", "MP1-comp.gmp", "wil.sty", "MP1-6P.scr").empty());
+    CHECK(net::BadMapName("../mp1-6p", "MP1-comp.gmp", "wil.sty", "MP1-6P.scr") == "map");
+    CHECK(net::BadMapName("mp1-6p", "../MP1-comp.gmp", "wil.sty", "MP1-6P.scr") == "gmp");
+    CHECK(net::BadMapName("mp1-6p", "MP1-comp.gmp", std::string(70, 'A') + "/../wil.sty", "MP1-6P.scr") == "sty");
+    CHECK(net::BadMapName("mp1-6p", "MP1-comp.gmp", "wil.sty", "x//////../ste.scr") == "scr");
+    CHECK(net::BadMapName("mp1-6p", "MP1-comp.gmp", "wil.sty", "MP1-6P.sty") == "scr");
+    // In a welcome as it comes off the wire, the vote's maps too
+    net::Welcome w;
+    w.players = 2;
+    w.map = "mp1-6p";
+    w.gmp = "MP1-comp.gmp";
+    w.sty = "wil.sty";
+    w.scr = "MP1-6P.scr";
+    w.maps = {"mp1-6p", "res-6p"};
+    net::BitWriter bw;
+    net::WriteWelcome(bw, w);
+    net::BitReader br(bw.Data().data(), bw.ByteCount());
+    net::Welcome got;
+    CHECK(br.Bits(8) == net::kMsgWelcome && net::ReadWelcome(br, got) && net::BadMapName(got).empty());
+    w.maps.push_back("../../../../home/x/.ssh/id_ed25519");
+    CHECK(net::BadMapName(w) == "vote map");
+}
 } // namespace
 
 // A message cut into parts and put together again, in any order, is the message
@@ -449,6 +494,7 @@ int main()
     TestMessages();
     TestCrc();
     TestNames();
+    TestFileNames();
     printf("messages ok\n");
     printf("net core tests passed\n");
     return 0;
