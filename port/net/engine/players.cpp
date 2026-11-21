@@ -12,6 +12,7 @@
 #include "Source/Game.hpp"
 #include "Source/GameSession.hpp"
 #include "Source/Hud.hpp"
+#include "Source/ParticleManager.hpp"
 #include "Source/Ped.hpp"
 #include "Source/Player.hpp"
 #include "Source/TextTable.hpp"
@@ -55,6 +56,38 @@ struct
 uint8_t gBonusCount[MAX_PLAYERS];
 uint8_t gBonusVoice[MAX_PLAYERS];
 int gBonusSeen = -1;
+// Each player's health as the last snapshot had it, and its ped then: a hit is a drop on the same ped
+struct SeenHealth
+{
+    s32 mPedId = -1;
+    int32_t mHealth = 0;
+};
+SeenHealth gSeenHealth[MAX_PLAYERS];
+
+// A hit the server had on a player, shown here: its blood and its grunt, which the client's own hits on players don't
+// give (players take no damage on a client: Ped::HandlePedHitByObject returns before the blood)
+void ShowServerHit(int i, Ped* ped, const EntityState& e)
+{
+    SeenHealth& seen = gSeenHealth[i];
+    const int32_t health = e.f[net::engine::kPlayerHealth], was = seen.mHealth;
+    const bool hit = seen.mPedId == ped->mId && health < seen.mHealth && seen.mHealth > 0 && !ped->mCar && !ped->isDead();
+    seen.mPedId = ped->mId;
+    seen.mHealth = health;
+    Sprite* s = hit ? net::engine::CharSprite(ped) : NULL;
+    if (!s)
+    {
+        return;
+    }
+    gParticle_8->EmitBloodBurst(s->mXy.x, s->mXy.y, s->mZpos, s->mRotation);
+    if (health > 0)
+    {
+        ped->SetVoiceEventIfNotOnFire(25); // Ped::TriggerVoiceEventRateLimited's, a punch's
+    }
+    if (Debug().selfLog)
+    {
+        printf("net: player %d hit on the server: health %d -> %d, its blood shown\n", i, was, health);
+    }
+}
 const int kBonusVoices = 12;
 const char* const kBonusText[kBonusVoices] = {NULL, "fly_car", "stl_all", "dst_all", "excutin", "gencide", "copkill", "carjaka",
                                               "elvis_d", "accurcy", "wrngway", "em_dest"}; // by voice_line
@@ -461,6 +494,7 @@ void net::engine::ApplyPlayer(const EntityState& e)
             gBonusSeen = count;
         }
     }
+    ShowServerHit(i, ped, e);
     if (CarryOutDeath(i, p, ped, e))
     {
         return;
