@@ -197,7 +197,9 @@ A client runs reG2's frame loop (`port/src/frame_loop.cpp`, `gPortNetFrameLoop`)
 game's rate, frames at the FRAME LIMIT, each drawn between the last two ticks (`port/src/interpolation.cpp`), SHOW FPS.
 The step is the tick and the hook together, so a draw only ever sees the state after a hook: the interpolation goes
 from what the frames before showed (the state before the tick, after the last hook's blend) to the state after this
-one's rollback and blend, and a correction is spread over the frames of a tick. A server and a replay run the
+one's rollback and blend, and a correction is spread over the frames of a tick. Objects and particles go from the
+corrected game's place before the tick instead (recorded before the shown tick is resimulated, `engine::ResimStepStart`):
+after a rollback the same sprite slot and id may hold another object in the prediction. A server and a replay run the
 original's frame path in `winmain.cpp` (a step, then a frame): a server draws nothing, a replay runs as fast as it can.
 
 ### The server
