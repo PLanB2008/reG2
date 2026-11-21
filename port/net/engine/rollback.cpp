@@ -33,23 +33,42 @@ namespace
 {
 unsigned gSet; // which rollback set: taken again, its blocks lie elsewhere in a saved world (Restorable)
 
-// The rollback set, asked once per game (its pointees are fixed once a map is loaded)
+// The first block that differs between two sets (none: -1)
+long FirstDifference(const std::vector<net::engine::Block>& a, const std::vector<net::engine::Block>& b)
+{
+    for (size_t i = 0; i < a.size() || i < b.size(); i++)
+    {
+        if (i >= a.size() || i >= b.size() || a[i].addr != b[i].addr || a[i].size != b[i].size)
+        {
+            return (long)i;
+        }
+    }
+    return -1;
+}
+
+// The rollback set, taken again whenever it would be another: a new game (a map change's new Game can come at the old
+// one's address, with its pools elsewhere: the old blocks wrote over freed memory), a function's static registered, a
+// pointee a global gained (NULL when the set was taken) or that moved. A world saved with an older set isn't restored
+// (Restorable)
 const std::vector<net::engine::Block>& RollbackSet()
 {
-    // Again for every game: a map change's new Game can come at the old one's address, with its pools elsewhere (the
-    // old blocks then wrote over freed memory: crashes all over after the second map change)
     static std::vector<net::engine::Block> sBlocks;
-    static Game* sFor;
-    static int sGeneration = -1;
-    static size_t sGlobals;
-    if (sFor != gGame_0x40 || sGeneration != net::engine::GameGeneration() || sBlocks.empty() ||
-        sGlobals != net::engine::RegisteredGlobals()) // a function's static came: at the end (WorldBlocks)
+    std::vector<net::engine::Block> now = net::engine::WorldBlocks();
+    const long diff = FirstDifference(sBlocks, now);
+    if (diff >= 0)
     {
-        sBlocks = net::engine::WorldBlocks();
+        sBlocks.swap(now);
         gSet++;
-        sFor = gGame_0x40;
+        // A block that keeps changing (a scratch pointer with a pointee, for kNoPointee in world.cpp) would leave no save
+        // to restore: each retake throws the saves away
+        static int sGeneration = -1, sTakes;
+        sTakes = sGeneration == net::engine::GameGeneration() ? sTakes + 1 : 0;
         sGeneration = net::engine::GameGeneration();
-        sGlobals = net::engine::RegisteredGlobals();
+        if (sTakes == 50)
+        {
+            printf("net: CHECK the rollback set taken 50 times in this game, the last time from block %ld (%s)\n", diff,
+                   (size_t)diff < sBlocks.size() ? sBlocks[diff].name : "-");
+        }
         if (net::engine::Debug().checkGrid)
         {
             size_t bytes = 0;
@@ -57,7 +76,8 @@ const std::vector<net::engine::Block>& RollbackSet()
             {
                 bytes += b.size;
             }
-            printf("net: the rollback set taken (set %u): %zu blocks, %zu bytes\n", gSet, sBlocks.size(), bytes);
+            printf("net: the rollback set taken (set %u): %zu blocks, %zu bytes, from block %ld (%s)\n", gSet, sBlocks.size(), bytes, diff,
+                   (size_t)diff < sBlocks.size() ? sBlocks[diff].name : "-");
             // GTA2_NET_CHECKGRID: a block that runs past the start of the next into memory beyond it (one inside another,
             // a camera inside its player, is fine). A pointee bigger than what its pointer points to is restored over
             // whatever lies after it
@@ -73,26 +93,6 @@ const std::vector<net::engine::Block>& RollbackSet()
                            by[i - 1].size, by[i].name, (void*)by[i].addr, by[i].size);
                 }
             }
-        }
-    }
-    else if (net::engine::Debug().checkGrid)
-    {
-        // GTA2_NET_CHECKGRID: the set as it would be now. A pointee that moved since is copied from (and restored into)
-        // memory it no longer owns: a scratch pointer for kNoPointee (world.cpp), or one to take again
-        static int sSaid;
-        const std::vector<net::engine::Block> now = net::engine::WorldBlocks();
-        for (size_t i = 0; i < now.size() && i < sBlocks.size() && sSaid < 10; i++)
-        {
-            if (now[i].addr != sBlocks[i].addr || now[i].size != sBlocks[i].size)
-            {
-                sSaid++;
-                printf("net: CHECK the rollback block %s moved since the set was taken: %p (%zu bytes), now %p (%zu)\n", sBlocks[i].name,
-                       (void*)sBlocks[i].addr, sBlocks[i].size, (void*)now[i].addr, now[i].size);
-            }
-        }
-        if (now.size() != sBlocks.size() && sSaid++ < 10)
-        {
-            printf("net: CHECK the rollback set has %zu blocks now, %zu when taken\n", now.size(), sBlocks.size());
         }
     }
     return sBlocks;
