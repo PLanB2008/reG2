@@ -16,6 +16,12 @@
 namespace
 {
 const uint32_t kArenaPeer = ~0u; // an arena bot's slot (no transport peer has it)
+const int kHelloWaitMs = 10000;
+
+long long NowMs()
+{
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
 
 float Distance(const net::EntityState& e, float x, float y)
 {
@@ -610,6 +616,21 @@ void net::Server::PollTransport()
     {
         OnEvent(e);
     }
+    // A connection holds a slot of the host's: one that says no hello in 10 s is dropped (a client says it at once)
+    const long long now = NowMs();
+    for (auto it = mHelloWait.begin(); it != mHelloWait.end();)
+    {
+        if (now - it->second > kHelloWaitMs)
+        {
+            printf("net: dropped a connection that said no hello in %d s\n", kHelloWaitMs / 1000);
+            mTransport->Disconnect(it->first);
+            it = mHelloWait.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
 }
 
 // Between frames: a client's ping goes back at once (its round trip is then the network's alone, not our tick's
@@ -634,12 +655,21 @@ void net::Server::Idle()
 
 void net::Server::OnEvent(const TransportEvent& e)
 {
-    if (e.type == TransportEvent::kReceive)
+    if (e.type == TransportEvent::kConnect)
     {
+        mHelloWait[e.peer] = NowMs();
+    }
+    else if (e.type == TransportEvent::kReceive)
+    {
+        if (!e.data.empty() && e.data[0] == kMsgHello)
+        {
+            mHelloWait.erase(e.peer); // welcomed, or refused and disconnected
+        }
         OnReceive(e);
     }
     else if (e.type == TransportEvent::kDisconnect)
     {
+        mHelloWait.erase(e.peer);
         const int slot = SlotOfPeer(e.peer);
         if (slot >= 0)
         {
