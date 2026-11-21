@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define NET_STR2(x) #x
+#define NET_STR(x) NET_STR2(x)
+
 namespace
 {
 const char kUsage[] =
@@ -21,7 +24,7 @@ const char kUsage[] =
     "  --port N              UDP port, 27920\n"
     "  --map <mmp>           a multiplayer map in data/, downtown-6p\n"
     "  --maps <mmp>,<mmp>    a rotation: a round on each in turn, the first instead of --map\n"
-    "  --players N           1-6, 6\n"
+    "  --players N           1-" NET_STR(NET_MAX_PLAYERS) ", 6\n"
     "  --gametype 1-3        frags, points, tag\n"
     "  --fraglimit N         10 (a points game's is money: 10000)\n"
     "  --timelimit min       a round's time limit\n"

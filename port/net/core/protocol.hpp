@@ -3,12 +3,13 @@
 #pragma once
 #include <vector>
 #include "bitstream.hpp"
+#include "player_limit.hpp"
 #include <stdint.h>
 #include <string>
 
 namespace net
 {
-const uint32_t kProtocolVersion = 28;
+const uint32_t kProtocolVersion = 29;
 const uint16_t kDefaultPort = 27920;
 const size_t kMaxPayload = 1372; // the largest unreliable ENet packet at any link MTU (1428: ENet's mtu 1400)
 // The link's MTU, IP packets (--mtu, 576 to 1428): 1280 by default, the smallest of the VPNs people play LAN games over
@@ -140,7 +141,7 @@ int ReadCommands(BitReader& r, uint32_t* pAckTick, InputCmd* cmds, int max); // 
 // and, per other player, the controls the server has for the ticks after it (the next one's as it will run, then the
 // commands it holds): what a client predicts that player with before it repeats the last
 const int kMaxForwarded = 4;
-const int kMaxForwardSlots = 8;
+const int kMaxForwardSlots = kMaxPlayers;
 struct ForwardedInputs
 {
     uint8_t count[kMaxForwardSlots] = {}; // ticks known after the snapshot's, per slot

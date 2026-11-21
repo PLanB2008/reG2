@@ -269,6 +269,18 @@ void TestMessages()
           got.map == w.map && got.print.gmp == w.print.gmp && got.print.sty == 7 && got.print.scr == 9 && got.token == w.token &&
           got.game == 513);
 
+    // The most player slots, the last one this client's; one more is refused
+    for (int players : {net::kMaxPlayers, net::kMaxPlayers + 1})
+    {
+        w.players = (uint8_t)players;
+        w.slot = (uint8_t)(net::kMaxPlayers - 1);
+        net::BitWriter mw;
+        net::WriteWelcome(mw, w);
+        net::BitReader mr(mw.Data().data(), mw.ByteCount());
+        CHECK(mr.Bits(8) == net::kMsgWelcome);
+        CHECK(net::ReadWelcome(mr, got) == (players <= net::kMaxPlayers));
+    }
+
     net::Hello hello;
     hello.build = "0.1.0-dev 1a2b3c4d5e";
     hello.name = "me";
@@ -343,6 +355,22 @@ void TestMessages()
     CHECK(hb.forwarded.count[0] == 0 && hb.forwarded.count[1] == 3 && hb.forwarded.count[5] == 1);
     CHECK(hb.forwarded.controls[1][0] == 0x101 && hb.forwarded.controls[1][1] == 0x101 && hb.forwarded.controls[1][2] == 0xFFF);
     CHECK(hb.forwarded.controls[5][0] == 0x020);
+
+    // Every slot with inputs, the last one too
+    net::SnapshotHeader all = {7000, 7000, 6999}, allb;
+    for (int i = 0; i < net::kMaxForwardSlots; i++)
+    {
+        all.forwarded.count[i] = 1;
+        all.forwarded.controls[i][0] = (uint16_t)(0x100 + i);
+    }
+    net::BitWriter aw;
+    net::WriteSnapshotHeader(aw, all);
+    net::BitReader ar(aw.Data().data(), aw.ByteCount());
+    CHECK(ar.Bits(8) == net::kMsgSnapshot && net::ReadSnapshotHeader(ar, allb));
+    for (int i = 0; i < net::kMaxForwardSlots; i++)
+    {
+        CHECK(allb.forwarded.count[i] == 1 && allb.forwarded.controls[i][0] == 0x100 + i);
+    }
 }
 
 // zlib's CRC-32, in one go or in pieces

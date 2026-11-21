@@ -222,7 +222,7 @@ bool net::ReadWelcome(BitReader& r, Welcome& m)
     }
     m.token = r.Bits(32);
     m.game = (uint16_t)r.Bits(16);
-    return ok && !r.Overflow() && m.slot < m.players && m.players <= 6; // the game has 6 player slots
+    return ok && !r.Overflow() && m.slot < m.players && m.players <= kMaxPlayers;
 }
 
 void net::WriteReject(BitWriter& w, const Reject& m)
@@ -329,7 +329,7 @@ void net::WriteSnapshotHeader(BitWriter& w, const SnapshotHeader& h)
     {
         slots += h.forwarded.count[i] > 0;
     }
-    w.Bits((uint32_t)slots, 4);
+    w.Bits((uint32_t)slots, BitsFor(kMaxForwardSlots));
     for (int i = 0; i < kMaxForwardSlots; i++)
     {
         const int n = h.forwarded.count[i] > kMaxForwarded ? kMaxForwarded : h.forwarded.count[i];
@@ -337,7 +337,7 @@ void net::WriteSnapshotHeader(BitWriter& w, const SnapshotHeader& h)
         {
             continue;
         }
-        w.Bits((uint32_t)i, 3);
+        w.Bits((uint32_t)i, BitsFor(kMaxForwardSlots - 1));
         w.Bits((uint32_t)(n - 1), 2);
         for (int k = 0; k < n; k++)
         {
@@ -358,10 +358,14 @@ bool net::ReadSnapshotHeader(BitReader& r, SnapshotHeader& h)
     const uint32_t back = r.VarU();
     h.lastCmdTick = r.VarU();
     h.forwarded = ForwardedInputs();
-    const uint32_t slots = r.Bits(4);
+    const uint32_t slots = r.Bits(BitsFor(kMaxForwardSlots));
     for (uint32_t j = 0; j < slots && !r.Overflow(); j++)
     {
-        const uint32_t i = r.Bits(3);
+        const uint32_t i = r.Bits(BitsFor(kMaxForwardSlots - 1));
+        if (i >= (uint32_t)kMaxForwardSlots)
+        {
+            return false;
+        }
         const int n = (int)r.Bits(2) + 1;
         for (int k = 0; k < n; k++)
         {

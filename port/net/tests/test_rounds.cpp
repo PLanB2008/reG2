@@ -9,7 +9,7 @@ const int kTps = 30;
 
 std::vector<net::RoundPlayer> Players(int in)
 {
-    std::vector<net::RoundPlayer> p(6);
+    std::vector<net::RoundPlayer> p(net::kRoundSlots);
     for (int i = 0; i < in; i++)
     {
         p[i].in = true;
@@ -210,6 +210,32 @@ int main()
         CHECK(f.State().voteKind == net::kVoteMap);
         f.Command(tick, 0, "/yes", players, m);
         CHECK(m.changeMap == 1 && f.State().winner == 0);
+    }
+    // Every slot in: the last slot's ready and vote bits count, a kick vote of it passes with a majority
+    {
+        net::RoundFlow f;
+        f.Start(rules, maps, 0);
+        auto players = Players(net::kRoundSlots);
+        const int last = net::kRoundSlots - 1;
+        uint32_t tick = 1;
+        f.Tick(tick, players);
+        net::RoundActions a;
+        for (int i = 0; i < net::kRoundSlots; i++)
+        {
+            f.Command(tick, i, "/ready", players, a);
+        }
+        CHECK(f.State().ready >> last & 1);
+        f.Tick(++tick, players);
+        CHECK(f.State().phase == net::kPhaseCountdown);
+        f.NewGame(++tick, 0, players);
+        net::RoundActions k;
+        f.Command(tick, 0, "/kick P" + std::to_string(last), players, k);
+        CHECK(f.State().voteKind == net::kVoteKick && f.State().voteArg == last);
+        for (int i = 1; i < net::kRoundSlots / 2 + 1; i++)
+        {
+            f.Command(tick, i, "/yes", players, k);
+        }
+        CHECK(k.kick == last);
     }
     // Off (an arena): the round from the start, the frag limit starts the next at once
     {
