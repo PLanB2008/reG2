@@ -657,7 +657,7 @@ void DrawLayer(s32 layer)
 {
     static bool sEmberTexture;
     static bool sSmoke;
-    if (!PortSettings::FireEffects() || !gGame_0x40 || gGame_0x40->mNumPlayers != 1 || layer < 1 || layer > 7)
+    if (!PortSettings::FireEffects() || !gGame_0x40 || !gGame_0x40->mDrawPlayer || layer < 1 || layer > 7)
     {
         Clear();
 #if defined(GTA2_PORT_SDL)

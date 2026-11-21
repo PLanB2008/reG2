@@ -220,7 +220,7 @@ void Draw()
 #if defined(GTA2_PORT_SDL)
     static f64 sLastSeconds;
     sOn = false;
-    if (!PortSettings::FireEffects() || !gGame_0x40 || gGame_0x40->mNumPlayers != 1)
+    if (!PortSettings::FireEffects() || !gGame_0x40 || !gGame_0x40->mDrawPlayer)
     {
         sNumHeat = 0;
         return;
