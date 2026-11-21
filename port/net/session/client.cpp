@@ -436,21 +436,34 @@ void net::Client::Reconcile(const Snapshot& snap)
     std::vector<engine::Pose> before; // what this frame would have shown, to blend the correction in
     engine::Poses(before);
     const engine::LocalChat chat = engine::TakeLocalChat();
+    using Clock = std::chrono::steady_clock;
+    const auto us = [](Clock::time_point a, Clock::time_point b) {
+        return (double)std::chrono::duration_cast<std::chrono::microseconds>(b - a).count();
+    };
+    const Clock::time_point start = Clock::now();
     engine::RestoreGame(*saved);
     mProbe.AfterRestore(snap);
     engine::Apply(snap);
     engine::ApplyScores(snap); // the resimulated ticks and their saves carry the server's scores
     mProbe.AfterApply(snap, mTick);
+    Clock::time_point mark = Clock::now();
+    mStats.restoreUs += us(start, mark);
     std::vector<uint32_t> buttons(mRemote);
     for (uint32_t t = s + 1; t <= mTick; t++)
     {
         buttons[mSlot] = mHist[t % kRing].tick == t ? mHist[t % kRing].buttons : 0;
         engine::ResimTick(buttons.data(), (int)buttons.size());
         mProbe.AfterResim();
+        const Clock::time_point ticked = Clock::now();
+        mStats.resimUs += us(mark, ticked);
         engine::SaveGame(*mSaves[t % kSaves], t);
+        mark = Clock::now();
+        mStats.saveUs += us(ticked, mark);
         mStats.resimTicks++;
         mLink.resimTicks++;
     }
+    const double total = us(start, mark);
+    mStats.reconcileWorstUs = total > mStats.reconcileWorstUs ? total : mStats.reconcileWorstUs;
     engine::PutLocalChat(chat);
     mStats.rollbacks++;
     mLink.rollbacks++;
@@ -899,6 +912,13 @@ void net::Client::PrintStats(const Snapshot& snap)
            st.maxError, st.shownErrorCount ? (float)(st.shownErrorSum / st.shownErrorCount) : 0.0f, st.shownErrorMax);
     printf("net: frame %u, players shown off the server's: the others %.3f blocks on average (up to %.2f), ourselves %.3f (up to %.2f)\n",
            mFrame, st.others.Mean(), st.others.max, st.self.Mean(), st.self.max);
+    if (st.rollbacks)
+    {
+        printf("net: frame %u, a rollback takes %.2f ms on average (worst %.2f): restore and apply %.2f, %.1f ticks resimulated %.2f, "
+               "their saves %.2f\n",
+               mFrame, (st.restoreUs + st.resimUs + st.saveUs) / st.rollbacks / 1000, st.reconcileWorstUs / 1000, st.restoreUs / st.rollbacks / 1000,
+               (float)st.resimTicks / st.rollbacks, st.resimUs / st.rollbacks / 1000, st.saveUs / st.rollbacks / 1000);
+    }
     std::string local;
     for (size_t i = 0; i < mLocalDeaths.size(); i++)
     {

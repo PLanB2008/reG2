@@ -99,6 +99,7 @@ class Client
         uint32_t shownErrorCount = 0;
         float shownErrorMax = 0;
         ShownError others, self; // the display error of the other players, and of the local player
+        double restoreUs = 0, resimUs = 0, saveUs = 0, reconcileWorstUs = 0; // the rollbacks' time
         uint32_t carFrames = 0, carMismatch = 0; // frames x players, and those where in-car differs from the snapshot
     };
     void Step(); // the frame's work: what arrived, the input, the snapshot, the commands
