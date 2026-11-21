@@ -521,9 +521,11 @@ void RemoveUnsent(const Pass& a, const Snapshot& snap)
         }
         it = gPeds.erase(it);
     }
+    // This game's own cars and peds the server doesn't have here, inside the area only: beyond it the snapshot says
+    // nothing, and one there (a map script's parked car) is adopted when the server's comes in reach (MapCar)
     for (Car* c : a.liveCars)
     {
-        if (!a.owned.count(c) && !a.mapped.count(c) && !c->IsDespawning())
+        if (!a.owned.count(c) && !a.mapped.count(c) && !c->IsDespawning() && !area.Beyond(c->mCarSprite))
         {
             RemoveCar(a, c);
         }
@@ -533,7 +535,7 @@ void RemoveUnsent(const Pass& a, const Snapshot& snap)
         // Drivers are sent too; passengers (not yet) stay with their car
         const bool passenger = p->mCar && p->mCar->mDriver != p;
         if (!a.owned.count(p) && !a.mapped.count(p) && !passenger && !IsSpareDriver(p) && (p->mGameObject || p->mCar) &&
-            p->IsActive())
+            p->IsActive() && !area.Beyond(PedSprite(p)))
         {
             p->Deallocate();
         }
