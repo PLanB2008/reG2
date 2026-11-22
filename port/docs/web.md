@@ -29,7 +29,9 @@ python3 -m http.server -d /tmp/web/site 8000                   # then http://loc
 
 Any static server works; the page needs no special headers (no `SharedArrayBuffer`). `localhost` counts as a
 secure context, so the service worker and storage work there as on the published site. `?stats` in the page's
-address logs the frame loop's rates and the game code's time per frame every 5 seconds.
+address shows, at the bottom left of the game: frames per second, the game code's and the GPU's time per frame
+(`EXT_disjoint_timer_query_webgl2` where the browser has it), late frames, the display's rate, the canvas size and
+the WebGL renderer. `?msaa=N` caps the anti-aliasing, to compare.
 
 ## Publishing (GitHub Pages)
 
@@ -68,7 +70,9 @@ Options considered:
 - **Asyncify limited to `main`, `WinMain`, `GameWinMain` and `port_WebYield`** (`asyncify_only.json`, with
   `ASYNCIFY_IGNORE_INDIRECT`): the cost is near zero, since only those functions are instrumented. The catch: no
   other code may yield, so SDL's own Asyncify yields are turned off (`SDL_HINT_EMSCRIPTEN_ASYNCIFY`) and a level
-  load blocks the page for its second or two, as it blocked the window on the desktop. Binaryen inlines
+  load blocks the page for its second or two, as it blocked the window on the desktop. Emscripten's `fsync`
+is replaced by a no-op for the same reason (it is asynchronous under Asyncify; the memory file system has nothing
+to wait for). Binaryen inlines
   `WinMain` and `port_WebYield` before Asyncify runs, which prints harmless "non-existing function" warnings.
 
 No pthreads, so no `SharedArrayBuffer` and no cross-origin isolation (which GitHub Pages cannot provide without a
@@ -170,7 +174,9 @@ settings, the game's overlays and touch controls).
 | Two tabs | Web Locks: the second tab offers to take over; the first one stops its game |
 | Tab hidden, phone call, notification | The pause menu opens, sound is suspended, files are stored, the wake lock is released |
 | Leaving during a game | The browser asks to confirm (only in a game, not in the menus) |
-| QUIT or SAVE AND QUIT | The game hands over to the page (`port_WebQuit`), which stores the files and shows itself again |
+| Page resized, full screen entered or left | The game switches to the canvas' new size 200 ms after it settles, as the DISPLAY setting does |
+| QUIT GAME, SAVE AND QUIT, game over | Back to the game's menus, as on the desktop |
+| The start menu's QUIT | The game hands over to the page (`port_WebQuit`), which stores the files and shows itself again |
 | Crash or abort | A message with Reload and Copy details (version, browser, memory, the last 60 log lines); only for a trap in the game's code, an abort or an error in `reg2.js` |
 | A browser refusing a request (pointer lock just after Escape, full screen, wake lock, orientation, audio) | Logged, never fatal; pointer lock is asked again at the next click |
 | WebGL context lost | Files are stored, a message offers a reload; the game's textures are not rebuilt in place |
