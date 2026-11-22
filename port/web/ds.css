@@ -67,6 +67,9 @@ h1, h2, h3 { font-weight: 400; margin: 0 0 var(--space-4); line-height: 1.25; }
 
 .muted { color: var(--muted); }
 .small { font-size: var(--step--1); color: var(--muted); }
+.foot { border-top: 1px solid var(--line); font-size: var(--step--1); color: var(--muted); }
+.foot p { max-width: 48rem; }
+.foot a:hover { color: var(--text); }
 
 /* A game-style menu: a vertical list of items, the selected one (.sel) in red and underlined.
    The pointer moves the selection, as the cursor does in the game. */

@@ -24,6 +24,12 @@ mkdir -p "$OUT/$BUILD"
 mv "$T/"* "$OUT/$BUILD/"
 rmdir "$T"
 sed -i "s|@BUILD@|$BUILD|" "$OUT/app.js"
+# The landing page's legal line is the site's only copy of it: the game page's footer takes it from there.
+LEGAL=$(grep -m1 '<p class="legal">' "$HERE/home/index.html" | sed 's/^ *//')
+[ -n "$LEGAL" ] || { echo "build.sh: no <p class=\"legal\"> in home/index.html" >&2; exit 1; }
+awk -v legal="$LEGAL" 'index($0, "<!--@LEGAL@-->") { gsub(/&/, "\\\\&", legal); sub(/<!--@LEGAL@-->/, legal) } { print }' \
+    "$OUT/index.html" > "$OUT/index.html.new"
+mv "$OUT/index.html.new" "$OUT/index.html"
 cp "$ROOT/docs/images/reg2_logo_black.svg" "$OUT/logo-dark.svg"
 # The site's design system, beside the page's fonts so that the service worker keeps it for offline starts.
 cp "$HERE/ds.css" "$OUT/"
