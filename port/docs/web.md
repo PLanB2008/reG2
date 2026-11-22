@@ -172,11 +172,15 @@ every port build the hooked function is an empty stub (`port/src/debug_stubs.cpp
 
 Hidden on the web (`port/src/settings.cpp`, one `#if defined(__EMSCRIPTEN__)` per list): FULL SCREEN (the page
 owns it), DISPLAY MODE, VSYNC, 3D SOUND (no OpenAL). CHECK FOR UPDATES is not built (`GTA2_UPDATE_CHECK` off).
-The page's own settings (volume, picture, touch controls, fewer flashes) are in `localStorage`. The picture
-setting sets the canvas' pixel ratio: the page overrides `devicePixelRatio`, which SDL reads for a
-`SDL_WINDOW_HIGH_PIXEL_DENSITY` window. Automatic keeps the canvas under 2.4 million pixels on a computer and 1.3
-million on a phone. Phones also get at most 2x anti-aliasing (`GTA2_MSAA_CAP`); "fewer flashes" turns bloom off
-(`GTA2_CALM`).
+The page keeps only what the game's OPTIONS can't have, in `localStorage`: the picture, and on a touch screen the
+touch controls' mode, size and opacity. The picture setting sets the canvas' pixel ratio: the page overrides
+`devicePixelRatio`, which SDL reads for a `SDL_WINDOW_HIGH_PIXEL_DENSITY` window. Automatic keeps the canvas under
+2.4 million pixels on a computer and 1.3 million on a phone. Phones also get at most 2x anti-aliasing
+(`GTA2_MSAA_CAP`). Saves and data (export, import, delete) sit in one closed disclosure. Once the game is imported,
+the page shows Play and little else: the introduction is for the first visit.
+
+The footer's legal line is written once, in the landing page (`<p class="legal">` in `home/index.html`), and
+`build.sh` puts it in the game page's footer (`<!--@LEGAL@-->`); `.foot` is in `ds.css`. It stays in English.
 
 ### Sharing the landing page's design
 
@@ -206,14 +210,13 @@ settings, the game's overlays and touch controls).
 | Portrait phone | A "turn your device" overlay; the game pauses behind it; `screen.orientation.lock` is tried in full screen |
 | iPhone (no full screen API) | A hint to Add to Home Screen; the manifest asks for full screen and landscape |
 | Autoplay policy | Sound starts after the Play click; SDL resumes the audio context on input |
-| Volume before the game starts | The page's volume slider, a gain node after SDL's audio |
 | Pinch zoom, double tap, pull to refresh, selection, long press | `touch-action: none`, `overscroll-behavior: none`, no selection or callout on the game |
 | Browser shortcuts | F1 to F10, Backspace and Tab go to the game; in full screen, Escape goes to the game (Keyboard Lock) |
 | Safe areas (notch, home bar) | `viewport-fit=cover` and `env(safe-area-inset-*)` for the page and the touch controls; the game's SAFE AREA setting for its HUD |
 | High-DPI and very large screens | The picture setting's pixel budget |
 | Very small screens | The page is one column; the game's view widens or narrows with the canvas |
 | Reduced motion | No transitions on the page |
-| Photosensitivity | "Fewer flashes" turns bloom off |
+| Photosensitivity | The game's BLOOM setting (GRAPHICS) |
 | Offline | The service worker serves the build; the game data is in IndexedDB |
 | New build | The usual service worker shape (`site/sw.js`): the page and its small scripts from the network first (3 s at most, else the cache), the game in a `build-<hash>/` folder from the cache first, a new worker taking over at once (skipWaiting, clients.claim). A new tab gets the new build; a tab already playing keeps the game it loaded in memory; a tab opened before the new build reloads once when it finds its build folder gone; offline, the cached build starts |
 

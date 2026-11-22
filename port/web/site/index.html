@@ -23,10 +23,17 @@
 
 <div id="page">
   <header class="top">
-    <img class="logo" src="logo-dark.svg" alt="reG2" width="72" height="72">
+    <a class="logo" href="../"><img src="logo-dark.svg" alt="reG2" width="72" height="72"></a>
+    <nav aria-label="Main">
+      <ul class="caps">
+        <li><a href="../" data-i18n="home">Home</a></li>
+        <li><a href="https://github.com/reG2-project/reG2" data-i18n="source">Source</a></li>
+      </ul>
+    </nav>
   </header>
 
   <main id="main">
+    <div id="intro">
     <section class="hero" aria-labelledby="title">
       <h1 id="title" class="nocase" data-i18n="title">reG2</h1>
       <p class="lede" data-i18n="lede">Play GTA2 in your browser with your own copy of the game.</p>
@@ -36,10 +43,11 @@
       <h2 id="how-title" data-i18n="howTitle">How it works</h2>
       <ol class="steps">
         <li data-i18n="how1">Give this page your copy of GTA2: the game folder, the free 2004 installer, the CD or a zip of it.</li>
-        <li data-i18n="how2">The page unpacks it right here, in your browser. Nothing is uploaded: the game files stay in this site's storage on this device.</li>
+        <li data-i18n="how2">The page unpacks it right here, in your browser, and keeps it in this site's storage on this device.</li>
         <li data-i18n="how3">Press Play. Next time the game is already here, even offline.</li>
       </ol>
     </section>
+    </div>
 
     <div id="support" class="panel warn" hidden role="alert">
       <h2 data-i18n="supportTitle">This browser can't run reG2</h2>
@@ -70,7 +78,7 @@
         <p data-i18n="noGameText">Rockstar gave GTA2 away for free in 2004. The Internet Archive keeps that release: download GTA2INSTALLER.exe (about 350 MB) from the page below, then choose it here. You don't need to run it.</p>
         <p><a href="https://archive.org/details/gta2_rockstar-classics" rel="noopener" target="_blank">archive.org/details/gta2_rockstar-classics</a></p>
       </details>
-      <p class="small legal-line" data-i18n="importLegal">reG2 contains no game data. The files you give it are read on this device and stay in this browser.</p>
+      <p class="small upload-line" data-i18n="importLocal">Nothing is uploaded: the files stay in your browser.</p>
 
       <div id="report" hidden>
         <h3 data-i18n="reportTitle">Found in this copy</h3>
@@ -97,48 +105,52 @@
       <p id="ios-tip" class="small" hidden data-i18n="iosTip">On iPhone and iPad, use Share, Add to Home Screen: the game then runs full screen and Safari keeps its files.</p>
 
       <div class="settings">
-        <h3 data-i18n="settingsTitle">Before you start</h3>
-        <label class="field"><span data-i18n="volume">Volume</span>
-          <input type="range" id="volume" min="0" max="100" step="5"></label>
+        <p class="small" data-i18n="inGame">Sound, controls and graphics are in the game's OPTIONS.</p>
         <label class="field"><span data-i18n="quality">Picture</span>
-          <select id="quality">
+          <select id="quality" aria-describedby="quality-help">
             <option value="auto" data-i18n="qualityAuto">Automatic</option>
             <option value="sharp" data-i18n="qualitySharp">Sharp (screen's full resolution)</option>
             <option value="fast" data-i18n="qualityFast">Fast (lower resolution)</option>
           </select></label>
-        <label class="field"><span data-i18n="touch">Touch controls</span>
-          <select id="touch-mode">
-            <option value="auto" data-i18n="touchAuto">On a touch screen</option>
-            <option value="on" data-i18n="touchOn">Always</option>
-            <option value="off" data-i18n="touchOff">Never</option>
-          </select></label>
-        <label class="field"><span data-i18n="touchSize">Control size</span>
-          <input type="range" id="touch-size" min="70" max="140" step="10"></label>
-        <label class="field"><span data-i18n="touchOpacity">Control opacity</span>
-          <input type="range" id="touch-opacity" min="20" max="100" step="10"></label>
-        <label class="check"><input type="checkbox" id="calm"> <span data-i18n="calm">Fewer flashes (no bloom)</span></label>
+        <p id="quality-help" class="small help" data-i18n="qualityHelp">The resolution the game draws at. Fast runs smoother on a slow device.</p>
+        <div id="touch-settings" hidden>
+          <label class="field"><span data-i18n="touch">Touch controls</span>
+            <select id="touch-mode" aria-describedby="touch-help">
+              <option value="auto" data-i18n="touchAuto">On a touch screen</option>
+              <option value="on" data-i18n="touchOn">Always</option>
+              <option value="off" data-i18n="touchOff">Never</option>
+            </select></label>
+          <p id="touch-help" class="small help" data-i18n="touchHelp">A stick and buttons on the screen. By default they show once you touch the game.</p>
+          <label class="field"><span data-i18n="touchSize">Control size</span>
+            <input type="range" id="touch-size" min="70" max="140" step="10" aria-describedby="size-help"></label>
+          <p id="size-help" class="small help" data-i18n="touchSizeHelp">How big the stick and buttons are.</p>
+          <label class="field"><span data-i18n="touchOpacity">Control opacity</span>
+            <input type="range" id="touch-opacity" min="20" max="100" step="10" aria-describedby="opacity-help"></label>
+          <p id="opacity-help" class="small help" data-i18n="touchOpacityHelp">How much of the game shows through them.</p>
+        </div>
       </div>
 
       <details class="data">
-        <summary data-i18n="dataTitle">Saves and storage</summary>
+        <summary data-i18n="dataTitle">Saves and data</summary>
         <p id="storage-info" class="small"></p>
         <div class="row">
           <button type="button" class="btn" id="export-saves" data-i18n="exportSaves">Export saves</button>
           <button type="button" class="btn" id="import-saves" data-i18n="importSaves">Import saves</button>
           <input type="file" id="saves-input" accept=".zip,.svg,.ini,.dat" multiple hidden>
         </div>
+        <p class="small help" data-i18n="savesHelp">A zip of your saves and settings, to keep or to move to another browser.</p>
         <div class="row">
           <button type="button" class="btn" id="reimport" data-i18n="reimport">Import again or add the music</button>
           <button type="button" class="btn danger" id="delete-all" data-i18n="deleteAll">Delete everything</button>
         </div>
+        <p class="small help" data-i18n="deleteHelp">Delete everything removes the game files and your saves from this browser.</p>
         <p id="data-message" class="small" role="status"></p>
       </details>
     </section>
   </main>
 
   <footer class="foot">
-    <p data-i18n="credit">The game code is the work of the <a href="https://github.com/CriminalRETeam/gta2_re">gta2_re</a> decompilation; reG2 adds the ports. Source on <a href="https://github.com/reG2-project/reG2">GitHub</a>.</p>
-    <p data-i18n="disclaimer">Grand Theft Auto and GTA2 are trademarks of Take-Two Interactive. reG2 is not affiliated with or endorsed by Rockstar Games or Take-Two. It contains no game data: you use your own copy, which stays in your browser.</p>
+    <!--@LEGAL@-->
     <p><a href="licenses.txt" data-i18n="licenses">Licences</a></p>
   </footer>
 </div>

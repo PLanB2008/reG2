@@ -12,7 +12,7 @@ const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platfor
 const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 
 // The page's own settings, per browser.
-const prefs = Object.assign({ volume: 80, quality: 'auto', touchMode: 'auto', touchSize: 100, touchOpacity: 60, calm: false },
+const prefs = Object.assign({ quality: 'auto', touchMode: 'auto', touchSize: 100, touchOpacity: 60 },
   readJson('reg2-prefs'));
 
 function readJson(key) {
@@ -368,8 +368,8 @@ $('do-import').onclick = async () => {
 async function showReady(install) {
   show('import', false);
   show('ready');
-  // A returning player lands on Play; the introduction follows it.
-  $('main').prepend($('ready'));
+  // A returning player gets Play and little else: the introduction is the landing page's and the first import's.
+  show('intro', false);
   const check = install.check;
   const parts = [];
   if (check) {
@@ -379,17 +379,16 @@ async function showReady(install) {
   }
   $('ready-summary').textContent = parts.join(' · ');
   show('ios-tip', isIOS && !standalone);
-  $('volume').value = prefs.volume;
   $('quality').value = prefs.quality;
+  show('touch-settings', isTouchDevice || prefs.touchMode === 'on');
   $('touch-mode').value = prefs.touchMode;
   $('touch-size').value = prefs.touchSize;
   $('touch-opacity').value = prefs.touchOpacity;
-  $('calm').checked = prefs.calm;
   updateStorageInfo();
   $('play').focus({ preventScroll: true });
 }
 
-for (const [id, key, parse] of [['volume', 'volume', Number], ['quality', 'quality', String], ['touch-mode', 'touchMode', String],
+for (const [id, key, parse] of [['quality', 'quality', String], ['touch-mode', 'touchMode', String],
   ['touch-size', 'touchSize', Number], ['touch-opacity', 'touchOpacity', Number]]) {
   $(id).addEventListener('input', () => {
     prefs[key] = parse($(id).value);
@@ -397,10 +396,6 @@ for (const [id, key, parse] of [['volume', 'volume', Number], ['quality', 'quali
     game.applyPrefs();
   });
 }
-$('calm').addEventListener('change', () => {
-  prefs.calm = $('calm').checked;
-  savePrefs();
-});
 
 async function updateStorageInfo() {
   const estimate = await store.estimate();
@@ -420,6 +415,7 @@ $('delete-all').onclick = async () => {
     localStorage.removeItem('reg2-prefs');
   } catch {}
   $('data-message').textContent = t('deleted');
+  show('intro');
   showImport('');
 };
 
@@ -496,7 +492,6 @@ const game = {
   log: [],
   persistTimer: 0,
   dirty: new Set(),
-  gain: null,
   wakeLock: null,
   exiting: false,
 
@@ -574,7 +569,6 @@ const game = {
 
   async run(wasmBinary, files) {
     const self = this;
-    const calm = prefs.calm;
     const Module = {
       canvas: $('canvas'),
       wasmBinary,
@@ -588,9 +582,8 @@ const game = {
         // The tracks as empty files: the game finds its music, and compat/src/miles.cpp asks for a track
         // (port_WebLoadFile) when it opens one that is empty.
         for (const path of self.music) self.writeToFS(M.FS, path, new Uint8Array(0));
-        // Phones: at most 2x anti-aliasing. Fewer flashes: no bloom (compat/src/video_port.cpp).
+        // Phones: at most 2x anti-aliasing (compat/src/video_port.cpp).
         if (isTouchDevice) M.ENV.GTA2_MSAA_CAP = '2';
-        if (calm) M.ENV.GTA2_CALM = '1';
         // Toggles for this session, to compare frame rates: ?msaa=N caps the anti-aliasing, ?bloom=0 turns bloom off,
         // ?nofx=1 every ENHANCED rendering pass (lighting, shadows, occlusion, fire, bloom, anti-aliasing).
         const params = new URLSearchParams(location.search);
@@ -738,7 +731,6 @@ const game = {
     $('crash-copy').onclick = () => this.copyDiagnostic();
     this.touch = new TouchControls($('touch'), M, () => this.state(), prefs);
     this.applyPrefs();
-    this.hookAudio();
     this.checkOrientation();
   },
 
@@ -866,7 +858,7 @@ const game = {
         }
       }).observe({ type: 'longtask', buffered: false });
     } catch {}
-    // The sound's callback, timed once SDL has made it (hookAudio puts the gain node in the same way).
+    // The sound's callback, timed once SDL has made it.
     const wrapAudio = () => {
       const sdl = M.SDL3;
       const node = sdl?.audio_playback?.scriptProcessorNode;
@@ -949,24 +941,7 @@ const game = {
 
   applyPrefs() {
     this.touch?.setPrefs(prefs);
-    if (this.gain) this.gain.gain.value = prefs.volume / 100;
     dispatchEvent(new Event('resize'));
-  },
-
-  // SDL plays through a ScriptProcessorNode straight to the speakers: a gain node in between gives the page's
-  // volume, which works before the game's own sound options can be reached.
-  hookAudio() {
-    const tryHook = () => {
-      const sdl = this.module?.SDL3;
-      const node = sdl?.audio_playback?.scriptProcessorNode;
-      if (!node) return setTimeout(tryHook, 500);
-      const ctx = sdl.audioContext;
-      this.gain = ctx.createGain();
-      this.gain.gain.value = prefs.volume / 100;
-      node.disconnect();
-      node.connect(this.gain).connect(ctx.destination);
-    };
-    tryHook();
   },
 
   audioContext() {
