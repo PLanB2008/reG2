@@ -143,6 +143,7 @@ class GLRenderer : public IRenderer
     GLuint mPresentProgram;
     GLint mUniGamma;
     GLint mUniFlipY;
+    GLint mUniShadowMask;
     GLuint mDownProgram;
     GLint mUniDownTexel;
     GLuint mBlurProgram;
