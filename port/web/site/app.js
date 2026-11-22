@@ -44,10 +44,26 @@ applyTranslations();
 registerServiceWorker();
 start();
 
+// A new build waits in its service worker until the page is idle (not in a game or an import), then takes over.
 function registerServiceWorker() {
-  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-    navigator.serviceWorker.register('sw.js').catch((e) => console.warn('service worker:', e));
-  }
+  if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
+  const idle = () => !game.module && !importing;
+  const offer = (reg) => {
+    if (reg.waiting && navigator.serviceWorker.controller && idle()) reg.waiting.postMessage('update');
+  };
+  navigator.serviceWorker.register('sw.js').then((reg) => {
+    offer(reg);
+    reg.addEventListener('updatefound', () => {
+      reg.installing?.addEventListener('statechange', () => offer(reg));
+    });
+  }).catch((e) => console.warn('service worker:', e));
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!reloading && idle()) {
+      reloading = true;
+      location.reload();
+    }
+  });
 }
 
 function missingFeatures() {
@@ -345,6 +361,8 @@ $('do-import').onclick = async () => {
 async function showReady(install) {
   show('import', false);
   show('ready');
+  // A returning player lands on Play; the introduction follows it.
+  $('main').prepend($('ready'));
   const check = install.check;
   const parts = [];
   if (check) {
@@ -555,7 +573,11 @@ const game = {
         M.FS.mkdirTree(GAME_DIR + '/test');
         for (const [path, bytes] of files) self.writeToFS(M.FS, path, bytes);
         files.length = 0;
-        self.seedSettings(M.FS, calm);
+        // Phones: at most 2x anti-aliasing. Fewer flashes: no bloom (compat/src/video_port.cpp).
+        if (isTouchDevice) M.ENV.GTA2_MSAA_CAP = '2';
+        if (calm) M.ENV.GTA2_CALM = '1';
+        // ?stats: the frame loop's rates in the console, every 5 seconds.
+        if (new URLSearchParams(location.search).has('stats')) M.ENV.GTA2_LOOP_STATS = '1';
       }],
       onAbort: (what) => self.crash(t('crashTitle'), t('crashText'), what),
       onExit: (code) => self.exited(code),
@@ -568,30 +590,6 @@ const game = {
     $('canvas').focus();
     M.callMain([]);
     this.loadMusic();
-  },
-
-  // First start in this browser: the renderer's settings for the device, before the game reads them.
-  seedSettings(FS, calm) {
-    const path = GAME_DIR + '/gta2_registry.ini';
-    let text = FS.analyzePath(path).exists ? FS.readFile(path, { encoding: 'utf8' }) : '';
-    const set = (key, value) => {
-      if (new RegExp('^' + key + ' =', 'm').test(text)) {
-        if (!calm) return;
-        text = text.replace(new RegExp('^' + key + ' = .*$', 'm'), key + ' = ' + value);
-        return;
-      }
-      const header = '[HKLM\\SOFTWARE\\DMA Design Ltd\\GTA2\\Screen]';
-      if (!text.includes(header)) text += (text ? '\n' : '') + header + '\n';
-      text = text.replace(header + '\n', header + '\n' + key + ' = ' + value + '\n');
-    };
-    const dword = (n) => 'dword:' + (n >>> 0).toString(16).padStart(8, '0');
-    if (!text.includes('gl_msaa')) set('gl_msaa', dword(isTouchDevice ? 0 : 2));
-    if (!text.includes('port_max_fps')) set('port_max_fps', dword(60));
-    if (calm) {
-      set('gl_bloom', dword(0));
-      set('gl_heat_haze', dword(0));
-    }
-    FS.writeFile(path, text);
   },
 
   async loadMusic() {
@@ -833,6 +831,9 @@ const game = {
     }
   },
 };
+
+// For tests and the console.
+window.reg2 = game;
 
 addEventListener('error', (e) => {
   if (game.module) game.crash(t('crashTitle'), t('crashText'), e.error || e.message);

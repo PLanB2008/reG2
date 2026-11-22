@@ -70,6 +70,17 @@ void port_SetRenderOptions(bool trueColour, int bloomTenths, bool perPixelLighti
     sGameOptions.mPerPixelLighting = perPixelLighting;
     sGameOptions.mTextureFilter = textureFilter;
     sGameOptions.mMsaa = msaa;
+#if defined(__EMSCRIPTEN__)
+    // The page's limits for the device and the player (web/site/app.js): anti-aliasing on phones, bloom's flashes.
+    if (const char* pCap = getenv("GTA2_MSAA_CAP"))
+    {
+        sGameOptions.mMsaa = SDL_min(msaa, atoi(pCap));
+    }
+    if (getenv("GTA2_CALM"))
+    {
+        sGameOptions.mBloom = 0.0f;
+    }
+#endif
     sGameOptions.mSoftShadows = softShadows;
     sHasGameOptions = true;
     if (sVidSystem)

@@ -1,7 +1,7 @@
 {
   "name": "reG2",
   "short_name": "reG2",
-  "description": "GTA2, rebuilt from its decompiled source, with your own copy of the game.",
+  "description": "Play GTA2 in your browser with your own copy of the game.",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",
