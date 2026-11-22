@@ -379,6 +379,21 @@ void port_UpdateGameResolution()
 {
     int w;
     int h;
+#if defined(__EMSCRIPTEN__)
+    // The page's canvas is the screen, full screen or not; the browser's screen size says nothing about it.
+    int canvasW = 0;
+    int canvasH = 0;
+    SDL_Window* pWindow = port_MainSDLWindow();
+    if (pWindow && SDL_GetWindowSizeInPixels(pWindow, &canvasW, &canvasH) && canvasW > 0 && canvasH > 0)
+    {
+        GameSize(canvasW, canvasH, &w, &h);
+        ScreenSet("full_width", w);
+        ScreenSet("full_height", h);
+        ScreenSet("window_width", w);
+        ScreenSet("window_height", h);
+        return;
+    }
+#endif
     const SDL_DisplayMode* pMode = port_FullscreenMode();
     if (!pMode)
     {

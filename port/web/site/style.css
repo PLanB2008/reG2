@@ -171,9 +171,9 @@ body.playing { overflow: hidden; overscroll-behavior: none; }
 .crash-box .btn { color: #ecebe6; border-color: #ecebe6; }
 #rotate p::before { content: "\21BB"; display: block; font-size: 3rem; color: var(--amber); }
 
-#game-bar { position: absolute; top: max(0.5rem, env(safe-area-inset-top)); right: max(0.5rem, env(safe-area-inset-right)); z-index: 3; }
+#game-bar { position: absolute; top: max(0.5rem, env(safe-area-inset-top)); right: calc(50% + 6px); z-index: 3; }
 #fs-button {
-  width: 40px; height: 40px; border: 2px solid rgba(255,255,255,0.5); background: rgba(0,0,0,0.35); cursor: pointer;
+  width: 48px; height: 48px; border: 2px solid rgba(255,255,255,0.5); background: rgba(0,0,0,0.35); cursor: pointer;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5'%3E%3Cpath d='M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'/%3E%3C/svg%3E");
   background-size: 24px; background-repeat: no-repeat; background-position: center; opacity: 0.6;
 }

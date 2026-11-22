@@ -7,8 +7,9 @@ import './vendor/nipplejs.js';
 // SDL_GamepadButton bits and SDL_GamepadAxis indices.
 const A = 1 << 0, B = 1 << 1, Y = 1 << 3, START = 1 << 6, LB = 1 << 9, RB = 1 << 10;
 const LT = 4, RT = 5;
+const MIN_PRESS_MS = 90;
 
-// Places are from the screen's right and bottom edges, in CSS pixels at size 100%; mode: shown on foot, in a
+// Places are from the screen's edges (or its centre), in CSS pixels at size 100%; mode: shown on foot, in a
 // car, in either (game), or in the menus.
 const BUTTONS = [
   { label: 'attack', bit: A, mode: 'foot', right: 28, bottom: 40, size: 1.35 },
@@ -21,7 +22,7 @@ const BUTTONS = [
   { label: 'fire', bit: A, mode: 'car', right: 200, bottom: 34, small: true },
   { label: '◀', bit: LB, mode: 'foot', right: 196, bottom: 150, small: true, raw: true },
   { label: '▶', bit: RB, mode: 'foot', right: 136, bottom: 196, small: true, raw: true },
-  { label: 'pause', bit: START, mode: 'game', right: 64, top: 8, small: true, wide: true },
+  { label: 'pause', bit: START, mode: 'game', centre: true, top: 8, small: true, wide: true },
   { label: 'back', bit: B, mode: 'menu', left: 12, top: 8, small: true, wide: true },
 ];
 
@@ -70,12 +71,23 @@ export class TouchControls {
       for (const side of ['right', 'bottom', 'left', 'top']) {
         if (def[side] !== undefined) el.style[side] = `calc(${def[side]}px * var(--touch-scale, 1) + env(safe-area-inset-${side}))`;
       }
+      // Clear of the HUD, which fills the top corners.
+      if (def.centre) el.style.left = 'calc(50% + 6px)';
       if (def.size) {
         el.style.width = el.style.height = `calc(64px * ${def.size} * var(--touch-scale, 1))`;
       }
       const pointers = new Set();
+      let pressedAt = 0;
+      let releaseTimer = 0;
       const update = () => {
         const down = pointers.size > 0;
+        // A tap shorter than a few frames would come and go between two of the game's reads of the pad.
+        clearTimeout(releaseTimer);
+        if (down) pressedAt = performance.now();
+        else if (performance.now() - pressedAt < MIN_PRESS_MS) {
+          releaseTimer = setTimeout(update, MIN_PRESS_MS - (performance.now() - pressedAt));
+          return;
+        }
         el.classList.toggle('down', down);
         if (def.axis !== undefined) this.axes[def.axis] = down ? 32767 : 0;
         else this.buttons = down ? this.buttons | def.bit : this.buttons & ~def.bit;
@@ -97,13 +109,19 @@ export class TouchControls {
     }
 
     // Shown while touch is the input in use (or always, or never, as set on the page).
-    addEventListener('touchstart', () => this.setUsed(true), { capture: true, passive: true });
+    // Browsers follow a touch with emulated mouse events: those are not a mouse in use.
+    let lastTouch = 0;
+    addEventListener('touchstart', () => {
+      lastTouch = performance.now();
+      this.setUsed(true);
+    }, { capture: true, passive: true });
+    addEventListener('touchend', () => (lastTouch = performance.now()), { capture: true, passive: true });
     addEventListener('keydown', (e) => {
       if (!e.isTrusted) return;
       this.setUsed(false);
     }, true);
     addEventListener('pointermove', (e) => {
-      if (e.pointerType === 'mouse' && (e.movementX || e.movementY)) this.setUsed(false);
+      if (e.pointerType === 'mouse' && (e.movementX || e.movementY) && performance.now() - lastTouch > 1000) this.setUsed(false);
     }, true);
     addEventListener('gamepadconnected', () => this.setUsed(false));
     this.usedTouch = matchMedia('(pointer: coarse)').matches;
