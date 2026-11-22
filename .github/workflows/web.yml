@@ -1,0 +1,64 @@
+name: Web
+
+# The web build (port/web): the game compiled to WebAssembly and the page around it, published on GitHub Pages
+# from main; port/** branches build it without publishing. No game data is involved.
+on:
+  push:
+    branches: ['main', 'port/**']
+  workflow_dispatch:
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  EMSDK_VERSION: 7.0.1
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Emscripten
+        run: |
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/emsdk"
+          "$RUNNER_TEMP/emsdk/emsdk" install "$EMSDK_VERSION"
+          "$RUNNER_TEMP/emsdk/emsdk" activate "$EMSDK_VERSION"
+          sudo apt-get install -y ninja-build
+
+      - name: Restore libraries
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}/web/dl
+            ${{ runner.temp }}/web/prefix
+          key: web-deps-${{ env.EMSDK_VERSION }}-${{ hashFiles('port/packaging/versions.sh', 'port/web/deps.sh') }}
+
+      - name: Build
+        run: |
+          . "$RUNNER_TEMP/emsdk/emsdk_env.sh"
+          W="$RUNNER_TEMP/web"
+          [ -f "$W/prefix/.complete" ] || sh port/web/deps.sh "$W/dl" "$W/prefix" "$W/b"
+          sh port/web/build.sh "$W/prefix" "$W/build" "$W/site"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ runner.temp }}/web/site
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
