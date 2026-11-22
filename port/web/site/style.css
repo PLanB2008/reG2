@@ -207,7 +207,7 @@ body.no-fullscreen #fs-button, body.fullscreen #fs-button { display: none; }
 #touch .dpad .r { right: 0; top: 33.5%; }
 #touch .dpad span.down { background: rgba(224, 33, 63, 0.8); border-color: #fff; }
 body.touch-on #pause-button { display: none; }
-body.touch-on #game-bar { top: calc(env(safe-area-inset-top) + 24px); right: calc(84px * var(--touch-scale, 1) + env(safe-area-inset-right)); }
+body.touch-on #game-bar { top: calc(env(safe-area-inset-top) + 21%); right: calc(80px * var(--touch-scale, 1) + env(safe-area-inset-right)); }
 #touch[data-mode="menu"] .game-only, #touch:not([data-mode="menu"]) .menu-only,
 #touch:not([data-mode="classic"]) .classic-only, #touch:not([data-mode="twin"]) .twin-only,
 #touch:not([data-mode="car"]) .car-only { display: none; }

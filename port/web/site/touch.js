@@ -21,25 +21,26 @@ const DPAD_REPEAT_MS = 180;
 // The aiming stick fires from this far out of its range; nearer, it only turns the player.
 const FIRE_FORCE = 0.35;
 
-// Places from the screen's edges, in CSS pixels at size 100% (inside the safe areas); size in pixels; mode: classic
-// (on foot), twin (on foot, aiming with a stick), car, game (all three) or menu.
+// Places from the screen's edges, in CSS pixels at size 100% or as a share of the screen (inside the safe areas); size
+// in pixels; mode: classic (on foot), twin (on foot, aiming with a stick), car, game (all three) or menu.
 const BUTTONS = [
   { label: 'attack', bit: A, mode: 'classic', right: 24, bottom: 28, size: 92 },
   { label: 'jump', bit: B, mode: 'classic', right: 132, bottom: 22, size: 68 },
   { label: 'enter', bit: Y, mode: 'classic', right: 30, bottom: 136, size: 68 },
   { label: 'prev', bit: LB, mode: 'classic', right: 128, bottom: 112, size: 56, raw: '◀' },
   { label: 'next', bit: RB, mode: 'classic', right: 108, bottom: 184, size: 56, raw: '▶' },
-  { label: 'jump', bit: B, mode: 'twin', right: 20, bottom: 24, size: 64 },
-  { label: 'enter', bit: Y, mode: 'twin', right: 20, bottom: 100, size: 64 },
-  { label: 'prev', bit: LB, mode: 'twin', right: 20, bottom: 176, size: 56, raw: '◀' },
-  { label: 'next', bit: RB, mode: 'twin', right: 20, bottom: 244, size: 56, raw: '▶' },
+  { label: 'jump', bit: B, mode: 'twin', right: 20, bottom: 20, size: 64 },
+  { label: 'enter', bit: Y, mode: 'twin', right: 20, bottom: 96, size: 64 },
+  { label: 'prev', bit: LB, mode: 'twin', right: 84, bottom: 172, size: 56, raw: '◀' },
+  { label: 'next', bit: RB, mode: 'twin', right: 20, bottom: 172, size: 56, raw: '▶' },
   { label: 'gas', axis: RT, mode: 'car', right: 24, bottom: 28, size: 96 },
   { label: 'brake', axis: LT, mode: 'car', right: 138, bottom: 22, size: 80 },
   { label: 'handbrake', bit: B, mode: 'car', right: 150, bottom: 118, size: 64 },
   { label: 'fire', bit: A, mode: 'car', right: 34, bottom: 140, size: 64 },
   { label: 'horn', bit: X, mode: 'car', right: 236, bottom: 30, size: 56 },
-  { label: 'exit', bit: Y, mode: 'car', right: 52, bottom: 218, size: 60 },
-  { label: 'pause', bit: START, mode: 'game', right: 16, top: 12, size: 56, raw: '❚❚' },
+  { label: 'exit', bit: Y, mode: 'car', right: 104, bottom: 210, size: 60 },
+  // Under the HUD's money, hearts and weapon, which take the top fifth of the right edge.
+  { label: 'pause', bit: START, mode: 'game', right: 16, top: '21%', size: 56, raw: '❚❚' },
   { label: 'ok', bit: A, mode: 'menu', right: 18, bottom: 22, size: 84 },
   { label: 'back', bit: B, mode: 'menu', right: 28, bottom: 128, size: 64 },
 ];
@@ -252,7 +253,8 @@ export class TouchControls {
       el.textContent = def.raw || labels[def.label];
       el.setAttribute('aria-hidden', 'true');
       for (const side of ['right', 'bottom', 'left', 'top']) {
-        if (def[side] !== undefined) el.style[side] = `calc(${def[side]}px * var(--touch-scale, 1) + env(safe-area-inset-${side}))`;
+        const v = def[side];
+        if (v !== undefined) el.style[side] = `calc(${typeof v === 'string' ? v : `${v}px * var(--touch-scale, 1)`} + env(safe-area-inset-${side}))`;
       }
       el.style.setProperty('--size', `${def.size}px`);
       const pointers = new Set();
