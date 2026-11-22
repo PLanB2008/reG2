@@ -89,15 +89,14 @@
           <dd><span class="path">Graphics &rsaquo; Preset</span> switches between CLASSIC and ENHANCED: true colour, per-pixel lighting, car headlights, light from gunfire, explosions and fires, fire effects (heat haze, smoke and embers), ambient occlusion, soft shadows, bloom, anti-aliasing.</dd>
         </div>
       </dl>
-      <div class="shot versus">
-        <figure>
-          <img src="img/pc_graphics_classic.jpg" width="880" height="880" alt="CLASSIC: a flamethrower sets a car on fire at dusk; the flame lights nothing around it." loading="lazy">
-          <figcaption class="caps">Classic</figcaption>
-        </figure>
-        <figure>
-          <img src="img/pc_graphics_enhanced.jpg" width="880" height="880" alt="ENHANCED: the same frame; the flame casts orange light on the road, the pavement and the burning car." loading="lazy">
-          <figcaption class="caps">Enhanced</figcaption>
-        </figure>
+      <div class="shot compare" style="--pos: 50%">
+        <img src="img/pc_compare_classic.webp" width="796" height="448" alt="CLASSIC: an explosion and a flamethrower on a street at dusk; the fire lights nothing around it." loading="lazy">
+        <span class="caps tag">Classic</span>
+        <div class="after">
+          <img src="img/pc_compare_enhanced.webp" width="796" height="448" alt="ENHANCED: the same frame; the fire lights the road and the cars, and smoke rises from it." loading="lazy">
+          <span class="caps tag">Enhanced</span>
+        </div>
+        <input type="range" min="0" max="100" value="50" autocomplete="off" aria-label="Classic or enhanced: move the divider to compare" oninput="this.parentNode.style.setProperty('--pos', this.value + '%')">
       </div>
       <dl class="items">
         <div>

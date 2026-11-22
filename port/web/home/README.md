@@ -1,6 +1,6 @@
 # reG2 landing page
 
-The page at the root of the GitHub Pages site. Plain HTML and CSS, no build step and no JavaScript.
+The page at the root of the GitHub Pages site. Plain HTML and CSS, no build step; the only JavaScript is the classic and enhanced slider's `oninput`.
 The Web workflow publishes it like this:
 
 | Site path | Source |
@@ -26,7 +26,8 @@ Then open <http://localhost:8000/>. The site is dark only.
 ## Files
 
 - `img/`: copies of `docs/images/*` (the reG2 logo for dark backgrounds, screenshots) and `port/resources/reg2_256.png`, so the
-  page works when only this folder is published. Git stores identical files once, so the copies cost nothing
+  page works when only this folder is published. `pc_compare_classic.webp` and `pc_compare_enhanced.webp` are the
+  two frames of `docs/images/pc_compare_graphics.png` (796x448 each, without the label bar). Git stores identical files once, so the copies cost nothing
   in the repository; replace them when the originals change. Only screenshots from the repository, and none
   that show the GTA2 or Rockstar logos large.
 - `fonts/`: Michroma and Archivo (variable), latin subsets as woff2, both under the SIL Open Font License
