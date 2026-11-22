@@ -1,5 +1,5 @@
-/* The game page: what ds.css (the site's design system, copied here by build.sh) does not have. */
-.btn.big { margin: 0.5rem 0 1rem; }
+/* The game page: what ds.css (the site's design system, copied here by build.sh) does not have. Actions read as
+   the game's menu items: tracked capitals, the main one red and underlined. */
 #page {
   max-width: 46rem;
   margin: 0 auto;
@@ -7,34 +7,56 @@
 }
 
 .top { display: flex; align-items: center; gap: 1rem; margin: 0.5rem 0 2.5rem; }
-.logo { display: block; width: 72px; height: 72px; }
+.logo { display: block; width: 78px; height: 52px; object-fit: cover; }
 
-.lede { margin: 0 0 2.5rem; }
+h1 { font: 400 var(--step-3)/1.25 var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; }
+h2, h3 { font-family: var(--font-display); font-size: var(--step--1); text-transform: uppercase; letter-spacing: var(--track); line-height: 1.5; }
+.lede { font-size: var(--step-1); line-height: 1.5; margin: 0 0 2.5rem; }
 
 .how { margin-bottom: 2.5rem; }
 .steps { list-style: none; counter-reset: step; padding: 0; margin: 0; display: grid; gap: 1rem; }
-.steps li { counter-increment: step; display: grid; grid-template-columns: 3rem 1fr; align-items: center; }
-.steps li::before {
-  content: counter(step);
-  font: 800 2.4rem/1 var(--font-display);
-  color: var(--amber);
+.steps li { counter-increment: step; display: grid; grid-template-columns: 2.5rem 1fr; align-items: baseline; }
+.steps li::before { content: counter(step); font: 400 var(--step-1)/1 var(--font-display); color: var(--red); }
+
+.panel { border-top: 1px solid var(--line); padding: 1.5rem 0 0.5rem; margin: 0 0 2rem; }
+.panel.warn h2 { color: var(--amber); }
+
+.row { display: flex; flex-wrap: wrap; gap: 0.25rem 2rem; margin: 0.75rem 0; }
+.btn {
+  font: 400 var(--step-0)/1.2 var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: var(--track);
+  color: var(--text);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 0.6rem 0;
+  min-height: 44px;
+  cursor: pointer;
+  text-align: left;
 }
+.btn:hover, .btn:focus-visible { color: var(--red); border-bottom-color: var(--red); outline: none; }
+.btn.primary { color: var(--red); border-bottom-color: var(--red); }
+.btn.big { font-size: var(--step-3); margin: 0.5rem 0 1rem; }
+.btn.danger { color: var(--muted); }
+.btn.danger:hover, .btn.danger:focus-visible { color: var(--red); }
+.btn:disabled { opacity: 0.4; cursor: default; border-bottom-color: transparent; color: var(--muted); }
 
-.drop { border: 2px dashed var(--line); padding: 1.25rem; margin-bottom: 1rem; transition: border-color 0.15s, background 0.15s; }
+.drop { border: 1px dashed var(--line); padding: 1.25rem; margin-bottom: 1rem; transition: border-color 0.15s, background 0.15s; }
 .drop.over { border-color: var(--red); background: color-mix(in srgb, var(--red) 8%, transparent); }
-.drop-main { margin: 0 0 0.75rem; font-weight: 600; }
+.drop-main { margin: 0 0 0.25rem; }
 
-.small-btn { min-height: 40px; padding: 0.5rem 0.9rem; }
+.small-btn { font-size: var(--step--1); }
 
-.error { color: var(--red); font-weight: 600; white-space: pre-line; }
+.error { color: var(--red); white-space: pre-line; }
 .legal-line { border-top: 1px solid var(--line); padding-top: 0.75rem; }
 
-details summary { cursor: pointer; font-weight: 600; padding: 0.4rem 0; }
+details summary { cursor: pointer; font-family: var(--font-display); font-size: var(--step--1); text-transform: uppercase; letter-spacing: var(--track); padding: 0.6rem 0; }
 .nogame { margin: 0.5rem 0 1rem; }
 
 .checks { list-style: none; padding: 0; margin: 0 0 0.5rem; }
 .checks li { padding: 0.25rem 0 0.25rem 1.8rem; position: relative; }
-.checks li::before { position: absolute; left: 0; font-weight: 600; }
+.checks li::before { position: absolute; left: 0; }
 .checks li.yes::before { content: "\2713"; color: var(--ok); }
 .checks li.no::before { content: "\2715"; color: var(--red); }
 .checks li.part::before { content: "\2013"; color: var(--amber); }
@@ -51,7 +73,6 @@ progress { width: 100%; height: 0.8rem; accent-color: var(--red); }
 
 @media (max-width: 30rem) {
   .field { grid-template-columns: 1fr; gap: 0.25rem; }
-  
 }
 
 /* The game: the whole viewport, nothing the browser may scroll, zoom or select. */
@@ -112,14 +133,15 @@ body.no-fullscreen #fs-button, body.fullscreen #fs-button { display: none; }
   border: 2px solid rgba(255, 255, 255, 0.85);
   background: rgba(0, 0, 0, 0.35);
   color: #fff;
-  font: 800 calc(0.85rem * var(--touch-scale, 1))/1 var(--font-display);
+  font: 400 calc(0.62rem * var(--touch-scale, 1))/1.1 var(--font-display);
   text-transform: uppercase;
   letter-spacing: 0.03em;
   display: flex; align-items: center; justify-content: center; text-align: center;
   pointer-events: auto; touch-action: none;
 }
 #touch .tbtn.down { background: rgba(224, 33, 63, 0.75); border-color: #fff; }
-#touch .tbtn.wide { border-radius: 14px; }
+#touch .tbtn.wide { border-radius: 14px; width: auto; padding: 0 0.9em; }
+body.touch-on #pause-button { display: none; }
 #touch .tbtn.small { width: calc(48px * var(--touch-scale, 1)); height: calc(48px * var(--touch-scale, 1)); }
 #touch[data-mode="menu"] .game-only, #touch[data-mode="foot"] .car-only, #touch[data-mode="car"] .foot-only,
 #touch:not([data-mode="menu"]) .menu-only { display: none; }

@@ -148,6 +148,8 @@ export class TouchControls {
     if (visible !== this.visible) {
       this.visible = visible;
       this.root.hidden = !visible;
+      // The controls have their own pause button.
+      document.body.classList.toggle('touch-on', visible);
       if (!visible) this.release();
     }
   }
