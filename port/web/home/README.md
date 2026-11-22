@@ -1,6 +1,6 @@
 # reG2 landing page
 
-The page at the root of the GitHub Pages site. Plain HTML and CSS, no build step; the only JavaScript is the classic and enhanced slider's `oninput`.
+The page at the root of the GitHub Pages site. Plain HTML and CSS, no build step; the only JavaScript is the classic and enhanced slider's few lines.
 The Web workflow publishes it like this:
 
 | Site path | Source |

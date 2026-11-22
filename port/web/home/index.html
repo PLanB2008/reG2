@@ -90,13 +90,24 @@
         </div>
       </dl>
       <div class="shot compare" style="--pos: 50%">
-        <img src="img/pc_compare_classic.webp" width="796" height="448" alt="CLASSIC: an explosion and a flamethrower on a street at dusk; the fire lights nothing around it." loading="lazy">
+        <img src="img/pc_compare_classic.webp" width="796" height="448" draggable="false" alt="CLASSIC: an explosion and a flamethrower on a street at dusk; the fire lights nothing around it." loading="lazy">
         <span class="caps tag">Classic</span>
         <div class="after">
-          <img src="img/pc_compare_enhanced.webp" width="796" height="448" alt="ENHANCED: the same frame; the fire lights the road and the cars, and smoke rises from it." loading="lazy">
+          <img src="img/pc_compare_enhanced.webp" width="796" height="448" draggable="false" alt="ENHANCED: the same frame; the fire lights the road and the cars, and smoke rises from it." loading="lazy">
           <span class="caps tag">Enhanced</span>
         </div>
         <input type="range" min="0" max="100" value="50" autocomplete="off" aria-label="Classic or enhanced: move the divider to compare" oninput="this.parentNode.style.setProperty('--pos', this.value + '%')">
+        <script>
+          {
+            const c = document.currentScript.parentNode, r = c.querySelector('input');
+            const set = (e) => { const b = c.getBoundingClientRect(); r.value = Math.round((e.clientX - b.left) / b.width * 100); r.dispatchEvent(new Event('input')); };
+            let x0 = null;
+            c.onpointerdown = (e) => { x0 = e.clientX; if (e.pointerType === 'mouse') { set(e); c.setPointerCapture(e.pointerId); } };
+            c.onpointermove = (e) => { if (x0 !== null && (e.pointerType === 'mouse' || Math.abs(e.clientX - x0) > 4)) set(e); };
+            c.onpointerup = (e) => { if (x0 !== null && e.pointerType !== 'mouse') set(e); x0 = null; };
+            c.onpointercancel = () => { x0 = null; };
+          }
+        </script>
       </div>
       <dl class="items">
         <div>
