@@ -56,6 +56,25 @@ that map's players: past them a client is turned away ("the server is full: Down
 open again with a map that takes more. A vote, a results' choice and the rotation go to a map only if every taken slot
 has a place on it (`RoundFlow::Fits`): with 10 in, a map of 6 isn't played; with players in slots 0-5 only, it is.
 
+A player's look is the remap its `PLAYER_PED` gives the ped, and the HUD tells players apart by it (the digits' colour,
+the arrow's). For a map of its own, give each player a different one of these 10:
+
+| Remap | Look | HUD digits | Arrow |
+|---|---|---|---|
+| 0 | police | steel blue | rust |
+| 5 | red-head redneck | the original's | the original's |
+| 7 | scientist | the original's | the original's |
+| 8 | Zaibatsu | the original's | the original's |
+| 9 | Krishna | the original's | the original's |
+| 10 | Russian | the original's | the original's |
+| 11 | Loonie | the original's | the original's |
+| 12 | Elvis | cyan | cyan |
+| 13 | Yakuza | the original's | the original's |
+| 14 | fireman | pink | purple |
+
+Other remaps give players the HUD can't tell apart: 6 (the blond redneck) has the red-head's colours, as in the
+original, and 1-4 and those past 14 have none of their own (the digits' and the arrow's default).
+
 `port/net/testdata/tiny-10p` is a 10-player map on the game's Tiny Town (`MP1-comp.gmp`, `bil.sty`): a player at each
 of its 10 restart zones in 10 looks, a few weapon generators. Its script is ours, `tiny-10p.mis`, compiled by
 `port/net/scripts/mis2scr.py` (only what it needs: `PLAYER_PED`, `GENERATOR`, `SWITCH_GENERATOR`, `LEVELSTART`,
