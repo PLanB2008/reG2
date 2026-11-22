@@ -58,7 +58,12 @@ void CheckEnvironment()
         p = end ? end + 1 : p + strlen(p);
     }
     net::engine::NetworkGame g;
-    g.players = atoi(fields[0].c_str());
+    const int players = atoi(fields[0].c_str());
+    g.players = players < 1 ? 1 : players > MAX_PLAYERS ? MAX_PLAYERS : players;
+    if (g.players != players)
+    {
+        printf("net: GTA2_OFFLINE_MP: %d players, not %s (1-%d)\n", g.players, fields[0].c_str(), MAX_PLAYERS);
+    }
     g.gmp = fields[1];
     g.sty = fields[2];
     g.scr = fields[3];
