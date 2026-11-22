@@ -43,7 +43,7 @@
     <img class="hero-img" src="img/pc_night_street.png" width="1280" height="720" alt="" fetchpriority="high">
     <div class="hero-text">
       <h1 id="title"><span>The definitive</span> <span>edition of GTA2</span></h1>
-      <p class="lede">GTA2 as it came out in 1999, running natively on Windows, macOS, Linux, in your browser and on the Nintendo 3DS. Play it as it was, or turn on the extras you want: smoother frames, new lighting, day and night, twin stick controls, autosave.</p>
+      <p class="lede">The original 1999 game, now on Windows, macOS, Linux, the Nintendo 3DS and in your browser. Keep it untouched, or turn on the extras you want: smoother frames, new lighting, day and night, twin stick controls, autosave.</p>
       <ul class="menu" aria-label="Get reG2">
         <li><a class="sel" href="#download">Download</a></li>
         <li><a href="play/">Play in your browser</a></li>
@@ -75,7 +75,7 @@
         <li>It draws a frame each time your screen refreshes, while the game itself keeps its original speed.</li>
         <li>The settings are in the game: OPTIONS replaces GTA2 Manager, the original's separate settings program, in five pages (GAME, GRAPHICS, DISPLAY, SOUND, CONTROLS). Escape during a game pauses it and opens the same menu, with the original pause screen's numbers under STATISTICS.</li>
         <li>Every menu works with the mouse, the keyboard or a gamepad.</li>
-        <li>A few crashes of the original are fixed, among them some the community found (<a href="https://gtamp.com/gta2/">Vike's GTA2 11.44</a> patch). The game plays the same.</li>
+        <li>A few crashes of the original are fixed, among them some the community found (<a href="https://gtamp.com/gta2/">Vike's GTA2 11.44</a> patch).</li>
       </ul>
     </div>
   </section>
@@ -89,9 +89,16 @@
           <dd><span class="path">Graphics &rsaquo; Preset</span> switches between CLASSIC and ENHANCED: true colour, per-pixel lighting, car headlights, light from gunfire, explosions and fires, fire effects (heat haze, smoke and embers), ambient occlusion, soft shadows, bloom, anti-aliasing.</dd>
         </div>
       </dl>
-      <figure class="shot">
-        <img src="img/pc_compare_graphics.png" width="1600" height="482" alt="The same burning street side by side: classic graphics on the left, enhanced on the right with smoke, glow and softer light." loading="lazy">
-      </figure>
+      <div class="shot versus">
+        <figure>
+          <img src="img/pc_graphics_classic.jpg" width="880" height="880" alt="CLASSIC: a flamethrower sets a car on fire at dusk; the flame lights nothing around it." loading="lazy">
+          <figcaption class="caps">Classic</figcaption>
+        </figure>
+        <figure>
+          <img src="img/pc_graphics_enhanced.jpg" width="880" height="880" alt="ENHANCED: the same frame; the flame casts orange light on the road, the pavement and the burning car." loading="lazy">
+          <figcaption class="caps">Enhanced</figcaption>
+        </figure>
+      </div>
       <dl class="items">
         <div>
           <dt class="caps">Day and night</dt>
@@ -99,7 +106,7 @@
         </div>
         <div>
           <dt class="caps">Frame rate</dt>
-          <dd>As fast as your screen, or a fixed limit up to 240 fps (<span class="path">Display &rsaquo; Frame limit</span>, where 30 ORIGINAL brings back the original's rate). The game still runs at its 30 steps per second and the frames in between are interpolated, so it plays exactly the same, just smoother.</dd>
+          <dd>As fast as your screen, or a fixed limit up to 240 fps (<span class="path">Display &rsaquo; Frame limit</span>, where 30 ORIGINAL brings back the original's rate). The game logic still runs at 30 steps per second, and reG2 fills in the frames in between.</dd>
         </div>
       </dl>
       <figure class="shot">
@@ -135,7 +142,7 @@
       <dl class="items">
         <div>
           <dt class="caps">Churches</dt>
-          <dd>Church saves work exactly as before: same cost, and the same file the original reads. reG2 also keeps one per city, so you can go back to a city you left.</dd>
+          <dd>Saving at a church costs the same as in the original game. reG2 also keeps a save for each city, so you can go back to a city you have left.</dd>
         </div>
         <div>
           <dt class="caps">Autosave</dt>
@@ -233,7 +240,7 @@
     <h2 id="about-title" class="caps">Built on <span class="nocase">gta2_re</span></h2>
     <div class="body prose">
       <p>reG2 is a fork of <a href="https://github.com/CriminalRETeam/gta2_re">gta2_re</a> by the CriminalRETeam, and all the credit for the game itself goes to them: they rebuilt GTA2 (PC, version 10.5) function by function, in C++ that compiles back to the original machine code.</p>
-      <p>reG2 adds what you need to run it today (SDL3, OpenGL, sound, gamepads) and some extras on top. The game plays the same.</p>
+      <p>reG2 adds what you need to run it today (SDL3, OpenGL, sound, gamepads) and some extras on top.</p>
     </div>
   </section>
 </main>
