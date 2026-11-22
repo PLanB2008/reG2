@@ -145,6 +145,18 @@ menu, as the player's Escape would; an Escape the browser delivers as well withi
 would close again. The pause menu also opens from the page's pause button, the touch controls' and a gamepad's
 Start. Leaving it, the next click on the game takes the pointer again (a refusal just after Escape is retried).
 
+### Import speed
+
+`import-worker.js` tunes two of Emscripten's file systems for files of hundreds of MB: a memory file grew by an eighth
+past 1 MB, copying all of it each time (about 2.7 GB copied for the installer's 300 MB of cabinets), and now doubles;
+reads of the chosen file go 4 MB ahead, one `FileReaderSync` call each. With `?debug` the page logs the phases.
+The free installer on a desktop (ms): before, source reads 1300 to 1650, memory writes 3000, unpacking 2250, sending
+200, total 8300 to 9000; after, 550 to 980, 420 to 750, 2200, 130 to 210, total 4300 to 5200. The unpacking (zlib in
+unshield) is CPU bound; the copies were memory bound, which phones pay most for.
+
+Over plain HTTP (a LAN address) the page works without what browsers keep for secure contexts (service worker,
+storage persistence, wake lock, the tab lock) and says so above everything else.
+
 ### Sound
 
 SDL plays through a ScriptProcessorNode, mixed on the page's thread between frames. The menus used to crackle: the

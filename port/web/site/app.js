@@ -45,6 +45,9 @@ const BUILD = '@BUILD@/';
 
 applyTranslations();
 registerServiceWorker();
+// Over plain HTTP (a LAN address) the browser leaves out the service worker, storage persistence, wake lock and
+// the tab lock: the page says so once, and works without them.
+show('insecure', !window.isSecureContext);
 start();
 
 // A tab opened before a new build was published asks for its old build folder, gone from the site: it reloads once
@@ -318,7 +321,8 @@ $('do-import').onclick = async () => {
   let writeError = null;
   importing = true;
   try {
-    const { result, fullInstall } = await runWorker({ cmd: 'install', ...pending, installed: before }, (file) => {
+    const started = performance.now();
+    const { result, fullInstall, times } = await runWorker({ cmd: 'install', ...pending, installed: before }, (file) => {
       setProgress(file.done / file.total, t('progressStore', formatMB(file.done), formatMB(file.total)));
       writes = writes.then(async () => {
         if (writeError) return;
@@ -334,6 +338,9 @@ $('do-import').onclick = async () => {
     });
     await writes;
     if (writeError) throw writeError;
+    if (new URLSearchParams(location.search).has('debug')) {
+      console.log('import: ' + JSON.stringify({ ...times, total: Math.round(performance.now() - started) }));
+    }
     if (!result.ok) {
       importing = false;
       show('progress', false);
