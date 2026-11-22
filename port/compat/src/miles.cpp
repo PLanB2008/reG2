@@ -62,6 +62,12 @@ struct Stream
     S32 mLoopCount = 1;
     U32 mStatus = SMP_DONE;
 
+#if defined(__EMSCRIPTEN__)
+    // A music track the page is still reading from its storage (web/site/app.js): silent until it is there.
+    std::string mPendingPath;
+    double mPendingMs = 0;
+#endif
+
     std::vector<s16> mBuf; // decoded frames, interleaved
     u32 mBufFirst = 0;     // frame index of mBuf[0]
     double mPos = 0;       // frame position
@@ -436,6 +442,34 @@ void MixSample(Sample* s, float* out, int frames)
     mix(s, out, frames, loopStart, loopEnd, left, right);
 }
 
+#if defined(__EMSCRIPTEN__)
+// Whether the stream can play: a pending track opens once the page has loaded it.
+bool StreamReady(Stream* s)
+{
+    if (s->mPendingPath.empty())
+    {
+        return true;
+    }
+    if (OpenWav(s, s->mPendingPath.c_str()))
+    {
+        s->mPendingPath.clear();
+        s->mPos = SDL_min(s->mPendingMs * s->mRate / 1000.0, (double)s->mTotalFrames);
+        return true;
+    }
+    if (s->mFile)
+    {
+        fclose(s->mFile);
+        s->mFile = NULL;
+    }
+    return false;
+}
+#else
+bool StreamReady(Stream*)
+{
+    return true;
+}
+#endif
+
 void MixStream(Stream* s, float* out, int frames)
 {
     const double step = (double)(s->mPlayRate ? s->mPlayRate : s->mRate) / kOutRate;
@@ -557,7 +591,7 @@ void SDLCALL AudioCallback(void*, SDL_AudioStream* stream, int additional, int)
             }
             for (Stream* s : sDriver->mStreams)
             {
-                if (s->mStatus == SMP_PLAYING)
+                if (s->mStatus == SMP_PLAYING && StreamReady(s))
                 {
                     MixStream(s, mix.data(), frames);
                 }
@@ -583,7 +617,10 @@ void SDLCALL AudioCallback(void*, SDL_AudioStream* stream, int additional, int)
                     i++;
                     continue;
                 }
-                fclose(s->mFile);
+                if (s->mFile)
+                {
+                    fclose(s->mFile);
+                }
                 delete s;
                 sDriver->mFadingStreams.erase(sDriver->mFadingStreams.begin() + i);
             }
@@ -631,7 +668,10 @@ void DropFading()
     }
     for (Stream* s : sDriver->mFadingStreams)
     {
-        fclose(s->mFile);
+        if (s->mFile)
+        {
+            fclose(s->mFile);
+        }
         delete s;
     }
     sDriver->mFadingSamples.clear();
@@ -859,7 +899,18 @@ DXDEC HSTREAM AILCALL AIL_open_stream(HDIGDRIVER, char FAR* filename, S32)
         if (s->mFile)
         {
             fclose(s->mFile);
+            s->mFile = NULL;
         }
+#if defined(__EMSCRIPTEN__)
+        char real[PATH_MAX];
+        if (sDriver && port_WebLoadFile(port_resolve_path(filename, real)))
+        {
+            s->mPendingPath = filename;
+            LOCK;
+            sDriver->mStreams.push_back(s);
+            return reinterpret_cast<HSTREAM>(s);
+        }
+#endif
         delete s;
         return NULL;
     }
@@ -874,13 +925,16 @@ DXDEC void AILCALL AIL_close_stream(HSTREAM h)
     if (sDriver && h)
     {
         sDriver->mStreams.erase(std::find(sDriver->mStreams.begin(), sDriver->mStreams.end(), St(h)));
-        if (St(h)->mStatus == SMP_PLAYING)
+        if (St(h)->mStatus == SMP_PLAYING && St(h)->mFile)
         {
             St(h)->mFade = kRampFrames;
             sDriver->mFadingStreams.push_back(St(h));
             return;
         }
-        fclose(St(h)->mFile);
+        if (St(h)->mFile)
+        {
+            fclose(St(h)->mFile);
+        }
         delete St(h);
     }
 }
@@ -934,6 +988,9 @@ DXDEC void AILCALL AIL_set_stream_ms_position(HSTREAM h, S32 milliseconds)
 {
     LOCK;
     Stream* s = St(h);
+#if defined(__EMSCRIPTEN__)
+    s->mPendingMs = milliseconds;
+#endif
     s->mPos = SDL_min((double)milliseconds * s->mRate / 1000.0, (double)s->mTotalFrames);
     s->mCurFrame = UINT_MAX;
 }

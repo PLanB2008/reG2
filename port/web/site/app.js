@@ -545,7 +545,7 @@ const game = {
     return bytes.buffer;
   },
 
-  // Everything but the music, which comes after the start (it is only streamed, and the biggest part).
+  // Everything but the music, the biggest part, which is only streamed: each track is read when it plays.
   async readFiles() {
     const paths = await store.listFiles();
     const now = paths.filter((p) => !store.isMusic(p));
@@ -577,6 +577,9 @@ const game = {
         M.FS.mkdirTree(GAME_DIR + '/test');
         for (const [path, bytes] of files) self.writeToFS(M.FS, path, bytes);
         files.length = 0;
+        // The tracks as empty files: the game finds its music, and compat/src/miles.cpp asks for a track
+        // (port_WebLoadFile) when it opens one that is empty.
+        for (const path of self.music) self.writeToFS(M.FS, path, new Uint8Array(0));
         // Phones: at most 2x anti-aliasing. Fewer flashes: no bloom (compat/src/video_port.cpp).
         if (isTouchDevice) M.ENV.GTA2_MSAA_CAP = '2';
         if (calm) M.ENV.GTA2_CALM = '1';
@@ -585,6 +588,7 @@ const game = {
       }],
       onAbort: (what) => self.exiting || self.crash(t('crashTitle'), t('crashText'), what),
       onGameQuit: (code) => self.exited(code),
+      loadFile: (path) => self.loadTrack(path),
     };
     const M = await window.createReg2(Module);
     this.module = M;
@@ -593,7 +597,6 @@ const game = {
     show('loading', false);
     $('canvas').focus();
     M.callMain([]);
-    this.loadMusic();
     if (new URLSearchParams(location.search).has('stats')) {
       setInterval(() => {
         const f = M.webFrames;
@@ -603,17 +606,21 @@ const game = {
     }
   },
 
-  async loadMusic() {
-    const M = this.module;
-    for (const p of this.music || []) {
-      if (!this.module) return;
-      try {
-        const blob = await store.readFile(p);
-        if (blob && this.module) this.writeToFS(M.FS, p, new Uint8Array(await blob.arrayBuffer()));
-      } catch (e) {
-        this.logLine('music ' + p + ': ' + e.message);
-      }
-    }
+  // A music track for the game (true if the page has it), read from storage while the stream waits silently.
+  // Only the last two tracks stay in memory: one plays at a time, the other may still be fading out.
+  loadTrack(path) {
+    const rel = path.replace(/^\/?reG2\//, '').replace(/\\/g, '/').toLowerCase();
+    const key = (this.music || []).find((p) => p.toLowerCase() === rel);
+    if (!key) return false;
+    this.tracks ??= [];
+    if (this.tracks.includes(key)) return true;
+    this.tracks.push(key);
+    const FS = this.module.FS;
+    while (this.tracks.length > 2) this.writeToFS(FS, this.tracks.shift(), new Uint8Array(0));
+    store.readFile(key).then(async (blob) => {
+      if (blob && this.module && this.tracks.includes(key)) this.writeToFS(FS, key, new Uint8Array(await blob.arrayBuffer()));
+    }).catch((e) => this.logLine('music ' + key + ': ' + e.message));
+    return true;
   },
 
   // The game's writes outside data/ (settings, saves, replays) are stored as soon as the file is closed.
@@ -750,11 +757,11 @@ const game = {
       try {
         this.module?._port_WebPause();
       } catch {}
-      this.audioContext()?.suspend();
+      this.audioContext()?.suspend().catch(() => {});
       this.flush();
       this.releaseWakeLock();
     } else {
-      this.audioContext()?.resume();
+      this.audioContext()?.resume().catch(() => {});
       this.requestWakeLock();
     }
   },
@@ -824,7 +831,7 @@ const game = {
     if (this.crashed) return;
     this.crashed = true;
     this.flush();
-    this.audioContext()?.suspend();
+    this.audioContext()?.suspend().catch(() => {});
     show('loading', false);
     show('game');
     show('page', false);
@@ -855,13 +862,47 @@ const game = {
 // For tests and the console.
 window.reg2 = game;
 
-// After the game quit, the runtime's unwinding may trap: the page is already on its way back.
+// Only the game's own failures stop it: a trap in its code (aborts come through onAbort) or an error in reg2.js.
+// Anything else, such as a browser API refusing a request, is logged. After the game quit, the runtime's unwinding
+// may trap: the page is already on its way back.
+function isGameFailure(error, file) {
+  return error instanceof WebAssembly.RuntimeError || /\/reg2\.js$/.test(file || '');
+}
 addEventListener('error', (e) => {
-  if (game.module && !game.exiting) game.crash(t('crashTitle'), t('crashText'), e.error || e.message);
+  if (!game.module || game.exiting) return;
+  if (isGameFailure(e.error, e.filename)) game.crash(t('crashTitle'), t('crashText'), e.error || e.message);
+  else game.logLine('page error: ' + (e.message || e.error));
 });
 addEventListener('unhandledrejection', (e) => {
-  if (game.module && !game.exiting) game.crash(t('crashTitle'), t('crashText'), e.reason);
+  if (!game.module || game.exiting) return;
+  if (isGameFailure(e.reason)) game.crash(t('crashTitle'), t('crashText'), e.reason);
+  else game.logLine('unhandled: ' + (e.reason && e.reason.message || e.reason));
 });
+
+// SDL asks for pointer lock when TWIN STICK aims with the mouse. The browser may refuse (just after the player left
+// it with Escape, or outside a click): the refusal is not an error, and the next click on the game asks again.
+let lockWanted = null;
+const requestLock = Element.prototype.requestPointerLock;
+if (requestLock) {
+  Element.prototype.requestPointerLock = function (...args) {
+    lockWanted = this;
+    try {
+      const result = requestLock.apply(this, args);
+      result?.catch?.((e) => game.logLine('pointer lock: ' + e.message));
+      return result;
+    } catch (e) {
+      game.logLine('pointer lock: ' + e.message);
+    }
+  };
+  const exitLock = document.exitPointerLock;
+  document.exitPointerLock = function (...args) {
+    lockWanted = null;
+    return exitLock.apply(this, args);
+  };
+  addEventListener('pointerdown', (e) => {
+    if (lockWanted && !document.pointerLockElement && e.target === lockWanted) lockWanted.requestPointerLock();
+  }, true);
+}
 
 function loadScript(src) {
   return new Promise((resolve, reject) => {

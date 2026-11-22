@@ -5,7 +5,7 @@
 //   python3 -m http.server -d <site> 8000 &
 //   SITE=http://127.0.0.1:8000/ GTA2=~/GTA2INSTALLER.exe OUT=/tmp/shots node port/web/tests/e2e.mjs [chromium|firefox] [scenario...]
 //
-// Scenarios: import, play, save, contextloss, offline, tabs, hide, touch. Each runs in its own new profile (import first).
+// Scenarios: import, play, save, contextloss, offline, tabs, hide, keys, touch. Each runs in its own new profile (import first).
 import { chromium, firefox } from 'playwright';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -195,6 +195,24 @@ const scenarios = {
     await page.waitForTimeout(1000);
     check('hide: pause menu', (await state(page)) & 4);
     check('hide: sound suspended', audio !== 'running', audio);
+    await close();
+  },
+
+  // Escape and Alt+Enter pressed again and again, with clicks between (pointer lock asked, left, refused): the game
+  // goes on, no failure screen.
+  async keys() {
+    const { page, close } = await open();
+    await importGame(page);
+    await startGame(page, true);
+    for (let i = 0; i < 12; i++) {
+      await page.mouse.click(640, 360);
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(150);
+      if (i % 3 === 0) await page.keyboard.press('Alt+Enter');
+    }
+    await page.waitForTimeout(1500);
+    check('keys: no failure screen', await hidden(page, 'crash'));
+    check('keys: still in a game', (await state(page)) & 2);
     await close();
   },
 

@@ -28,6 +28,8 @@ addToLibrary({
   port_WebQuit: (code) => {
     Module['onGameQuit']?.(code);
   },
+  port_WebLoadFile__deps: ['$UTF8ToString'],
+  port_WebLoadFile: (path) => (Module['loadFile']?.(UTF8ToString(path)) ? 1 : 0),
   port_WebFramePeriodMs__deps: ['$webFrames'],
   port_WebFramePeriodMs: () => webFrames.period,
 });

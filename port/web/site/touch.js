@@ -7,7 +7,7 @@ import './vendor/nipplejs.js';
 // SDL_GamepadButton bits and SDL_GamepadAxis indices.
 const A = 1 << 0, B = 1 << 1, Y = 1 << 3, START = 1 << 6, LB = 1 << 9, RB = 1 << 10;
 const LT = 4, RT = 5;
-const MIN_PRESS_MS = 90;
+const MIN_PRESS_MS = 40;
 
 // Places are from the screen's edges (or its centre), in CSS pixels at size 100%; mode: shown on foot, in a
 // car, in either (game), or in the menus.
@@ -81,7 +81,7 @@ export class TouchControls {
       let releaseTimer = 0;
       const update = () => {
         const down = pointers.size > 0;
-        // A tap shorter than a few frames would come and go between two of the game's reads of the pad.
+        // SDL reads the virtual pad's state once a frame: a tap must last across one of its reads.
         clearTimeout(releaseTimer);
         if (down) pressedAt = performance.now();
         else if (performance.now() - pressedAt < MIN_PRESS_MS) {
