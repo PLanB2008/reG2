@@ -13,7 +13,7 @@ DirectPlay sat (`NetPlay`), and the few changes to `Source/` are port-only hooks
 
 What works: 1-10 players on the game's multiplayer maps, frags, points and tag games, police, traffic, trains and ambient peds,
 joining and leaving mid-game, rounds with warmup, results and votes, map rotations, chat with commands, reconnecting,
-a frontend page to join, bots (scripted and trained), recordings that replay without a server. Protocol 29.
+a frontend page to join, bots (scripted and trained), recordings that replay without a server. Protocol 30.
 
 The player limit is `NET_MAX_PLAYERS` (`core/player_limit.hpp`, 10), the port build's `MAX_PLAYERS`; the original and
 the MSVC build have 6. The map decides how many play on it ("Maps and players"). Each look a script gives a player has
@@ -51,10 +51,14 @@ one (maps since Vike's 11.3 leave it out: any number; Mini City has one script a
 players), at most 10 (`core/map_players.cpp`). The game's maps take 6.
 
 A server has as many slots as its biggest map takes, fewer with `--players N` (more than the maps take are cut, with a
-message). The game on a map has
-that map's players: past them a client is turned away ("the server is full: Downtown takes 6 players"), and the slots
-open again with a map that takes more. A vote, a results' choice and the rotation go to a map only if every taken slot
-has a place on it (`RoundFlow::Fits`): with 10 in, a map of 6 isn't played; with players in slots 0-5 only, it is.
+message). The game on a map has that map's players: past them a client is turned away ("the server is full: Downtown
+takes 6 players"), and the slots open again with a map that takes more. Slot N is the map's N-th `PLAYER_PED`. A join
+takes the first free slot of the current map; at a map change the taken slots are numbered again from 0 in their order
+(`CompactSlots`: 0, 1, 8 become 0, 1, 2), then those of players who dropped in the last 40 s (their reconnect), as far
+as the map goes; the other names are forgotten. Each client hears its new slot in its `kMsgMapChange` and takes it with
+the new game (its local player); the server moves each slot's token, name, commands, ready flag, votes and map choice
+with it, and holds every input through the pause. A vote, a results' choice and the rotation go to a map only if it
+takes as many players as are in or connecting (`RoundFlow::Fits`).
 
 A player's look is the remap its `PLAYER_PED` gives the ped, and the HUD tells players apart by it (the digits' colour,
 the arrow's). For a map of its own, give each player a different one of these 10:
@@ -161,7 +165,9 @@ last inputs held for 5 ticks after the last snapshot, then without fire, then fr
 the connection (after 5-10 s) it shows **Lost the server, reconnecting** and connects again every 3 s with its slot's
 token (the welcome's): the server gives the slot back with its score and ammo, also while it still has the old
 connection (dropped then, the player stays where it is), else at a restart zone. A game the server went on to
-meanwhile (a round's fresh game, another map) starts here as a map change does. After 30 s it goes back to the
+meanwhile (a round's fresh game, another map) starts here as a map change does, in the slot the welcome gives (a map
+change may have renumbered it; a dropped player's slot is kept if the map has room after those in, else he joins again as
+a new one). After 30 s it goes back to the
 network page. A new join under the name of a player who left takes that slot, with an empty score.
 
 **Chat** is the game's own: F10 starts a line, each key types into it, Enter ends it, and every machine shows
@@ -467,7 +473,7 @@ A little-endian bitstream (`core/bitstream.cpp`), never a copy of a struct: clie
 | `kMsgLeave` | reliable | why a client leaves (its copy of the map differs) |
 | `kMsgCommands` | unreliable | the last few commands (tick and input bits, each delta-coded against the one before; a key press with the character it typed) and the newest snapshot the client has |
 | `kMsgSnapshot`, `kMsgSnapshotPart` | unreliable | server tick, the baseline it is made against, the other players' forwarded controls, entities with field masks and changed fields (`core/snapshot.cpp`) |
-| `kMsgMapChange` | reliable | the next map, after a round, with its files' CRC-32s and the players of its game |
+| `kMsgMapChange` | reliable | the next map, after a round, with its files' CRC-32s, the players of its game and the client's slot in it |
 | `kMsgPing`, `kMsgPong` | unreliable | the client's clock, sent back at once |
 | `kMsgCommand`, `kMsgNotice` | reliable | a player's command; a line to show (a vote, a player ready) |
 
