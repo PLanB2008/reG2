@@ -23,3 +23,4 @@ set_target_properties(reg2_import PROPERTIES SUFFIX .js)
 # The Khronos headers the renderer declares its OpenGL entry points with.
 target_include_directories(gta2 PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../renderer/khronos)
 target_include_directories(gta2gl PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../renderer/khronos)
+set_target_properties(gta2 PROPERTIES LINK_DEPENDS "${web}/src/web_library.js;${web}/asyncify_only.json")

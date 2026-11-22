@@ -590,6 +590,13 @@ const game = {
     $('canvas').focus();
     M.callMain([]);
     this.loadMusic();
+    if (new URLSearchParams(location.search).has('stats')) {
+      setInterval(() => {
+        const f = M.webFrames;
+        if (f && f.frames) console.log(`web: ${(f.busy / f.frames).toFixed(2)} ms of game code per frame, display period ${f.period.toFixed(2)} ms`);
+        if (f) f.busy = f.frames = 0;
+      }, 5000);
+    }
   },
 
   async loadMusic() {
@@ -683,6 +690,14 @@ const game = {
     screen.orientation?.addEventListener?.('change', () => this.checkOrientation());
     document.addEventListener('fullscreenchange', () => this.onFullscreen());
     $('fs-button').onclick = () => toggleFullscreen();
+    // The full screen button shows while the mouse moves, then fades: it sits over the HUD's corner.
+    let idleTimer = 0;
+    addEventListener('pointermove', () => {
+      $('game-bar').classList.remove('idle');
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => $('game-bar').classList.add('idle'), 2500);
+    });
+    idleTimer = setTimeout(() => $('game-bar').classList.add('idle'), 4000);
     if (!document.fullscreenEnabled && !document.webkitFullscreenEnabled) document.body.classList.add('no-fullscreen');
     $('crash-reload').onclick = () => location.reload();
     $('crash-copy').onclick = () => this.copyDiagnostic();

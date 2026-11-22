@@ -178,6 +178,8 @@ body.playing { overflow: hidden; overscroll-behavior: none; }
   background-size: 24px; background-repeat: no-repeat; background-position: center; opacity: 0.6;
 }
 #fs-button:hover { opacity: 1; }
+#game-bar { transition: opacity 0.3s; }
+#game-bar.idle { opacity: 0; pointer-events: none; }
 body.no-fullscreen #fs-button, body.fullscreen #fs-button { display: none; }
 
 /* Touch controls (touch.js). Sizes scale with --touch-scale, opacity with --touch-opacity. */
