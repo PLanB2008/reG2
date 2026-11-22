@@ -374,6 +374,12 @@ void port_OpenGamepad()
     SDL_free(pIds);
 }
 
+// Whether the pads or the second keys hold a control down (0 forward to 11 special 3), as the game gets it.
+bool port_ControlHeld(int control)
+{
+    return control >= 0 && control < kNumControls && sHeld[control];
+}
+
 bool port_PadMode()
 {
     return sMode == kPadMode;

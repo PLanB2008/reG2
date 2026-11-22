@@ -136,6 +136,7 @@ bool port_MenuUsesMouse(); // the frontend or the pause menu
 bool port_DebugKeys(); // the game's do_debug_keys debug setting
 // TWIN STICK and the local player with the controls on: 1 on foot, 2 in a vehicle, else 0.
 int port_TwinStick();
+bool port_ControlHeld(int control);
 // TWIN STICK aims: on foot, or in a vehicle with a roof gun.
 bool port_TwinStickAims();
 // The local player with the controls on, in a vehicle, in either CONTROLS style.
