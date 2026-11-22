@@ -9,7 +9,7 @@
 
 namespace net
 {
-const uint32_t kProtocolVersion = 29;
+const uint32_t kProtocolVersion = 30;
 const uint16_t kDefaultPort = 27920;
 const size_t kMaxPayload = 1372; // the largest unreliable ENet packet at any link MTU (1428: ENet's mtu 1400)
 // The link's MTU, IP packets (--mtu, 576 to 1428): 1280 by default, the smallest of the VPNs people play LAN games over
@@ -92,6 +92,7 @@ struct MapChange
     MapPrint print; // the server's copy of gmp, sty and scr
     uint16_t game = 0; // the server's game on it (its snapshots' world.game)
     uint8_t players = 0; // that game's (the map's, at most the server's slots)
+    uint8_t slot = 0; // the client's player index in it: the slots are renumbered from 0 (netcode.md, "Maps and players")
 };
 
 struct InputCmd

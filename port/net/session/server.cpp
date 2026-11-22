@@ -18,6 +18,7 @@ namespace
 const uint32_t kArenaPeer = ~0u; // an arena bot's slot (no transport peer has it)
 const int kHelloWaitMs = 10000;
 const int kDesertedWaitMs = 100;
+const int kComeBackSec = 40; // a client tries to reconnect for 30 s (client.cpp, kGiveUpMs) after its own timeout
 
 long long NowMs()
 {
@@ -269,11 +270,15 @@ void net::Server::OnHello(uint32_t peer, BitReader& r)
             welcome.token = token;
             welcome.game = (uint16_t)(engine::MapChangePending() ? engine::GameGeneration() + 1 : engine::GameGeneration());
             WriteWelcome(w, welcome);
-            if (!stillIn)
+            // During a map change's pause the slots are the next game's already (ChangeToMap): its start sets them up
+            if (!stillIn && !engine::MapChangePending())
             {
                 engine::PutInGame(slot, back < 0); // at the next restart zone; a new player with an empty score
             }
-            engine::SetPlayerName(slot, name.c_str());
+            if (!engine::MapChangePending())
+            {
+                engine::SetPlayerName(slot, name.c_str());
+            }
             printf("net: %s %s player %d%s\n", name.c_str(), back >= 0 ? "is back as" : "joined as", slot,
                    name != hello.name ? (" (asked for \"" + hello.name + "\")").c_str() : "");
             Notice(-1, name + (back >= 0 ? " is back" : " joined"), slot);
@@ -725,7 +730,11 @@ void net::Server::OnEvent(const TransportEvent& e)
             mSlots[slot] = Slot();
             mSlots[slot].name = name; // kept for its return
             mSlots[slot].token = token;
-            engine::TakeOutOfGame(slot);
+            mSlots[slot].leftTick = mTick;
+            if (!engine::MapChangePending()) // else the next game's start leaves the slot out
+            {
+                engine::TakeOutOfGame(slot);
+            }
             mRounds.Left(slot);
             Notice(-1, name + " left");
         }
@@ -746,6 +755,14 @@ void net::Server::SetNextInputs(const Snapshot& world)
     for (size_t i = 0; i < mSlots.size(); i++)
     {
         Slot& s = mSlots[i];
+        if (engine::MapChangePending())
+        {
+            // The slots are the next game's (ChangeToMap): nobody's input goes to the old one's peds, the key events wait
+            s.next = 0;
+            engine::SetPlayerInput((int)i, 0);
+            engine::SetPlayerTyped((int)i, 0, 0);
+            continue;
+        }
         if (s.peer == kArenaPeer)
         {
             s.buttons = mStarted ? mArena.Buttons((int)i) : 0;
@@ -802,7 +819,7 @@ std::vector<net::RoundPlayer> net::Server::RoundPlayers(const Snapshot& world) c
     for (size_t i = 0; i < mSlots.size(); i++)
     {
         players[i].taken = mSlots[i].used;
-        players[i].in = mSlots[i].used && engine::SlotInGame((int)i);
+        players[i].in = mSlots[i].used && (engine::MapChangePending() || engine::SlotInGame((int)i)); // the pause: the next game's slots
         players[i].voter = mSlots[i].used && mSlots[i].peer != kArenaPeer;
         players[i].alwaysReady = mSlots[i].peer == kArenaPeer;
         players[i].name = mSlots[i].name;
@@ -948,7 +965,10 @@ void net::Server::Kick(int slot)
     mRounds.Left(slot);
     const std::string name = s.name;
     s = Slot(); // the name isn't kept for a return
-    engine::TakeOutOfGame(slot);
+    if (!engine::MapChangePending())
+    {
+        engine::TakeOutOfGame(slot);
+    }
     Notice(-1, name + " was kicked");
 }
 
@@ -958,12 +978,22 @@ void net::Server::ChangeToMap(int map)
 {
     mMap = (size_t)map;
     const MapFiles& m = mConfig.voteMaps[mMap];
-    // Its players: the slots past them are free (the round flow picks a map only if they are, RoundFlow::Fits) and
-    // stay closed through the pause; more open with the new game (StartOver)
+    // Its players, and the slots renumbered from 0 for it (CompactSlots): one that doesn't fit (the round flow picks a
+    // map only if they all do, RoundFlow::Fits) is put out. The slots past them stay closed through the pause; more
+    // open with the new game (StartOver)
     mGamePlayers = m.players < mConfig.slots ? m.players : mConfig.slots;
-    for (size_t i = (size_t)mGamePlayers; i < mSlots.size(); i++)
+    std::vector<bool> taken(mSlots.size()), kept(mSlots.size());
+    const uint32_t tps = 1000 / (mConfig.game.tickMs > 0 ? mConfig.game.tickMs : 33);
+    for (size_t i = 0; i < mSlots.size(); i++)
     {
-        if (!mSlots[i].used)
+        taken[i] = mSlots[i].used;
+        kept[i] = !mSlots[i].used && !mSlots[i].name.empty() && mTick - mSlots[i].leftTick < kComeBackSec * tps;
+    }
+    const int open = std::min((int)mSlots.size(), mGamePlayers);
+    const std::vector<int> to = CompactSlots(taken, kept, open);
+    for (size_t i = 0; i < mSlots.size(); i++)
+    {
+        if (!mSlots[i].used || to[i] >= 0)
         {
             continue;
         }
@@ -981,10 +1011,21 @@ void net::Server::ChangeToMap(int map)
         mRounds.Left((int)i);
         engine::TakeOutOfGame((int)i);
     }
-    if ((int)mSlots.size() > mGamePlayers)
+    mRounds.Renumber(to);
+    std::vector<Slot> slots((size_t)open);
+    for (size_t i = 0; i < mSlots.size(); i++)
     {
-        mSlots.resize((size_t)mGamePlayers);
+        if (to[i] < 0)
+        {
+            continue;
+        }
+        if (to[i] != (int)i)
+        {
+            printf("net: player %zu (%s) is player %d on %s\n", i, mSlots[i].name.c_str(), to[i], m.name.c_str());
+        }
+        slots[(size_t)to[i]] = std::move(mSlots[i]);
     }
+    mSlots = std::move(slots);
     mConfig.game.gmp = m.gmp; // for the welcome of those joining
     mConfig.game.sty = m.sty;
     mConfig.game.scr = m.scr;
@@ -1000,18 +1041,19 @@ void net::Server::ChangeToMap(int map)
     change.scr = m.scr;
     change.game = (uint16_t)(engine::GameGeneration() + 1);
     change.players = (uint8_t)mGamePlayers;
-    BitWriter w;
-    WriteMapChange(w, change);
-    for (const Slot& s : mSlots)
+    for (size_t i = 0; i < mSlots.size(); i++)
     {
-        if (s.used && s.peer != kArenaPeer)
+        if (mSlots[i].used && mSlots[i].peer != kArenaPeer)
         {
-            mTransport->Send(s.peer, kChannelReliable, w.Data().data(), w.ByteCount(), true);
+            change.slot = (uint8_t)i;
+            BitWriter w;
+            WriteMapChange(w, change);
+            mTransport->Send(mSlots[i].peer, kChannelReliable, w.Data().data(), w.ByteCount(), true);
         }
     }
     // The round flow showed the results already: half a second for the clients to hear of it. Without it (an arena's
     // rotation) the pause shows the winner
-    engine::ChangeMap(m.gmp, m.sty, m.scr, mGamePlayers, mConfig.rules.enabled ? 15 : 90);
+    engine::ChangeMap(m.gmp, m.sty, m.scr, mGamePlayers, 0, mConfig.rules.enabled ? 15 : 90);
 }
 
 void net::Server::Shutdown()

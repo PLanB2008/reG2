@@ -291,14 +291,61 @@ void net::RoundFlow::EndRound(uint32_t tick, const std::vector<RoundPlayer>& pla
 bool net::RoundFlow::Fits(int map, const std::vector<RoundPlayer>& players) const
 {
     const int takes = map >= 0 && map < (int)mTakes.size() ? mTakes[map] : kRoundSlots;
-    for (size_t i = (size_t)(takes > 0 ? takes : 0); i < players.size(); i++)
+    int taken = 0;
+    for (const RoundPlayer& p : players)
     {
-        if (players[i].taken)
+        taken += p.taken;
+    }
+    return taken <= takes;
+}
+
+std::vector<int> net::CompactSlots(const std::vector<bool>& taken, const std::vector<bool>& kept, int count)
+{
+    std::vector<int> to(taken.size(), -1);
+    int next = 0;
+    for (int pass = 0; pass < 2; pass++)
+    {
+        for (size_t i = 0; i < taken.size(); i++)
         {
-            return false;
+            const bool wanted = pass == 0 ? taken[i] : !taken[i] && i < kept.size() && kept[i];
+            if (wanted && next < count)
+            {
+                to[i] = next++;
+            }
         }
     }
-    return true;
+    return to;
+}
+
+void net::RoundFlow::Renumber(const std::vector<int>& to)
+{
+    RoundState was = mState;
+    mState.ready = mState.voteYes = mState.voteNo = 0;
+    for (uint8_t& c : mState.mapChoice)
+    {
+        c = 0;
+    }
+    for (size_t i = 0; i < to.size() && i < (size_t)kRoundSlots; i++)
+    {
+        const int n = to[i];
+        if (n < 0 || n >= kRoundSlots)
+        {
+            continue;
+        }
+        const SlotMask bit = (SlotMask)(1u << n);
+        mState.ready |= (was.ready >> i & 1) ? bit : 0;
+        mState.voteYes |= (was.voteYes >> i & 1) ? bit : 0;
+        mState.voteNo |= (was.voteNo >> i & 1) ? bit : 0;
+        mState.mapChoice[n] = was.mapChoice[i];
+    }
+    if (was.voteKind == kVoteKick)
+    {
+        const int n = was.voteArg < to.size() ? to[was.voteArg] : -1;
+        mState.voteKind = n >= 0 ? was.voteKind : (uint8_t)kVoteNone;
+        mState.voteArg = (uint8_t)(n >= 0 ? n : 0);
+        mState.voteYes = n >= 0 ? mState.voteYes : 0;
+        mState.voteNo = n >= 0 ? mState.voteNo : 0;
+    }
 }
 
 int net::RoundFlow::RotationNext(const std::vector<RoundPlayer>& players) const
@@ -431,7 +478,7 @@ void net::RoundFlow::Command(uint32_t tick, int slot, const std::string& text, c
         }
         if (!Fits(m, players))
         {
-            out.notices.push_back({slot, Title(m) + " takes " + std::to_string(mTakes[m]) + " players: the slots past them are in use"});
+            out.notices.push_back({slot, Title(m) + " takes " + std::to_string(mTakes[m]) + " players: more are in"});
             return;
         }
         if (mState.phase == kPhaseResults && mRules.enabled)
@@ -534,7 +581,7 @@ void net::RoundFlow::Carry(VoteKind kind, int arg, uint32_t tick, const std::vec
     }
     if (kind == kVoteMap && !Fits(arg, players))
     {
-        out.notices.push_back({-1, Title(arg) + " takes " + std::to_string(mTakes[arg]) + " players: the slots past them are in use now"});
+        out.notices.push_back({-1, Title(arg) + " takes " + std::to_string(mTakes[arg]) + " players: more are in now"});
         return;
     }
     if (kind == kVoteMap)

@@ -53,6 +53,10 @@ struct RoundActions
 std::string CompleteCommand(const std::string& line, const std::vector<std::string>& maps, const std::vector<std::string>& names,
                             std::vector<std::string>& options);
 
+// The slots of a map change's next game, by the current ones (-1: none): the taken ones from 0 in their order, then those
+// kept for a player who dropped (his reconnect), as far as <count> goes
+std::vector<int> CompactSlots(const std::vector<bool>& taken, const std::vector<bool>& kept, int count);
+
 class RoundFlow
 {
   public:
@@ -82,8 +86,10 @@ class RoundFlow
     {
         mTakes = players;
     }
-    // Every taken slot has a place on <map>: the slots are kept from map to map, so a map that takes 6 needs slots 6 up free
+    // <map> takes every taken slot: a map change renumbers them from 0 (CompactSlots), so only how many counts
     bool Fits(int map, const std::vector<RoundPlayer>& players) const;
+    // A map change's new slot numbers (<to>[old], -1: gone): the ready flags, votes and map choices follow
+    void Renumber(const std::vector<int>& to);
 
   private:
     void Enter(uint32_t tick, RoundPhase phase, RoundActions& out);

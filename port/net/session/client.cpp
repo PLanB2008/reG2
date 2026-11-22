@@ -51,6 +51,7 @@ void net::CorrectionStats::Print(uint32_t frame, const char* what) const
 void net::Client::Welcomed(const Welcome& welcome, engine::NetworkGame* pGame)
 {
     mSlot = welcome.slot;
+    mNextSlot = welcome.slot;
     mSession = welcome.session;
     mToken = welcome.token;
     mServerGame = welcome.game; // during a map change's pause, the next game: the old one's snapshots aren't for us
@@ -947,17 +948,17 @@ void net::Client::OnMapChange(BitReader& r)
     MapChange m;
     if (ReadMapChange(r, m))
     {
-        ChangeGame(m.map, m.gmp, m.sty, m.scr, m.print, m.game, m.players, 90);
+        ChangeGame(m.map, m.gmp, m.sty, m.scr, m.print, m.game, m.players, m.slot, 90);
     }
 }
 
 bool net::Client::ChangeGame(const std::string& map, const std::string& gmp, const std::string& sty, const std::string& scr, const MapPrint& print,
-                             int game, int players, int pauseTicks)
+                             int game, int players, int slot, int pauseTicks)
 {
     std::string missing;
-    if (players <= mSlot)
+    if (players <= slot)
     {
-        missing = "the server's next map takes " + std::to_string(players) + " players, not enough for us (player " + std::to_string(mSlot) + ")";
+        missing = "the server's next map takes " + std::to_string(players) + " players, not enough for us (player " + std::to_string(slot) + ")";
     }
     if (!missing.empty() || !PlainNames(BadMapName(map, gmp, sty, scr), "the server", &missing) || !HaveMap(gmp, sty, scr, &missing) || !SameMap(map, gmp, sty, scr, print, &missing))
     {
@@ -966,8 +967,9 @@ bool net::Client::ChangeGame(const std::string& map, const std::string& gmp, con
         LeaveToMenu(missing.c_str());
         return false;
     }
-    printf("net: frame %u, the next map: %s\n", mFrame, scr.c_str());
-    engine::ChangeMap(gmp, sty, scr, players, pauseTicks);
+    printf("net: frame %u, the next map: %s%s\n", mFrame, scr.c_str(), slot != mSlot ? (", as player " + std::to_string(slot)).c_str() : "");
+    engine::ChangeMap(gmp, sty, scr, players, slot, pauseTicks);
+    mNextSlot = slot;
     mScr = scr;
     mServerGame = game; // from now on: the old game's snapshots would put its things into the next map's
     return true;
@@ -976,6 +978,7 @@ bool net::Client::ChangeGame(const std::string& map, const std::string& gmp, con
 void net::Client::StartOver()
 {
     mGeneration = engine::GameGeneration();
+    mSlot = mNextSlot;
     mSynced = false;
     mNewSnapshot = false;
     mTakenTick = 0;
@@ -1260,19 +1263,22 @@ void net::Client::Rejoined(const Welcome& welcome)
         LeaveToMenu("the server was restarted");
         return;
     }
-    if (welcome.version != kProtocolVersion || welcome.slot != mSlot)
+    // The server's game went on to another (a round's fresh game, another map) while we were away: that one here too,
+    // in the slot it has us in (a map change renumbers them)
+    const bool otherGame = welcome.scr != mScr || (mServerGame >= 0 && welcome.game != mServerGame);
+    if (welcome.version != kProtocolVersion || (!otherGame && welcome.slot != mNextSlot))
     {
-        printf("net: frame %u, the server has us back as player %d, not %d: start the game again to play on\n", mFrame, welcome.slot, mSlot);
+        printf("net: frame %u, the server has us back as player %d, not %d: start the game again to play on\n", mFrame, welcome.slot, mNextSlot);
         LeaveToMenu("the server has us back as another player");
         return;
     }
-    // The server's game went on to another (a round's fresh game, another map) while we were away: that one here too
-    if ((welcome.scr != mScr || (mServerGame >= 0 && welcome.game != mServerGame)) &&
-        !ChangeGame(welcome.map, welcome.gmp, welcome.sty, welcome.scr, welcome.print, welcome.game, welcome.players, 1))
+    if (otherGame && !ChangeGame(welcome.map, welcome.gmp, welcome.sty, welcome.scr, welcome.print, welcome.game, welcome.players, welcome.slot, 1))
     {
         return;
     }
-    printf("net: frame %u, back in as player %d\n", mFrame, mSlot);
+    printf("net: frame %u, back in as player %d\n", mFrame, welcome.slot);
+    mToken = welcome.token; // a new one if the server had forgotten us
+    mConfig.name = welcome.name;
     mConnected = true;
     mSynced = false;
     mNewSnapshot = false;
