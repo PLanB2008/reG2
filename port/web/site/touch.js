@@ -3,15 +3,21 @@
 // - on foot, a floating stick on the left half walks; on the right, ATTACK, JUMP, ENTER and the weapons; with
 //   TWIN STICK, the right half is a second floating stick that aims and fires while held (right stick and RT);
 // - in a vehicle, the left stick steers; GAS and BRAKE (RT, LT), HAND BRAKE, FIRE, HORN and EXIT on the right;
-// - in the menus, taps reach the game as the mouse; BACK is the pad's B.
+// - in the menus, taps reach the game as the mouse; a d-pad (the pad's, repeating while held), OK (A) and BACK (B).
 // In a game the controls cover the whole screen, so that no touch reaches the canvas as a mouse click.
 // The action set follows the 3DS port's layout (attack or gas, jump or hand brake, get in or out, the weapons).
 
 // SDL_GamepadButton bits and SDL_GamepadAxis indices.
 const A = 1 << 0, B = 1 << 1, X = 1 << 2, Y = 1 << 3, START = 1 << 6, LB = 1 << 9, RB = 1 << 10;
+const UP = 1 << 11, DOWN = 1 << 12, LEFT = 1 << 13, RIGHT = 1 << 14;
 const RX = 2, LT = 4, RT = 5;
 // SDL reads the virtual pad once a frame: a tap lasts at least this long.
 const MIN_PRESS_MS = 50;
+// The menus read the pad once a frame at 30 Hz or less: each d-pad press and release lasts this long, so that
+// quick taps and repeats all count on a slow phone too.
+const DPAD_STEP_MS = 80;
+const DPAD_REPEAT_DELAY_MS = 400;
+const DPAD_REPEAT_MS = 180;
 // The aiming stick fires from this far out of its range; nearer, it only turns the player.
 const FIRE_FORCE = 0.35;
 
@@ -34,15 +40,16 @@ const BUTTONS = [
   { label: 'horn', bit: X, mode: 'car', right: 236, bottom: 30, size: 56 },
   { label: 'exit', bit: Y, mode: 'car', right: 52, bottom: 218, size: 60 },
   { label: 'pause', bit: START, mode: 'game', right: 16, top: 12, size: 56, raw: '❚❚' },
-  { label: 'back', bit: B, mode: 'menu', left: 16, top: 12, size: 56, wide: true },
+  { label: 'ok', bit: A, mode: 'menu', right: 18, bottom: 22, size: 84 },
+  { label: 'back', bit: B, mode: 'menu', right: 28, bottom: 128, size: 64 },
 ];
 
 const LABELS = {
-  en: { attack: 'Attack', jump: 'Jump', enter: 'Enter', gas: 'Gas', brake: 'Brake', handbrake: 'Hand brake', exit: 'Exit', fire: 'Fire', horn: 'Horn', back: 'Back' },
-  fr: { attack: 'Frapper', jump: 'Sauter', enter: 'Monter', gas: 'Gaz', brake: 'Frein', handbrake: 'Frein à main', exit: 'Sortir', fire: 'Tirer', horn: 'Klaxon', back: 'Retour' },
-  de: { attack: 'Angriff', jump: 'Springen', enter: 'Einsteigen', gas: 'Gas', brake: 'Bremse', handbrake: 'Handbremse', exit: 'Aussteigen', fire: 'Feuer', horn: 'Hupe', back: 'Zurück' },
-  it: { attack: 'Attacca', jump: 'Salta', enter: 'Sali', gas: 'Gas', brake: 'Freno', handbrake: 'Freno a mano', exit: 'Scendi', fire: 'Spara', horn: 'Clacson', back: 'Indietro' },
-  es: { attack: 'Atacar', jump: 'Saltar', enter: 'Subir', gas: 'Gas', brake: 'Freno', handbrake: 'Freno de mano', exit: 'Bajar', fire: 'Disparar', horn: 'Claxon', back: 'Atrás' },
+  en: { ok: 'OK', attack: 'Attack', jump: 'Jump', enter: 'Enter', gas: 'Gas', brake: 'Brake', handbrake: 'Hand brake', exit: 'Exit', fire: 'Fire', horn: 'Horn', back: 'Back' },
+  fr: { ok: 'OK', attack: 'Frapper', jump: 'Sauter', enter: 'Monter', gas: 'Gaz', brake: 'Frein', handbrake: 'Frein à main', exit: 'Sortir', fire: 'Tirer', horn: 'Klaxon', back: 'Retour' },
+  de: { ok: 'OK', attack: 'Angriff', jump: 'Springen', enter: 'Einsteigen', gas: 'Gas', brake: 'Bremse', handbrake: 'Handbremse', exit: 'Aussteigen', fire: 'Feuer', horn: 'Hupe', back: 'Zurück' },
+  it: { ok: 'OK', attack: 'Attacca', jump: 'Salta', enter: 'Sali', gas: 'Gas', brake: 'Freno', handbrake: 'Freno a mano', exit: 'Scendi', fire: 'Spara', horn: 'Clacson', back: 'Indietro' },
+  es: { ok: 'OK', attack: 'Atacar', jump: 'Saltar', enter: 'Subir', gas: 'Gas', brake: 'Freno', handbrake: 'Freno de mano', exit: 'Bajar', fire: 'Disparar', horn: 'Claxon', back: 'Atrás' },
 };
 
 // A floating stick: it moves to where the thumb lands in its zone and follows that one finger; at rest it shows,
@@ -111,6 +118,93 @@ function stick(zone, onMove, onEnd) {
   return { end, forget: (pointerId) => pointerId === id && end() };
 }
 
+// The menus' d-pad: one finger points a direction from its centre and may slide to another. setBits(bits) gets the
+// d-pad's bits, each state held DPAD_STEP_MS; a direction held repeats.
+function dpad(el, setBits) {
+  const arms = {};
+  for (const [bit, cls, glyph] of [[UP, 'u', '▲'], [DOWN, 'd', '▼'], [LEFT, 'l', '◀'], [RIGHT, 'r', '▶']]) {
+    const arm = document.createElement('span');
+    arm.className = cls;
+    arm.textContent = glyph;
+    el.appendChild(arm);
+    arms[bit] = arm;
+  }
+  let id = null;
+  let dir = 0;
+  let repeat = 0;
+  const queue = [];
+  let applied = 0;
+  let pump = 0;
+  const next = () => {
+    pump = 0;
+    if (!queue.length) return;
+    applied = queue.shift();
+    setBits(applied);
+    pump = setTimeout(next, DPAD_STEP_MS);
+  };
+  const push = (bits) => {
+    if ((queue.length ? queue[queue.length - 1] : applied) === bits) return;
+    queue.push(bits);
+    if (!pump) next();
+  };
+  const set = (d) => {
+    if (d === dir) return;
+    clearTimeout(repeat);
+    if (dir) arms[dir].classList.remove('down');
+    dir = d;
+    push(d);
+    if (!d) return;
+    arms[d].classList.add('down');
+    if (navigator.vibrate) navigator.vibrate(10);
+    const again = () => {
+      push(0);
+      push(d);
+      repeat = setTimeout(again, DPAD_REPEAT_MS);
+    };
+    repeat = setTimeout(again, DPAD_REPEAT_DELAY_MS);
+  };
+  const aim = (e) => {
+    const r = el.getBoundingClientRect();
+    const dx = e.clientX - (r.left + r.width / 2);
+    const dy = e.clientY - (r.top + r.height / 2);
+    if (Math.hypot(dx, dy) < r.width * 0.12) return set(0);
+    set(Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? LEFT : RIGHT) : dy < 0 ? UP : DOWN);
+  };
+  el.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (id !== null) return;
+    id = e.pointerId;
+    try {
+      el.setPointerCapture(id);
+    } catch {}
+    aim(e);
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (e.pointerId === id) aim(e);
+  });
+  const end = () => {
+    id = null;
+    set(0);
+  };
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+    el.addEventListener(type, (e) => {
+      if (e.pointerId === id) end();
+    });
+  }
+  // The page hidden or the layout changed: released at once, nothing left queued.
+  const release = () => {
+    id = null;
+    clearTimeout(repeat);
+    clearTimeout(pump);
+    pump = 0;
+    queue.length = 0;
+    if (dir) arms[dir].classList.remove('down');
+    dir = applied = 0;
+  };
+  return { release, forget: (pointerId) => pointerId === id && end() };
+}
+
 export class TouchControls {
   constructor(root, module, getState, prefs) {
     this.root = root;
@@ -146,8 +240,15 @@ export class TouchControls {
       }),
     ];
 
+    const pad = dpad(add('dpad menu-only'), (bits) => {
+      this.buttons = (this.buttons & ~(UP | DOWN | LEFT | RIGHT)) | bits;
+      this.send();
+    });
+    this.releases.push(pad.release);
+    this.forgets.push(pad.forget);
+
     for (const def of BUTTONS) {
-      const el = add(`tbtn ${def.mode}-only${def.mode === 'game' || def.mode === 'menu' ? '' : ' game-only'}${def.wide ? ' wide' : ''}`);
+      const el = add(`tbtn ${def.mode}-only${def.mode === 'game' || def.mode === 'menu' ? '' : ' game-only'}`);
       el.textContent = def.raw || labels[def.label];
       el.setAttribute('aria-hidden', 'true');
       for (const side of ['right', 'bottom', 'left', 'top']) {

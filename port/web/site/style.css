@@ -190,7 +190,22 @@ body.no-fullscreen #fs-button, body.fullscreen #fs-button { display: none; }
   pointer-events: auto; touch-action: none;
 }
 #touch .tbtn.down { background: rgba(224, 33, 63, 0.8); border-color: #fff; }
-#touch .tbtn.wide { border-radius: 12px; width: auto; padding: 0 1em; }
+#touch .dpad {
+  position: absolute; pointer-events: auto; touch-action: none;
+  left: calc(12px * var(--touch-scale, 1) + env(safe-area-inset-left));
+  bottom: calc(12px * var(--touch-scale, 1) + env(safe-area-inset-bottom));
+  width: calc(171px * var(--touch-scale, 1)); height: calc(171px * var(--touch-scale, 1));
+}
+#touch .dpad span {
+  position: absolute; width: 33%; height: 33%; box-sizing: border-box; border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.8); background: rgba(10, 10, 11, 0.55); color: #fff;
+  font-size: calc(1.4rem * var(--touch-scale, 1)); display: flex; align-items: center; justify-content: center;
+}
+#touch .dpad .u { left: 33.5%; top: 0; }
+#touch .dpad .d { left: 33.5%; bottom: 0; }
+#touch .dpad .l { left: 0; top: 33.5%; }
+#touch .dpad .r { right: 0; top: 33.5%; }
+#touch .dpad span.down { background: rgba(224, 33, 63, 0.8); border-color: #fff; }
 body.touch-on #pause-button { display: none; }
 body.touch-on #game-bar { top: calc(env(safe-area-inset-top) + 24px); right: calc(84px * var(--touch-scale, 1) + env(safe-area-inset-right)); }
 #touch[data-mode="menu"] .game-only, #touch:not([data-mode="menu"]) .menu-only,
