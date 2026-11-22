@@ -31,7 +31,22 @@ Any static server works; the page needs no special headers (no `SharedArrayBuffe
 secure context, so the service worker and storage work there as on the published site. `?stats` in the page's
 address shows, at the bottom left of the game: frames per second, the game code's and the GPU's time per frame
 (`EXT_disjoint_timer_query_webgl2` where the browser has it), late frames, the display's rate, the canvas size and
-the WebGL renderer. `?msaa=N` caps the anti-aliasing, to compare.
+the WebGL renderer (`?gpu=1` adds the GPU's time, from a timer query each frame). `?debug` also logs a console line a
+second: frame intervals, time in the game, Asyncify, sound and storage, WebGL calls, draws, framebuffer binds and
+upload bytes, long tasks and page events. Session toggles, to compare frame rates without touching the settings:
+`?fps=N` (frame limit, 0 every refresh), `?scale=F` (canvas resolution), `?msaa=N`, `?bloom=0`, `?nofx=1` (the
+ENHANCED rendering passes off).
+
+### Frame rate in a browser
+
+Each WebGL call goes through the browser's GPU process. The renderer batches sprites and tiles into about 135 draws
+a frame; a batch keeps the target, program and vertex array the previous one bound (`GLRenderer::Flush`), about 8
+calls a draw. Before that, about 15 calls a draw kept Chrome at 25 to 40 frames a second on a 120 Hz screen; after,
+it draws 120. Two things in the page made long tasks and must stay out of a frame: reading the WebGL renderer's name
+(it waits for the GPU to finish), and, less clearly, a GPU timer query each frame (now only with `?gpu=1`). On the web
+the first start sets FRAME LIMIT 60. Playwright's Chromium on the same KDE Wayland session sometimes drew every second
+refresh in unlimited mode (59 a second, its GPU process about 2 ms busy a frame) and other times 120; the user's
+Chrome draws 120.
 
 ## Publishing (GitHub Pages)
 
