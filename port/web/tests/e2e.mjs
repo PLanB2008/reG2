@@ -4,12 +4,14 @@
 //   npm i playwright && npx playwright install chromium firefox
 //   python3 -m http.server -d <site> 8000 &
 //   SITE=http://127.0.0.1:8000/ GTA2=~/GTA2INSTALLER.exe OUT=/tmp/shots node port/web/tests/e2e.mjs [chromium|firefox] [scenario...]
+// The update scenario also needs SITE_DIR=<site> (it serves a copy and changes the build in it).
 //
-// Scenarios: import, play, save, exit, contextloss, offline, tabs, hide, keys, escape, resize, touch. Each runs in its own new profile (import first).
+// Scenarios: import, play, save, exit, contextloss, offline, tabs, hide, keys, escape, resize, update, touch. Each runs in its own new profile (import first).
 import { chromium, firefox } from 'playwright';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { cpSync, createReadStream, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { extname, join } from 'node:path';
 
 const SITE = process.env.SITE || 'http://127.0.0.1:8000/';
 const GTA2 = process.env.GTA2;
@@ -315,6 +317,53 @@ const scenarios = {
     check('resize: and back', modes[modes.length - 1] === '1280x720', modes.join(' '));
     await shot(page, 'resize');
     await close();
+  },
+
+  // A new build reaches a new tab at once; offline, the cached build starts.
+  async update() {
+    if (!process.env.SITE_DIR) {
+      console.log('  (update needs SITE_DIR)');
+      return;
+    }
+    const dir = mkdtempSync(join(tmpdir(), 'reg2-site-'));
+    cpSync(process.env.SITE_DIR, dir, { recursive: true });
+    const types = { '.html': 'text/html', '.js': 'text/javascript', '.wasm': 'application/wasm', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
+    const server = createServer((req, res) => {
+      let file = join(dir, decodeURIComponent(new URL(req.url, 'http://x').pathname));
+      try {
+        if (statSync(file).isDirectory()) file = join(file, 'index.html');
+        statSync(file);
+      } catch {
+        res.writeHead(404);
+        return res.end();
+      }
+      res.writeHead(200, { 'content-type': types[extname(file)] || 'application/octet-stream', 'cache-control': 'no-cache' });
+      createReadStream(file).pipe(res);
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const url = `http://127.0.0.1:${server.address().port}/`;
+    const { ctx, page, close } = await open();
+    await page.goto(url);
+    await page.waitForFunction(() => navigator.serviceWorker.controller, null, { timeout: 30000 });
+    // The next build: another version in the service worker, another title in the page.
+    const sw = readFileSync(join(dir, 'sw.js'), 'utf8').replace(/const VERSION = '[^']*'/, "const VERSION = 'next'");
+    writeFileSync(join(dir, 'sw.js'), sw);
+    writeFileSync(join(dir, 'index.html'), readFileSync(join(dir, 'index.html'), 'utf8').replace('<title>reG2</title>', '<title>reG2 next</title>'));
+    const tab = await ctx.newPage();
+    await tab.goto(url);
+    const got = await tab.waitForFunction(() => document.title === 'reG2 next', null, { timeout: 30000 }).then(() => true, () => false);
+    check('update: a new tab has the new build', got, await tab.title());
+    // The other tabs hold the storage: left first, as a player would.
+    await page.goto('about:blank');
+    await tab.close();
+    await ctx.setOffline(true);
+    const offline = await ctx.newPage();
+    await offline.goto(url).catch(() => {});
+    const started = await offline.waitForFunction(() => !document.getElementById('import').hidden || !document.getElementById('ready').hidden, null, { timeout: 30000 }).then(() => true, () => false);
+    check('update: offline, the page starts', started, await offline.title().catch(() => '?'));
+    await close();
+    server.close();
+    rmSync(dir, { recursive: true, force: true });
   },
 
   // A phone in landscape: the menus by touch, the stick and a button.

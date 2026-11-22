@@ -41,32 +41,57 @@ function formatMB(bytes) {
 // Start-up
 
 applyTranslations();
-registerServiceWorker();
-start();
+registerServiceWorker().finally(start);
 
-// A new build waits in its service worker until the page is idle (not in a game or an import), then takes over.
-function registerServiceWorker() {
+// A new build: at load (nothing running yet) the page looks for one and switches to it at once, so a new tab gets
+// it; later, it waits until the page is idle (not in a game or an import). Offline, the cached build starts.
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function registerServiceWorker() {
   if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
+  const sw = navigator.serviceWorker;
   const idle = () => !game.module && !importing;
-  const offer = (reg) => {
-    if (reg.waiting && navigator.serviceWorker.controller && idle()) reg.waiting.postMessage('update');
-  };
-  navigator.serviceWorker.register('sw.js').then((reg) => {
-    if (!reg) return;
-    offer(reg);
-    reg.addEventListener('updatefound', () => {
-      reg.installing?.addEventListener('statechange', () => offer(reg));
-    });
-  }).catch((e) => console.warn('service worker:', e));
-  // The first install also changes the controller (clients.claim): only a replaced build needs the reload.
-  const hadController = !!navigator.serviceWorker.controller;
+  const hadController = !!sw.controller;
   let reloading = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (hadController && !reloading && idle()) {
+  const reload = () => {
+    if (!reloading) {
       reloading = true;
       location.reload();
     }
+  };
+  // The first install also changes the controller (clients.claim): only a replaced build needs the reload.
+  sw.addEventListener('controllerchange', () => {
+    if (hadController && idle()) reload();
   });
+  let reg;
+  try {
+    reg = await sw.register('sw.js', { updateViaCache: 'none' });
+  } catch (e) {
+    console.warn('service worker:', e);
+    return;
+  }
+  if (!reg || !hadController) return;
+  const offer = () => {
+    if (reg.waiting && idle()) reg.waiting.postMessage('update');
+  };
+  reg.addEventListener('updatefound', () => reg.installing?.addEventListener('statechange', offer));
+  // A few seconds at most for the check and the new build's download; then the build in hand starts.
+  await Promise.race([reg.update().catch(() => {}), wait(3000)]);
+  const next = reg.installing || reg.waiting;
+  if (!next) return;
+  await Promise.race([
+    new Promise((resolve) => {
+      if (next.state === 'installed') return resolve();
+      next.addEventListener('statechange', () => next.state !== 'installing' && resolve());
+    }),
+    wait(20000),
+  ]);
+  if (reg.waiting) {
+    reg.waiting.postMessage('update');
+    await Promise.race([new Promise((resolve) => sw.addEventListener('controllerchange', resolve)), wait(3000)]);
+    reload();
+    await new Promise(() => {});
+  }
 }
 
 function missingFeatures() {

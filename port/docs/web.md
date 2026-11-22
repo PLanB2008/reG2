@@ -207,7 +207,7 @@ settings, the game's overlays and touch controls).
 | Reduced motion | No transitions on the page |
 | Photosensitivity | "Fewer flashes" turns bloom off |
 | Offline | The service worker serves the build; the game data is in IndexedDB |
-| New build | Installed in the background, taken over on the home page, never during a game or an import |
+| New build | Checked at each page load (a few seconds at most) and used at once, so a new tab gets it; found later, it waits until no game or import runs; offline, the cached build starts |
 
 ## Tests
 
