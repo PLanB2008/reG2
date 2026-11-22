@@ -50,4 +50,7 @@ for the selected or main action. The screenshots carry the colour.
 - Components: `.caps` (tracked capitals), `.menu` (a vertical menu, `.sel` on the selected item; the pointer
   moves the selection), `.nocase` (keeps macOS or gta2_re in `.caps`), `.muted`, `.small`, `.skip`.
 
-No Rockstar or GTA2 logos, fonts or artwork as branding; no gradients, glows, tags or decorative effects.
+A touch of the era, kept faint: the sections numbered like the chapters of a printed manual, each under a bold bar
+with its number as a tab (`home.css`).
+
+No Rockstar or GTA2 logos, fonts or artwork as branding; no gradients, glows or other decorative effects.
