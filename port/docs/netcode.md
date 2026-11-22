@@ -464,7 +464,8 @@ What a network game trusts, and what it doesn't:
   a trailer the game wouldn't hitch, an object without a definition, a station that isn't a train's, a ped state whose
   objective lacks its target, a carjacking animation on foot. In port builds the map's lookups stay on the map
   (`Map_0x370`'s `get_base`). `port/net/scripts/fuzz.sh` plays games whose client turns random fields of each
-  snapshot into random values (`GTA2_NET_FUZZ`), best under AddressSanitizer.
+  snapshot into random values (`GTA2_NET_FUZZ`), best under AddressSanitizer (`-p res-6p` for trains: the only
+  multiplayer map whose script makes some).
 - **Text** a peer sent goes to the terminal and the log as printable ASCII, anything else a `?` (`Printable`).
 - **The transport**: 64 KB packets at most (ENet's `maximumPacketSize`, 32 MB by default), and a connection that
   says no hello within 10 s is dropped.
