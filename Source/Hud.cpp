@@ -1035,18 +1035,18 @@ void Hud_Arrow::SetPlayerArrowColour(Ped* pPed)
             break;
 #if defined(GTA2_PORT)
         // Port: more players than the original's 6 (MAX_PLAYERS): the blond redneck, Elvis and the police look get
-        // arrows of their own, an arrow drawn with a user remap (the high byte, DrawArrow): cyan, brown, olive
+        // arrows of their own, an arrow drawn with a user remap (the high byte, DrawArrow): rust, cyan, mustard
         case 5:
             mTargets.mArrowSprtIdx = 4;
             break;
         case 6:
-            mTargets.mArrowSprtIdx = 3 | 9 << 8;
+            mTargets.mArrowSprtIdx = 2 | 1 << 8;
             break;
         case 12:
-            mTargets.mArrowSprtIdx = 3 | 14 << 8;
+            mTargets.mArrowSprtIdx = 6 | 9 << 8;
             break;
         case 0:
-            mTargets.mArrowSprtIdx = 1 | 14 << 8;
+            mTargets.mArrowSprtIdx = 1 | 13 << 8;
             break;
 #else
         case 5:
