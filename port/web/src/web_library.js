@@ -9,8 +9,11 @@ addToLibrary({
     const f = webFrames;
     Module['webFrames'] = f;
     if (f.resumed) {
-      f.busy += performance.now() - f.resumed;
+      const busy = performance.now() - f.resumed;
+      f.busy += busy;
+      f.busyTotal = (f.busyTotal || 0) + busy;
       f.frames++;
+      f.yields = (f.yields || 0) + 1;
     }
     requestAnimationFrame((t) => {
       const d = t - f.last;
@@ -22,6 +25,8 @@ addToLibrary({
       }
       f.resumed = performance.now();
       wakeUp();
+      // The whole callback: Asyncify's rewind, the game until its next yield, the unwind.
+      f.callback = (f.callback || 0) + performance.now() - f.resumed;
     });
   }),
   // fsync: nothing to wait for in the memory file system (the page stores files as they are closed). Emscripten's

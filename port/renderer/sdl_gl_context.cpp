@@ -62,6 +62,10 @@ IGLContext* CreateGLContext(SDL_Window* pWindow, const char** ppError)
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
+#if defined(__EMSCRIPTEN__)
+    // An opaque canvas: the browser need not blend it with the page behind.
+    SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 0);
+#endif
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);

@@ -601,7 +601,9 @@ const game = {
     $('canvas').focus();
     M.callMain([]);
     this.logLine('WebGL: ' + this.glRenderer());
-    if (new URLSearchParams(location.search).has('stats')) this.showStats(M);
+    const params = new URLSearchParams(location.search);
+    if (params.has('stats') || params.has('debug')) this.showStats(M);
+    if (params.has('debug')) this.debugLog(M);
   },
 
   // A music track for the game (true if the page has it), read from storage while the stream waits silently.
@@ -657,6 +659,7 @@ const game = {
   },
 
   async flush() {
+    const started = performance.now();
     clearTimeout(this.persistTimer);
     const M = this.module;
     if (!M || storageLost) return;
@@ -673,6 +676,7 @@ const game = {
         if (quota) this.notice(t('saveQuota'));
       }
     }
+    if (this.debug) this.debug.io += performance.now() - started;
   },
 
   notice(text) {
@@ -747,7 +751,10 @@ const game = {
     let query = null;
     const pending = [];
     let lastFrame = 0;
+    let browserFrames = 0;
+    this.browserFrames = () => browserFrames;
     const frame = (t) => {
+      browserFrames++;
       if (lastFrame && t - lastFrame > 1.5 * (M.webFrames?.period || 16.7)) late++;
       lastFrame = t;
       if (timer && !gl.isContextLost()) {
@@ -767,6 +774,7 @@ const game = {
     };
     requestAnimationFrame(frame);
     let lastPresents = 0;
+    let lastBrowser = 0;
     let lastTime = performance.now();
     let tick = 0;
     setInterval(() => {
@@ -774,6 +782,8 @@ const game = {
       if (!f) return;
       const now = performance.now();
       const fps = ((f.presents - lastPresents) * 1000) / (now - lastTime);
+      const browserFps = ((this.browserFrames() - lastBrowser) * 1000) / (now - lastTime);
+      lastBrowser = this.browserFrames();
       const busy = f.frames ? f.busy / f.frames : 0;
       lastPresents = f.presents;
       lastTime = now;
@@ -781,11 +791,81 @@ const game = {
       const canvas = $('canvas');
       const gpuMs = gpu.length ? gpu.reduce((a, b) => a + b, 0) / gpu.length : NaN;
       gpu.length = 0;
-      box.textContent = `${fps.toFixed(0)} fps  game ${busy.toFixed(1)} ms  gpu ${isNaN(gpuMs) ? '?' : gpuMs.toFixed(1)} ms  ` +
-        `late frames ${late}  display ${(1000 / f.period).toFixed(0)} Hz\n` +
+      box.textContent = `${fps.toFixed(0)} fps drawn of ${browserFps.toFixed(0)} browser frames  game ${busy.toFixed(1)} ms  ` +
+        `gpu ${isNaN(gpuMs) ? '?' : gpuMs.toFixed(1)} ms  late ${late}  screen ${(1000 / f.period).toFixed(0)} Hz\n` +
         `canvas ${canvas.width}x${canvas.height} (x${devicePixelRatio.toFixed(2)})  wasm ${M.HEAPU8.length >> 20} MB\n${this.glRenderer()}`;
       late = 0;
       if (++tick % 5 === 0) console.log('web: ' + box.textContent.replace(/\n/g, ' | '));
+    }, 1000);
+  },
+
+  // ?debug: one compact console line a second about the page's thread, for players to send (DevTools console,
+  // Save as): the browser's frame intervals, the time in the game, in Asyncify, in sound, in storage, long tasks,
+  // and what happened (pointer lock, full screen, visibility, resizes, the audio context's state).
+  debugLog(M) {
+    const d = { raf: [], audio: 0, audioCalls: 0, io: 0, long: [], events: [] };
+    this.debug = d;
+    let last = 0;
+    const frame = (t) => {
+      if (last) d.raf.push(t - last);
+      last = t;
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+    const event = (name) => d.events.push(name);
+    document.addEventListener('pointerlockchange', () => event(document.pointerLockElement ? 'lock' : 'unlock'));
+    document.addEventListener('fullscreenchange', () => event(document.fullscreenElement ? 'fullscreen' : 'window'));
+    document.addEventListener('visibilitychange', () => event(document.hidden ? 'hidden' : 'visible'));
+    addEventListener('resize', () => event(`resize ${innerWidth}x${innerHeight}`));
+    try {
+      new PerformanceObserver((list) => {
+        for (const e of list.getEntries()) {
+          const a = e.attribution && e.attribution[0];
+          d.long.push(`${Math.round(e.duration)}ms@${Math.round(e.startTime / 1000)}s${a ? ' ' + (a.containerType || a.name) : ''}`);
+        }
+      }).observe({ type: 'longtask', buffered: false });
+    } catch {}
+    // The sound's callback, timed once SDL has made it (hookAudio puts the gain node in the same way).
+    const wrapAudio = () => {
+      const sdl = M.SDL3;
+      const node = sdl?.audio_playback?.scriptProcessorNode;
+      if (!node || !node.onaudioprocess) return setTimeout(wrapAudio, 500);
+      const inner = node.onaudioprocess;
+      node.onaudioprocess = (e) => {
+        const t = performance.now();
+        inner(e);
+        d.audio += performance.now() - t;
+        d.audioCalls++;
+      };
+      sdl.audioContext.addEventListener('statechange', () => event('audio ' + sdl.audioContext.state));
+      event('audio ' + sdl.audioContext.state);
+    };
+    wrapAudio();
+    let tick = 0;
+    let lastCallback = 0;
+    let lastBusy = 0;
+    let lastFrames = 0;
+    setInterval(() => {
+      const f = M.webFrames || {};
+      const r = d.raf.splice(0);
+      const sum = r.reduce((a, b) => a + b, 0);
+      const fmt = (v) => v.toFixed(1);
+      const frames = (f.yields || 0) - lastFrames;
+      const callback = (f.callback || 0) - lastCallback;
+      const busy = (f.busyTotal || 0) - lastBusy;
+      lastFrames = f.yields || 0;
+      lastCallback = f.callback || 0;
+      lastBusy = f.busyTotal || 0;
+      const known = callback + d.audio + d.io;
+      console.log(`[reg2 debug] t=${++tick}s raf n=${r.length} min/avg/max ${r.length ? fmt(Math.min(...r)) : '-'}/` +
+        `${r.length ? fmt(sum / r.length) : '-'}/${r.length ? fmt(Math.max(...r)) : '-'} >20ms:${r.filter((x) => x > 20).length} ` +
+        `>33ms:${r.filter((x) => x > 33).length} | game ${fmt(busy)}ms in ${frames} yields, asyncify+callback ` +
+        `${fmt(callback - busy)}ms | audio ${fmt(d.audio)}ms in ${d.audioCalls} calls | storage (wall) ${fmt(d.io)}ms | ` +
+        `page thread busy (known) ${fmt(known)}ms of 1000 | state ${this.state()} | long tasks: ${d.long.join(', ') || '-'} | ` +
+        `events: ${d.events.join(', ') || '-'}`);
+      d.audio = d.audioCalls = d.io = 0;
+      d.long.length = 0;
+      d.events.length = 0;
     }, 1000);
   },
 

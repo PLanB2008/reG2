@@ -1136,8 +1136,13 @@ void ApplyStyle(Style style)
     gRegistry.Set_Screen_Setting(ScreenName(kRetry), enhanced);
     gRegistry.Set_Screen_Setting(ScreenName(kKfRespawn), enhanced);
     gRegistry.Set_Screen_Setting(ScreenName(kInfiniteLives), 0);
-    // Unlimited with vsync: a frame each refresh of the screen.
+    // Unlimited with vsync: a frame each refresh of the screen. In a browser 60: drawing at 120 or 144 Hz loads its
+    // compositor for little, with the game's 30 steps a second.
+#if defined(__EMSCRIPTEN__)
+    gRegistry.Set_Screen_Setting(ScreenName(kFrameLimit), 60);
+#else
     gRegistry.Set_Screen_Setting(ScreenName(kFrameLimit), 0);
+#endif
     gRegistry.Set_Screen_Setting(ScreenName(kVsync), 1);
     port_ApplyVsync();
     PortFrameLoop::ApplySettings();

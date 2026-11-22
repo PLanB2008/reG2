@@ -150,8 +150,8 @@ unsigned long long port_SwapRefreshNs()
 void port_PresentAgain()
 {
 #if defined(__EMSCRIPTEN__)
-    // The canvas keeps showing the last frame until something is drawn.
-    port_WebMarkPresented();
+    // The canvas keeps showing the last frame until something is drawn: the loop only waits for the next one.
+    port_WebMarkIdle();
     return;
 #endif
     if (sVidSystem)
