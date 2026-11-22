@@ -123,10 +123,27 @@ the game as installed.
   (SDL's relative mode); Escape releases it, a click takes it again.
 - Gamepads through the Gamepad API (SDL), with hot plug and rumble where the browser has it.
 - Touch: `touch.js` draws the controls and drives a virtual SDL gamepad (`port_WebPad`), so the port's pad
-  support does the rest (left stick to walk or steer, RT and LT to accelerate and brake, the default pad
-  bindings). The stick is nipplejs. On foot: attack, jump, enter, previous and next weapon; in a vehicle: gas,
-  brake, hand brake, exit, fire; always: pause; in the menus: back (menus are tapped, which SDL turns into the
-  mouse). They show while touch is in use and hide at a key, a mouse move or a gamepad button.
+  support does the rest; the action set is the 3DS port's. Held in landscape with two thumbs:
+  - on foot, a floating stick on the left half walks; on the right ATTACK, JUMP, ENTER and the weapons;
+    with TWIN STICK (state bit 16) the right half is a second floating stick that aims and fires while pushed past
+    a third of its range (right stick and RT), with JUMP, ENTER and the weapons in a column at the edge;
+  - in a vehicle the left stick steers; GAS and BRAKE (RT, LT), HAND BRAKE, FIRE, HORN (special 1) and EXIT;
+  - PAUSE in the top right corner in a game, BACK top left in the menus; the menus are tapped (SDL turns a tap
+    into the mouse);
+  - buttons 56 to 96 px, inside the safe areas, a short vibration on each press where the browser has it.
+  The sticks are drawn by `touch.js` (about 60 lines): nipplejs placed its stick from its zone's position measured
+  when it was made, while hidden, so the stick appeared away from the thumb.
+  In a game a blocker under the controls takes the touches that miss them, so none reaches the canvas as a mouse
+  click (with TWIN STICK the mouse's left button attacks). Every press ends with its finger, also when the finger
+  slides off, the browser cancels the touch, the last finger lifts, or the page loses focus. While the controls are
+  in use the page asks for no pointer lock, and a touch ends one the game took for the mouse (TWIN STICK's relative
+  mode): under pointer lock every event has the same position, so the sticks could not move. The sticks show,
+  faint, at their usual place while at rest. The controls show while touch is in use and hide at a key, a mouse
+  move or a gamepad button.
+- SDL reads a virtual trigger's whole range, -32768 to 32767, as 0 to 32767: `port_WebPad` sends a released
+  trigger as -32768. Sent as 0 it read as half pressed, so RT held ATTACK down with TWIN STICK (the player punched
+  without end) and LT and RT held specials 2 and 3 in CLASSIC (the player could not move); emulation showed it as
+  soon as the game's state was checked (`port_WebPlayer`, test only).
 
 ### Escape and the pause menu
 
@@ -189,7 +206,7 @@ its state once per frame in the menus. In the original, as in the port before, a
 lost: the press and the release cancel out in one read, or both fall between two reads of the state. The port's
 DirectInput (`compat/src/dinput.cpp`) now shows a pressed key in the state once, and holds a release back to the
 next pass of buffered reads when its press was given in the same pass. This is the same on the desktop builds.
-Touch buttons still hold 40 ms: SDL reads the virtual pad's state once a frame.
+Touch buttons still hold 50 ms: SDL reads the virtual pad's state once a frame.
 
 ### The ImGui debug window
 
@@ -274,6 +291,6 @@ Not tested: a real iPhone or Android phone, Safari, real gamepads in a browser, 
 - OpenCE (OpenCommunityEdition/OpenCE), Halo CE in the browser: the service worker that keeps one build per
   cache and switches when the page allows, the touch controls as a gamepad the game reads, the import done by the
   page in a worker, the warnings about WebGL feedback loops and LTO.
-- Libraries rather than custom code where one fits: idb-keyval (storage), nipplejs (the stick), fflate (save
+- Libraries rather than custom code where one fits: idb-keyval (storage), fflate (save
   export and import as a zip). The formats of the game's copy are read by the native setup's own code
   (libarchive, unshield), which also covers InstallShield, for which no JavaScript library exists.

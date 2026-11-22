@@ -174,10 +174,10 @@ const scenarios = {
     await page.waitForTimeout(1500);
     await shot(page, 'pause-load-list');
     await press(page, 'Enter');
-    await page.waitForFunction(() => window.reg2.state() === 2, null, { timeout: 60000 }).catch(() => {});
+    await page.waitForFunction(() => (window.reg2.state() & 7) === 2, null, { timeout: 60000 }).catch(() => {});
     await page.waitForTimeout(3000);
     await shot(page, 'pause-load-done');
-    check('pause load: in a game, not paused', (await state(page)) === 2);
+    check('pause load: in a game, not paused', ((await state(page)) & 7) === 2);
     check('pause load: no failure screen', await hidden(page, 'crash'));
     await close();
   },
@@ -404,22 +404,35 @@ const scenarios = {
     const back = await page.locator('#touch .tbtn.menu-only').boundingBox();
     await page.touchscreen.tap(back.x + back.width / 2, back.y + back.height / 2);
     await page.waitForTimeout(2500);
-    for (let i = 0; i < 3; i++) {
+    // The intro (if BACK did not skip it), the style, PLAY, START PLAY IN AREA.
+    for (let i = 0; i < 5 && !((await state(page)) & 2); i++) {
       await press(page, 'Enter');
       await page.waitForTimeout(2500);
     }
     await page.waitForFunction(() => window.reg2.state() & 2, null, { timeout: 60000 });
     await page.waitForTimeout(3000);
     const cdp = await ctx.newCDPSession(page);
+    const player = (i) => page.evaluate((i) => window.reg2.module._port_WebPlayer(i), i);
+    // The keys above hid the controls: a first touch brings them back.
+    await page.touchscreen.tap(420, 60);
+    await page.waitForTimeout(500);
+    const before = [await player(0), await player(1)];
+    // The stick pushed down (the player starts below a wall): he walks.
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 150, y: 250 }] });
     for (let i = 1; i <= 10; i++) {
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 150, y: 250 - 7 * i }] });
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 150, y: 250 + 7 * i }] });
       await page.waitForTimeout(30);
     }
-    await page.waitForTimeout(2000);
-    check('touch: in-game controls', (await page.evaluate(() => document.getElementById('touch').dataset.mode)) === 'foot');
+    await page.waitForTimeout(3000);
+    check('touch: in-game controls', ['twin', 'classic'].includes(await page.evaluate(() => document.getElementById('touch').dataset.mode)));
+    const after = [await player(0), await player(1)];
+    const walked = Math.hypot(after[0] - before[0], after[1] - before[1]);
+    check('touch: the stick walks the player', walked > 0.3, `${walked.toFixed(2)} blocks`);
     await shot(page, 'touch');
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await page.waitForTimeout(500);
+    // At rest, the virtual pad's triggers read 0: no attack (RT with TWIN STICK), no special.
+    check('touch: nothing held at rest', (await player(3)) === 0);
     await close();
   },
 };

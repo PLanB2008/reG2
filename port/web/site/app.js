@@ -1150,6 +1150,8 @@ let lockWanted = null;
 const requestLock = Element.prototype.requestPointerLock;
 if (requestLock) {
   Element.prototype.requestPointerLock = function (...args) {
+    // Touch controls in use: a phone's browser may lock the pointer, and then every touch goes to the canvas.
+    if (document.body.classList.contains('touch-on')) return;
     lockWanted = this;
     try {
       const result = requestLock.apply(this, args);

@@ -154,17 +154,34 @@ body.playing { overflow: hidden; overscroll-behavior: none; }
 #fs-button { --glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5'%3E%3Cpath d='M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'/%3E%3C/svg%3E"); }
 body.no-fullscreen #fs-button, body.fullscreen #fs-button { display: none; }
 
-/* Touch controls (touch.js). Sizes scale with --touch-scale, opacity with --touch-opacity. */
-#touch { position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: var(--touch-opacity, 0.6); }
+/* Touch controls (touch.js): round plates in the game's colours, sizes from --size times --touch-scale, opacity from
+   --touch-opacity. In a game the blocker takes the touches that miss the controls. */
+#touch { position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: var(--touch-opacity, 0.6);
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 #touch .zone { position: absolute; pointer-events: auto; touch-action: none; }
-#touch .stick-zone { left: 0; top: 15%; bottom: 0; width: 45%; }
+#touch .blocker { inset: 0; }
+#touch .stick-zone { left: 0; top: 18%; bottom: 0; width: 50%; }
+#touch .aim-zone { left: 50%; top: 18%; bottom: 0; right: calc(96px * var(--touch-scale, 1) + env(safe-area-inset-right)); }
+#touch .stick-base {
+  position: absolute; left: 32%; top: 62%; opacity: 0.45;
+  width: calc(130px * var(--touch-scale, 1)); height: calc(130px * var(--touch-scale, 1));
+  margin: calc(-65px * var(--touch-scale, 1)) 0 0 calc(-65px * var(--touch-scale, 1));
+  border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.6); background: rgba(10, 10, 11, 0.35);
+  pointer-events: none;
+}
+#touch .stick-base.on { opacity: 1; }
+#touch .aim-zone .stick-base { left: 50%; }
+#touch .stick-knob {
+  position: absolute; left: 25%; top: 25%; width: 50%; height: 50%;
+  border-radius: 50%; background: rgba(255, 255, 255, 0.7);
+}
 #touch .tbtn {
   position: absolute;
-  width: calc(64px * var(--touch-scale, 1));
-  height: calc(64px * var(--touch-scale, 1));
+  width: calc(var(--size, 64px) * var(--touch-scale, 1));
+  height: calc(var(--size, 64px) * var(--touch-scale, 1));
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.85);
-  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  background: rgba(10, 10, 11, 0.55);
   color: #fff;
   font: 400 calc(0.62rem * var(--touch-scale, 1))/1.1 var(--font-display);
   text-transform: uppercase;
@@ -172,12 +189,13 @@ body.no-fullscreen #fs-button, body.fullscreen #fs-button { display: none; }
   display: flex; align-items: center; justify-content: center; text-align: center;
   pointer-events: auto; touch-action: none;
 }
-#touch .tbtn.down { background: rgba(224, 33, 63, 0.75); border-color: #fff; }
-#touch .tbtn.wide { border-radius: 14px; width: auto; padding: 0 0.9em; }
+#touch .tbtn.down { background: rgba(224, 33, 63, 0.8); border-color: #fff; }
+#touch .tbtn.wide { border-radius: 12px; width: auto; padding: 0 1em; }
 body.touch-on #pause-button { display: none; }
-#touch .tbtn.small { width: calc(48px * var(--touch-scale, 1)); height: calc(48px * var(--touch-scale, 1)); }
-#touch[data-mode="menu"] .game-only, #touch[data-mode="foot"] .car-only, #touch[data-mode="car"] .foot-only,
-#touch:not([data-mode="menu"]) .menu-only { display: none; }
+body.touch-on #game-bar { top: calc(env(safe-area-inset-top) + 24px); right: calc(84px * var(--touch-scale, 1) + env(safe-area-inset-right)); }
+#touch[data-mode="menu"] .game-only, #touch:not([data-mode="menu"]) .menu-only,
+#touch:not([data-mode="classic"]) .classic-only, #touch:not([data-mode="twin"]) .twin-only,
+#touch:not([data-mode="car"]) .car-only { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
