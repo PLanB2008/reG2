@@ -2,5 +2,5 @@
 GMPFile = MP1-comp.gmp
 STYFile = bil.sty
 SCRFile = tiny-10p.scr
-Description = Tiny Town 10player
+Description = Tiny Town 10
 PlayerCount = 10
