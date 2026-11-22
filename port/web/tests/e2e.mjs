@@ -298,6 +298,13 @@ const scenarios = {
       await page.waitForTimeout(800);
       check(`escape: resumed (${round + 1})`, !((await state(page)) & 4));
     }
+    // P, a pause key the browser never takes, opens and closes it the same way.
+    await press(page, 'p');
+    await page.waitForTimeout(800);
+    check('escape: P pauses', (await state(page)) & 4);
+    await press(page, 'p');
+    await page.waitForTimeout(800);
+    check('escape: P resumes', !((await state(page)) & 4));
     check('escape: no failure screen', await hidden(page, 'crash'));
     await close();
   },

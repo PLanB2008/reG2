@@ -129,6 +129,14 @@ the game as installed.
 
 ### Escape and the pause menu
 
+What the player gets, in Chrome and Firefox alike:
+- In a game, the mouse aims (pointer lock). Escape: the browser frees the mouse and the pause menu opens, once.
+- In the pause menu, Escape (or RESUME) goes back to the game; a click takes the pointer again.
+- In full screen in Chrome, Escape goes straight to the game (Keyboard Lock); holding it leaves full screen, as a
+  hint says once. Firefox leaves full screen on Escape, and the pause menu opens.
+- P (unless a control uses it) and Pause act as Escape in the game, and no browser takes them; so does the
+  gamepad's Start, and the page's pause button at the right edge.
+
 The browser takes the first Escape to leave pointer lock (held in a game with TWIN STICK) or full screen, so the
 game would never see it. In full screen the page asks for Keyboard Lock (Chromium) so Escape reaches the game, and
 says once that holding Escape leaves full screen. Losing pointer lock or full screen during play opens the pause
@@ -207,7 +215,7 @@ settings, the game's overlays and touch controls).
 | Reduced motion | No transitions on the page |
 | Photosensitivity | "Fewer flashes" turns bloom off |
 | Offline | The service worker serves the build; the game data is in IndexedDB |
-| New build | Checked at each page load (a few seconds at most) and used at once, so a new tab gets it; found later, it waits until no game or import runs; offline, the cached build starts |
+| New build | The usual service worker shape (`site/sw.js`): the page and its small scripts from the network first (3 s at most, else the cache), the game in a `build-<hash>/` folder from the cache first, a new worker taking over at once (skipWaiting, clients.claim). A new tab gets the new build; a tab already playing keeps the game it loaded in memory; offline, the cached build starts |
 
 ## Tests
 

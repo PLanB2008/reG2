@@ -14,7 +14,16 @@ ninja -C "$B" gta2 reg2_import
 rm -rf "$OUT"
 mkdir -p "$OUT/icons"
 cp -R "$HERE/site/." "$OUT/"
-cp "$B/reg2.js" "$B/reg2.wasm" "$B/reg2_import.js" "$B/reg2_import.wasm" "$OUT/"
+# The game and the importer in a folder named after their contents: a new build's page simply asks for new files,
+# which the service worker may keep for good (sw.js).
+T=$(mktemp -d)
+cp "$B/reg2.js" "$B/reg2.wasm" "$B/reg2_import.js" "$B/reg2_import.wasm" "$OUT/import-worker.js" "$T/"
+rm "$OUT/import-worker.js"
+BUILD=build-$(cd "$T" && cat reg2.js reg2.wasm reg2_import.js reg2_import.wasm import-worker.js | sha256sum | cut -c1-12)
+mkdir -p "$OUT/$BUILD"
+mv "$T/"* "$OUT/$BUILD/"
+rmdir "$T"
+sed -i "s|@BUILD@|$BUILD|" "$OUT/app.js"
 cp "$ROOT/docs/images/reg2_logo_black.svg" "$OUT/logo-dark.svg"
 # The site's design system, beside the page's fonts so that the service worker keeps it for offline starts.
 cp "$HERE/ds.css" "$OUT/"
@@ -33,8 +42,8 @@ cp "$PORT/resources/reg2_256.png" "$PORT/resources/reg2_512.png" "$OUT/icons/"
 } > "$OUT/licenses.txt"
 rm -f "$OUT/vendor/"*.LICENSE "$OUT/fonts/"*.txt
 
-# The service worker caches this build's files under a version made from their contents.
+# The service worker keeps this build's files for offline starts, under a version made from their contents.
 VERSION=$(cd "$OUT" && find . -type f ! -name sw.js | sort | xargs cat | sha256sum | cut -c1-12)
 FILES=$(cd "$OUT" && find . -type f ! -name sw.js | sort | sed 's|^\./||' | awk 'BEGIN{printf "["} {printf "%s\"%s\"", (NR>1?",":""), $0} END{printf "]"}')
 sed -i "s|@VERSION@|$VERSION|; s|@FILES@|$FILES|" "$OUT/sw.js"
-echo "site: $OUT (version $VERSION)"
+echo "site: $OUT (version $VERSION, $BUILD)"

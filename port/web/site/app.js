@@ -40,59 +40,20 @@ function formatMB(bytes) {
 // ---------------------------------------------------------------------------------------------------------------
 // Start-up
 
+// build.sh: the folder of this build's game and importer.
+const BUILD = '@BUILD@/';
+
 applyTranslations();
-registerServiceWorker().finally(start);
+registerServiceWorker();
+start();
 
-// A new build: at load (nothing running yet) the page looks for one and switches to it at once, so a new tab gets
-// it; later, it waits until the page is idle (not in a game or an import). Offline, the cached build starts.
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-async function registerServiceWorker() {
-  if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
-  const sw = navigator.serviceWorker;
-  const idle = () => !game.module && !importing;
-  const hadController = !!sw.controller;
-  let reloading = false;
-  const reload = () => {
-    if (!reloading) {
-      reloading = true;
-      location.reload();
-    }
-  };
-  // The first install also changes the controller (clients.claim): only a replaced build needs the reload.
-  sw.addEventListener('controllerchange', () => {
-    if (hadController && idle()) reload();
-  });
-  let reg;
-  try {
-    reg = await sw.register('sw.js', { updateViaCache: 'none' });
-  } catch (e) {
-    console.warn('service worker:', e);
-    return;
-  }
-  if (!reg || !hadController) return;
-  const offer = () => {
-    if (reg.waiting && idle()) reg.waiting.postMessage('update');
-  };
-  reg.addEventListener('updatefound', () => reg.installing?.addEventListener('statechange', offer));
-  // A few seconds at most for the check and the new build's download; then the build in hand starts.
-  await Promise.race([reg.update().catch(() => {}), wait(3000)]);
-  const next = reg.installing || reg.waiting;
-  if (!next) return;
-  await Promise.race([
-    new Promise((resolve) => {
-      if (next.state === 'installed') return resolve();
-      next.addEventListener('statechange', () => next.state !== 'installing' && resolve());
-    }),
-    wait(20000),
-  ]);
-  if (reg.waiting) {
-    reg.waiting.postMessage('update');
-    await Promise.race([new Promise((resolve) => sw.addEventListener('controllerchange', resolve)), wait(3000)]);
-    reload();
-    await new Promise(() => {});
+// The service worker (sw.js) keeps the site for offline starts and gets new builds by itself.
+function registerServiceWorker() {
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    navigator.serviceWorker.register('sw.js').catch((e) => console.warn('service worker:', e));
   }
 }
+
 
 function missingFeatures() {
   const missing = [];
@@ -178,7 +139,7 @@ function showImportError(message) {
 
 function newWorker() {
   worker?.terminate();
-  worker = new Worker('import-worker.js');
+  worker = new Worker(BUILD + 'import-worker.js');
   return worker;
 }
 
@@ -542,7 +503,7 @@ const game = {
     this.requestWakeLock();
     try {
       const [wasm, files] = await Promise.all([this.fetchWasm(), this.readFiles()]);
-      await loadScript('reg2.js');
+      await loadScript(BUILD + 'reg2.js');
       await this.run(wasm, files);
     } catch (e) {
       this.crash(t('startFailedTitle'), t('startFailed', e.message || e), e);
@@ -550,7 +511,7 @@ const game = {
   },
 
   async fetchWasm() {
-    const response = await fetch('reg2.wasm');
+    const response = await fetch(BUILD + 'reg2.wasm');
     if (!response.ok) throw new Error('reg2.wasm: HTTP ' + response.status);
     const total = +response.headers.get('content-length') || 0;
     const reader = response.body.getReader();
@@ -742,7 +703,7 @@ const game = {
     // The browser takes the first Escape to leave pointer lock (or full screen) and the game never sees it: losing
     // either during play counts as the player's Escape.
     document.addEventListener('pointerlockchange', () => {
-      if (!document.pointerLockElement && lockWanted) this.pause();
+      if (!document.pointerLockElement && lockWanted) this.pauseForEscape();
     });
     // The full screen button shows while the mouse moves, then fades: it sits over the HUD's corner.
     let idleTimer = 0;
@@ -940,6 +901,13 @@ const game = {
     } catch {}
   },
 
+  // The browser took an Escape to leave pointer lock or full screen: the pause menu, once. A browser may also deliver
+  // that Escape, before (the game opens the menu itself) or after (onKey drops it).
+  pauseForEscape() {
+    if (performance.now() - (this.escapeAt || 0) < 400) return;
+    this.pause();
+  },
+
   // A short message over the game, shown once per page load for each text.
   toast(text) {
     this.toasts ??= new Set();
@@ -1001,10 +969,13 @@ const game = {
     if (!this.module) return;
     // A browser that also delivers the Escape that left pointer lock or full screen: the pause menu just opened
     // for it, and the game would close it again.
-    if (e.key === 'Escape' && performance.now() - (this.pausedAt || 0) < 400) {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      return;
+    if (e.key === 'Escape') {
+      if (performance.now() - (this.pausedAt || 0) < 400) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return;
+      }
+      this.escapeAt = performance.now();
     }
     // Alt+Enter: full screen, as the desktop builds.
     if (e.key === 'Enter' && e.altKey) {
@@ -1025,7 +996,7 @@ const game = {
     if (on) {
       navigator.keyboard?.lock?.(['Escape']).then(() => this.toast(t('holdEscape'))).catch(() => {});
     } else {
-      this.pause();
+      this.pauseForEscape();
     }
     if (on && isTouchDevice) screen.orientation?.lock?.('landscape').catch(() => {});
     this.checkOrientation();

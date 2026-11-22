@@ -1,14 +1,21 @@
-// The service worker keeps one build of the site (its files listed below by build.sh) in a cache of its own, so
-// that a return visit starts at once and works offline. A new build installs beside the old one and takes over
-// when the page asks (app.js, never during a game), so a page never mixes two builds' files.
-// The pattern is OpenCE's (port/web/site/sw.js of OpenCommunityEdition/OpenCE), without its isolation headers.
+// The service worker, in the usual shape for a site that must start offline:
+// - the game and the importer live in a folder named after their contents (build-<hash>/, by build.sh): those are
+//   answered from the cache first, since a new build's page asks for another folder;
+// - everything else (the page and its small scripts) from the network first, a few seconds at most, else the cache;
+// - a new worker takes over at once (skipWaiting, clients.claim) and drops the other builds' caches.
+// A tab that is playing keeps the game it loaded: its files are all in memory once it started.
 'use strict';
 const VERSION = '@VERSION@';
 const FILES = ['./', ...@FILES@];
 const CACHE = 'reg2-site-' + VERSION;
+const NETWORK_WAIT_MS = 3000;
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES.map((f) => new Request(f, { cache: 'reload' })))));
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    await cache.addAll(FILES.map((f) => new Request(f, { cache: 'reload' })));
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', (event) => {
@@ -20,28 +27,35 @@ self.addEventListener('activate', (event) => {
   })());
 });
 
-self.addEventListener('message', (event) => {
-  if (event.data === 'update') self.skipWaiting();
-});
+async function networkFirst(request) {
+  const key = request.mode === 'navigate' ? './' : request;
+  try {
+    const response = await Promise.race([
+      fetch(request),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('slow')), NETWORK_WAIT_MS)),
+    ]);
+    if (response.ok) (await caches.open(CACHE)).put(key, response.clone());
+    return response;
+  } catch {
+    const cached = await caches.match(key, { ignoreSearch: true });
+    if (cached) return cached;
+    if (request.mode !== 'navigate') return Response.error();
+    return new Response('<!doctype html><title>reG2</title><p>reG2 needs the network once to start.</p>',
+      { status: 503, headers: { 'content-type': 'text/html' } });
+  }
+}
+
+async function cacheFirst(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (response.ok) (await caches.open(CACHE)).put(request, response.clone());
+  return response;
+}
 
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== location.origin) return;
-  event.respondWith((async () => {
-    const cache = await caches.open(CACHE);
-    const key = request.mode === 'navigate' ? './' : request;
-    const cached = await cache.match(key, { ignoreSearch: request.mode === 'navigate' });
-    if (cached) return cached;
-    try {
-      return await fetch(request);
-    } catch {
-      // Offline with this build not cached yet (or cleared), or the request was cancelled: the page from any build
-      // kept, a short page saying so, or a plain error for a file.
-      if (request.mode !== 'navigate') return Response.error();
-      return (await caches.match('./', { ignoreSearch: true })) ||
-        new Response('<!doctype html><title>reG2</title><p>reG2 needs the network once to start.</p>',
-          { status: 503, headers: { 'content-type': 'text/html' } });
-    }
-  })());
+  event.respondWith(/\/build-[0-9a-f]+\//.test(url.pathname) ? cacheFirst(request) : networkFirst(request));
 });
