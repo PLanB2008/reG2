@@ -16,10 +16,10 @@ joining and leaving mid-game, rounds with warmup, results and votes, map rotatio
 a frontend page to join, bots (scripted and trained), recordings that replay without a server. Protocol 29.
 
 The player limit is `NET_MAX_PLAYERS` (`core/player_limit.hpp`, 10), the port build's `MAX_PLAYERS`; the original and
-the MSVC build have 6. The maps' scripts make 6 player peds: a slot past them gets one at a restart zone as the game
-boots (`engine/slots.cpp`), with a look no script slot has, its own HUD colour and arrow. What stays as the game has it:
-the police chase 4 criminals at once, the ambient traffic and peds are 3 players' worth for everyone, and Residential has
-4 restart zones (players start two to a zone).
+the MSVC build have 6. The map decides how many play on it ("Maps and players"). Each look a script gives a player has
+its HUD colour and arrow from one table (`port/src/player_looks.hpp`): the original's, and three more looks (the police,
+Elvis, the fireman) for 10 apart. What stays as the game has it: the police chase 4 criminals at once, the ambient
+traffic and peds are 3 players' worth for everyone, and Residential has 4 restart zones (players start two to a zone).
 
 ## Running
 
@@ -36,12 +36,29 @@ where **Network game** joins a server (below). The command line (`port/net/cmdli
 
 | | Options |
 |---|---|
-| Server | `--port` (27920), `--map <data/*.mmp>` (downtown-6p), `--maps a,b,c` (a rotation), `--players 1-10` (6), `--gametype 1-3` (frags, points, tag), `--fraglimit` (frags, 10; a points game's is money, 10000 as the original lobby's), `--timelimit` (minutes), `--tickms`, `--police [stars]` (off by default, as the lobby; up to the game's 1 star, or 1-6), `--traffic N` (ambient cars per player, 16), `--packets N` (a snapshot's parts at most, 4), `--interest blocks` (24) |
+| Server | `--port` (27920), `--map <data/*.mmp>` (downtown-6p), `--maps a,b,c` (a rotation), `--players N` (6; at most what the maps take), `--gametype 1-3` (frags, points, tag), `--fraglimit` (frags, 10; a points game's is money, 10000 as the original lobby's), `--timelimit` (minutes), `--tickms`, `--police [stars]` (off by default, as the lobby; up to the game's 1 star, or 1-6), `--traffic N` (ambient cars per player, 16), `--packets N` (a snapshot's parts at most, 4), `--interest blocks` (24) |
 | Round flow | `--minplayers N` (2), `--warmup s` (60), `--results s` (15), `--votes start,map,kick` (or `none`), `--rounds on\|off` |
 | Arena | `--arena brain,...` (bots on the server itself), `--ticks N` (the result printed and the server ended at tick N), `--seed N` |
 | Client | `--connect host[:port]`, `--name`, `--bot [brain]` (simple, carhop, rammer, soldier, hunter, `nn:<file>`), `--replay <file>` |
 | Either end | `--lag ms`, `--jitter ms`, `--loss %`, `--lossburst N`, `--spike ms:on:every`: a link conditioner on this end's sends (losses in bursts of N on average; ms more delay for `on` s every `every` s); `--mtu N`: the link's MTU (IP packets, 1280 by default, which fits the VPNs people play over: Tailscale 1280, WireGuard 1420, Hamachi 1404; 1428 the most) |
 | Any | `--data <folder>` (the game folder, or its `data/`: else `GTA2_DIR`...), `--help` |
+
+### Maps and players
+
+A map's script makes a ped for each of its players (`PLAYER_PED`, `ScriptThread::Handle_PLAYER_PED`) and the game has no
+other, so a map takes as many players as its script has `PLAYER_PED`s, at most its `.mmp`'s `PlayerCount` when it has
+one (maps since Vike's 11.3 leave it out: any number; Mini City has one script and an `.mmp` for each of 2 to 6
+players), at most 10 (`core/map_players.cpp`). The game's maps take 6.
+
+A server has `--players` slots, at most what its biggest map takes (more are cut, with a message). The game on a map has
+that map's players: past them a client is turned away ("the server is full: Downtown takes 6 players"), and the slots
+open again with a map that takes more. A vote, a results' choice and the rotation go to a map only if every taken slot
+has a place on it (`RoundFlow::Fits`): with 10 in, a map of 6 isn't played; with players in slots 0-5 only, it is.
+
+`port/net/testdata/tiny-10p` is a 10-player map on the game's Tiny Town (`MP1-comp.gmp`, `bil.sty`): a player at each
+of its 10 restart zones in 10 looks, a few weapon generators. Its script is ours, `tiny-10p.mis`, compiled by
+`port/net/scripts/mis2scr.py` (only what it needs: `PLAYER_PED`, `GENERATOR`, `SWITCH_GENERATOR`, `LEVELSTART`,
+`LEVELEND`). To play it, copy `tiny-10p.mmp` and `tiny-10p.scr` into `data/`: `--map tiny-10p --players 10`.
 
 ## Hosting a game
 
@@ -430,7 +447,7 @@ A little-endian bitstream (`core/bitstream.cpp`), never a copy of a struct: clie
 | `kMsgLeave` | reliable | why a client leaves (its copy of the map differs) |
 | `kMsgCommands` | unreliable | the last few commands (tick and input bits, each delta-coded against the one before; a key press with the character it typed) and the newest snapshot the client has |
 | `kMsgSnapshot`, `kMsgSnapshotPart` | unreliable | server tick, the baseline it is made against, the other players' forwarded controls, entities with field masks and changed fields (`core/snapshot.cpp`) |
-| `kMsgMapChange` | reliable | the next map, after a round, with its files' CRC-32s |
+| `kMsgMapChange` | reliable | the next map, after a round, with its files' CRC-32s and the players of its game |
 | `kMsgPing`, `kMsgPong` | unreliable | the client's clock, sent back at once |
 | `kMsgCommand`, `kMsgNotice` | reliable | a player's command; a line to show (a vote, a player ready) |
 
@@ -575,6 +592,7 @@ The netcode's hooks, declared in `port/src/net_hooks.hpp`; those in `Source/` ar
 | `Car.cpp` | `Car::TryHonkHorn` | a train's lead without a driver (a player got out of a carriage that stood still) doesn't read it |
 | `Hud.cpp` | `port_TypedChar` (`port/compat/src/dinput.cpp`), `gPortChatChar` | the chat types the keyboard layout's characters; a server, those its clients typed |
 | `Hud.cpp` | `gPortServerKillNotices` | a client's kill notices are the server's deaths only |
+| `Player.cpp`, `Hud.cpp` | `PortLookOf` (`port/src/player_looks.hpp`) | each look's HUD colour and arrow from one table, three more looks than the original's |
 | `TagGame.cpp` | `gPortTagTimeCounts` | the tag game counts the "it" seconds without the game's time limit, which the original counts by |
 | `PlayerScoreTracker.cpp` | `gPortServerKillAwards`, `gPortScoreBonusHook` | a client's kills award no points or bonuses: the scores are the server's, and a bonus's message and voice are its player's client's, from the server |
 | `Pool.hpp`, `Car.cpp`, `Char_Pool.cpp`, `Game.cpp` | `PortRand::Scope` (`port/src/rand/owner.hpp`) | who a random draw belongs to |
