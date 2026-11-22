@@ -134,6 +134,20 @@ void PlaceWagons(Train* t)
 
 int gMismatched; // for the log: trains this game has otherwise
 
+// The height the wagons' walk (AdvanceAlongRailway with dontFlip, AdvanceAlongRailwayChecked without) first snaps a
+// lead at z to is within a block of z, with the blocks it reads there
+bool WalkStartsOnBlocks(Fix16 x, Fix16 y, Fix16 z, bool dontFlip)
+{
+    Fix16 snapped = z;
+    gMap_0x370->SnapZToRailway(x, y, &snapped, dontFlip, false);
+    if (snapped < z - Fix16(1) || snapped > z + Fix16(1))
+    {
+        return false;
+    }
+    const gmp_block_info* b = gMap_0x370->GetBlock(x.ToInt(), y.ToInt(), (snapped - Fix16(1)).ToInt());
+    return b && (!IS_SLOPE_IN_BLOCK_ABOVE(b->mSlopeType) || gMap_0x370->GetBlock(x.ToInt(), y.ToInt(), snapped.ToInt()));
+}
+
 // A train's place on a railway, with a block under it, and within 16 blocks of where it is here: its wagons are
 // placed along the rails from it (Map_0x370::SnapZToRailway and AdvanceAlongRailway read the blocks unchecked)
 bool OnRails(const Train* t, const net::EntityState& e)
@@ -151,8 +165,8 @@ bool OnRails(const Train* t, const net::EntityState& e)
     {
         return false;
     }
-    // As the server's trains are: on the centre line of a block, at the height SnapZToRailway gives it (the block it reads
-    // there and, on a slope, the one at its floor exist), so that the wagons' walk from it stays on blocks
+    // As the server's trains are: on the centre line of a block, within a block of the rail's height (a lead on a slope
+    // is up to a block under the height SnapZToRailway gives it), so that the wagons' walk from it stays on blocks
     const int32_t half = 1 << 13, mask = (1 << 14) - 1;
     if ((e.f[kTrainX] & mask) != half && (e.f[kTrainY] & mask) != half)
     {
@@ -162,9 +176,7 @@ bool OnRails(const Train* t, const net::EntityState& e)
     {
         return false;
     }
-    Fix16 snapped = z;
-    gMap_0x370->SnapZToRailway(x, y, &snapped, false, false);
-    return snapped == z;
+    return WalkStartsOnBlocks(x, y, z, false) && WalkStartsOnBlocks(x, y, z, true);
 }
 } // namespace
 
