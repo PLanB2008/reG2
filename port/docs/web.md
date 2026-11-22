@@ -221,6 +221,7 @@ settings, the game's overlays and touch controls).
 | Portrait phone | A "turn your device" overlay; the game pauses behind it; `screen.orientation.lock` is tried in full screen |
 | iPhone (no full screen API) | A hint to Add to Home Screen; the manifest asks for full screen and landscape |
 | Autoplay policy | Sound starts after the Play click; SDL resumes the audio context on input |
+| Pause and full screen buttons with the pointer locked (TWIN STICK's mouse aim) | The page reads the game's cursor (`port_WebCursorX/Y`), marks the button under it red and takes a click there for the button, not the game |
 | Pinch zoom, double tap, pull to refresh, selection, long press | `touch-action: none`, `overscroll-behavior: none`, no selection or callout on the game |
 | Browser shortcuts | F1 to F10, Backspace and Tab go to the game; in full screen, Escape goes to the game (Keyboard Lock) |
 | Safe areas (notch, home bar) | `viewport-fit=cover` and `env(safe-area-inset-*)` for the page and the touch controls; the game's SAFE AREA setting for its HUD |
