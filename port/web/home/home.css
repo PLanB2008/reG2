@@ -1,131 +1,115 @@
 /* Landing page layout; colours, type and components come from ds.css. */
 
-/* Content hangs from a left margin (--edge) instead of being centred, like the game's menus. */
-:root { --edge: max(0px, min(9vw - 2rem, 10rem)); --inset: calc(var(--edge) + var(--gutter)); }
+:root { --edge: clamp(1rem, 4vw, 3.5rem); }
 
-.wrap {
-  max-width: calc(var(--page-max) + var(--edge));
-  padding-left: max(var(--inset), env(safe-area-inset-left));
-  padding-right: max(var(--gutter), env(safe-area-inset-right));
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.top {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+  padding: var(--space-4) max(var(--edge), env(safe-area-inset-right)) var(--space-4) max(var(--edge), env(safe-area-inset-left));
 }
-
-.top { display: flex; align-items: center; gap: var(--space-4) var(--space-6); padding-top: var(--space-4); padding-bottom: var(--space-4); }
 /* The logo SVG is square with the mark in the middle: crop to the mark. */
-.logo { flex: none; }
-.logo img { display: block; width: 92px; height: 64px; object-fit: cover; object-position: 50% 50%; }
-.top nav ul { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--space-5); }
-.top nav a { font: italic 900 var(--step-0)/1 var(--font-display); font-stretch: var(--display-stretch); text-transform: uppercase; text-decoration: none; white-space: nowrap; display: inline-block; padding: var(--space-2) 0; border-bottom: 3px solid transparent; }
-.top nav a:hover { color: var(--red); border-bottom-color: var(--red); }
+.logo img { display: block; width: 78px; height: 52px; object-fit: cover; }
+.top ul { list-style: none; display: flex; gap: var(--space-4) var(--space-6); margin: 0; padding: 0; }
+.top nav a { display: inline-block; padding: var(--space-2) 0; text-decoration: none; border-bottom: 1px solid transparent; }
+.top nav a:hover { border-bottom-color: currentColor; }
 
-main > section { padding-top: var(--space-7); padding-bottom: var(--space-7); }
+/* The first screen: the city, darkened as the game darkens it behind its menus, with the menu laid over it. */
+.hero { position: relative; display: flex; align-items: flex-end; min-height: min(calc(100svh - 84px), 52rem); overflow: hidden; background: #000; }
+.hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 60% 40%; filter: brightness(0.5); }
+.hero-text { position: relative; padding: var(--space-7) var(--edge) clamp(2.5rem, 7vh, 4.5rem); max-width: 70rem; }
+.kicker { color: var(--muted); margin: 0 0 var(--space-5); }
+h1 { font: 400 var(--step-3)/1.25 var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 var(--space-5); }
+h1 span { display: block; }
+.lede { max-width: 34rem; font-size: var(--step-1); line-height: 1.5; margin: 0 0 var(--space-6); }
+.hero .menu { margin-bottom: var(--space-6); }
+.note { max-width: 34rem; margin: 0; color: var(--text); opacity: 0.8; }
 
-/* Section titles run in from the left edge of the screen. */
-h2.label { margin: 0 0 var(--space-5) calc(-1 * var(--inset)); padding-left: var(--inset); }
-.hud.index { margin: 0 0 var(--space-2); }
-
-figure { margin: 0; }
-.shot { box-shadow: 8px 8px 0 var(--accent); border: 2px solid #000; background: #000; }
-.shot img { display: block; width: 100%; }
-figcaption { margin-top: calc(var(--space-3) + 8px); font: 400 var(--step--1)/1.3 var(--font-hud); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
-figcaption::before { content: ""; display: inline-block; width: 0.6em; height: 0.6em; background: var(--accent); margin-right: 0.6em; }
-
+/* Sections read like the game's option pages: the title on the left, the content on the right. */
+.sec {
+  display: grid; grid-template-columns: 14rem minmax(0, 1fr); gap: var(--space-5) var(--space-6);
+  max-width: calc(var(--page-max) + 2 * var(--edge)); margin: 0 auto;
+  padding: var(--space-7) var(--edge);
+  border-top: 1px solid var(--line);
+}
+.sec:first-of-type { border-top: 0; }
+.sec > h2 { font-size: var(--step-0); margin: 0.3rem 0 0; }
 .prose { max-width: var(--measure); }
-.prose > :first-child { margin-top: 0; }
-.prose h3:not(:first-child) { margin-top: var(--space-6); }
-h3 { color: var(--accent); }
+.body > :first-child, .body > :first-child > :first-child { margin-top: 0; }
+.big { font-size: var(--step-2); font-weight: 500; line-height: 1.4; }
 
-/* Hero: a top-down street grid behind the text, like the city under the game's camera. */
-.hero {
-  padding-top: var(--space-6);
-  background-image:
-    linear-gradient(90deg, rgb(240 238 230 / 0.045) 1px, transparent 1px),
-    linear-gradient(rgb(240 238 230 / 0.045) 1px, transparent 1px);
-  background-size: 96px 96px;
-  border-bottom: 1px solid var(--line);
-  overflow: hidden;
+h3.caps { font-size: var(--step--1); margin: 0 0 var(--space-2); }
+.sub { margin-top: var(--space-6) !important; }
+
+.shot { margin: var(--space-6) 0; }
+.shot img { display: block; width: 100%; background: #000; }
+figcaption { margin-top: var(--space-2); font-size: var(--step--1); color: var(--muted); }
+
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5) var(--space-6); }
+.pair p { margin: 0; }
+
+.list { padding-left: 1.1rem; list-style: square; }
+.list li { margin: 0 0 var(--space-3); }
+.list li::marker { color: var(--muted); }
+
+.items { margin: 0; }
+.items > div { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: var(--space-2) var(--space-5); padding: var(--space-5) 0; border-top: 1px solid var(--line); }
+.items > div:first-child { border-top: 0; padding-top: 0; }
+.items dt { padding-top: 0.2rem; }
+.items dd { margin: 0; max-width: var(--measure); }
+.items dd p { margin: 0 0 var(--space-3); }
+.items dd p:last-child { margin-bottom: 0; }
+.shot + .items > div:first-child { padding-top: 0; }
+
+/* A menu path, set like the game's own menu items. */
+.path { font: 400 0.76em/1 var(--font-display); text-transform: uppercase; letter-spacing: 0.1em; }
+.ui { display: block; margin-top: var(--space-4); background: #000; }
+
+.dl { width: 100%; border-collapse: collapse; margin: 0 0 var(--space-5); }
+.dl tr { border-top: 1px solid var(--line); }
+.dl tr:first-child { border-top: 0; }
+.dl th, .dl td { text-align: left; vertical-align: top; padding: var(--space-5) 0; }
+.dl tr:first-child > * { padding-top: 0; }
+.dl th { width: 15rem; padding-right: var(--space-5); font-weight: 400; }
+.dl th .caps { display: block; color: var(--text); }
+.dl th .small { display: block; margin-top: var(--space-1); }
+.dl td p { margin: 0 0 var(--space-2); max-width: var(--measure); }
+.dl td p:last-child { margin-bottom: 0; }
+.file { font-weight: 600; font-size: var(--step-1); }
+.file:hover { color: var(--red); }
+
+.aside { margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--line); max-width: var(--measure); }
+.aside p { margin: 0 0 var(--space-4); }
+.files { border-collapse: collapse; font-size: var(--step--1); width: 100%; }
+.files th, .files td { text-align: left; vertical-align: top; padding: var(--space-2) var(--space-4) var(--space-2) 0; border-top: 1px solid var(--line); }
+.files th { font-weight: 400; color: var(--muted); white-space: nowrap; }
+
+.foot {
+  max-width: calc(var(--page-max) + 2 * var(--edge)); margin: 0 auto;
+  padding: var(--space-6) var(--edge) var(--space-7);
+  border-top: 1px solid var(--line);
+  font-size: var(--step--1); color: var(--muted);
 }
-.hero-grid { display: grid; gap: var(--space-6); }
-.hero-text { padding-left: max(var(--inset), env(safe-area-inset-left)); padding-right: var(--gutter); }
-.hero h1 { font-size: clamp(2rem, 7.4vw, 3.7rem); line-height: 1; }
-.hero h1 > span { display: block; }
-.neon { color: var(--red); text-shadow: 0 0 22px rgb(232 33 63 / 0.55); }
-.hero .lede { margin: var(--space-5) 0; }
-.hero-side { padding: 0 var(--gutter); }
-.hero-shot .shot { box-shadow: 10px 10px 0 var(--red), 0 0 70px rgb(232 33 63 / 0.3); }
-.hero .pager { margin: var(--space-6) 0 0; max-width: 30rem; }
+.foot p { max-width: 48rem; }
+.foot a:hover { color: var(--text); }
 
-.platforms { list-style: none; padding: 0; margin: 0 0 var(--space-5); display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.platforms li:nth-child(odd) { transform: rotate(-2deg); }
-.platforms li:nth-child(even) { transform: rotate(1.5deg); }
-
-.band { background: var(--bg-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.band .lede { margin: 0 0 var(--space-6); }
-
-.split { display: grid; gap: var(--space-3) var(--space-6); align-items: start; }
-
-.feature, .extra { display: grid; gap: var(--space-6); align-items: start; }
-.extra { padding: var(--space-6) 0; border-top: 1px dashed var(--line); }
-.extra.wide { border-top: 0; padding-top: 0; }
-
-.choices { display: grid; gap: var(--space-3); margin: var(--space-5) 0; }
-.choices div { padding: var(--space-4); border: 2px solid var(--line); }
-.choices .enhanced { background: var(--red); border-color: var(--red); color: var(--red-ink); clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%); }
-.choices dt { font: italic 900 var(--step-2)/1 var(--font-display); font-stretch: var(--display-stretch); text-transform: uppercase; margin-bottom: var(--space-2); }
-.choices dd { margin: 0; }
-
-.dash { list-style: none; padding: 0; margin: var(--space-4) 0; }
-.dash li { position: relative; padding-left: 1.7rem; margin: var(--space-3) 0; }
-.dash li::before { content: ""; position: absolute; left: 0; top: 0.55em; width: 0.95rem; height: 0.55em; background: var(--accent); clip-path: polygon(30% 0, 100% 0, 70% 100%, 0 100%); }
-
-.also { max-width: var(--measure); border-top: 1px dashed var(--line); padding-top: var(--space-5); margin: 0; }
-.also strong { font: italic 900 var(--step-0) var(--font-display); font-stretch: var(--display-stretch); text-transform: uppercase; color: var(--accent); }
-
-.downloads { list-style: none; padding: 0; margin: 0 0 var(--space-5); max-width: 60rem; }
-.downloads li { display: grid; gap: 0 var(--space-6); padding: var(--space-5) var(--space-4); border-left: var(--rule) solid var(--accent); margin-bottom: var(--space-2); background: var(--bg); }
-.downloads h3 { margin: 0; font-size: var(--step-3); }
-.downloads p { margin: var(--space-2) 0; }
-.downloads li > div:last-child > p:first-child { margin-top: 0; }
-.downloads .small { margin: var(--space-1) 0 var(--space-3); }
-.downloads .btn { overflow-wrap: anywhere; text-align: left; text-transform: none; font-style: normal; font-stretch: 100%; font-weight: 700; }
-
-#no-game { margin: var(--space-6) 0 var(--space-5); background: var(--bg); max-width: 48rem; }
-
-.files summary { cursor: pointer; font-weight: 600; padding: var(--space-2) 0; }
-.files p { max-width: var(--measure); }
-.files table { border-collapse: collapse; width: 100%; max-width: 48rem; font-size: var(--step--1); }
-.files th, .files td { text-align: left; vertical-align: top; padding: var(--space-2) var(--space-3) var(--space-2) 0; border-bottom: 1px solid var(--line); }
-.files th { font-weight: 600; color: var(--muted); }
-
-.foot { margin-top: 0; padding-bottom: var(--space-6); }
-.foot p { max-width: 52rem; }
-
+@media (max-width: 56rem) {
+  .sec { grid-template-columns: minmax(0, 1fr); padding-top: var(--space-6); padding-bottom: var(--space-6); }
+  .sec > h2 { font-size: var(--step-1); margin-bottom: var(--space-3); }
+  .items dt { color: var(--muted); }
+}
 @media (max-width: 40rem) {
-  .wide-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .logo img { width: 72px; height: 50px; }
-  .top { gap: var(--space-4); justify-content: space-between; }
-  .top nav ul { gap: var(--space-4); }
-  .top nav a { font-stretch: 100%; }
-}
-
-@media (min-width: 52rem) {
-  .hero-grid { grid-template-columns: minmax(0, calc(var(--inset) + 40rem)) minmax(0, 1fr); gap: var(--space-6); align-items: start; }
-  .hero-side { padding: var(--space-6) 0 0; }
-  /* The screenshot runs off the right edge; the pager overlaps its bottom left corner. */
-  .hero-shot .shot { border-right: 0; }
-  .hero-shot figcaption { padding-right: var(--gutter); }
-  .hero .pager { position: relative; z-index: 1; margin: -3rem 0 0 -3rem; }
-  .hero-shot figcaption { text-align: right; }
-  .hero h1 > span + span { padding-left: 1.1em; }
-  .split { grid-template-columns: 2fr 3fr; }
-  .feature { grid-template-columns: 6fr 5fr; }
-  .feature > figure { margin-top: var(--space-7); }
-  .extra { grid-template-columns: 6fr 5fr; }
-  .extra.wide { grid-template-columns: 1fr; }
-  .extra:not(.wide) > figure { margin-top: var(--space-6); }
-  .solo .dash { columns: 2; column-gap: var(--space-6); max-width: 60rem; }
-  .solo .dash li { break-inside: avoid; margin-top: 0; }
-  .extra.flip { grid-template-columns: 5fr 6fr; }
-  .extra.flip > figure { order: -1; }
-  .choices { grid-template-columns: 1fr 1fr; }
-  .downloads li { grid-template-columns: 14rem 1fr; }
+  .wide-only { display: none; }
+  .top ul { gap: var(--space-4); }
+  .top .caps { font-size: 0.75rem; letter-spacing: 0.1em; }
+  .logo img { width: 60px; height: 40px; }
+  .hero { min-height: 0; }
+  .hero-img { object-position: 52% 50%; }
+  .hero .menu a { font-size: 1rem; letter-spacing: 0.08em; }
+  .pair, .items > div { grid-template-columns: minmax(0, 1fr); }
+  .dl, .dl tbody, .dl tr, .dl th, .dl td { display: block; width: auto; }
+  .dl th { padding: var(--space-5) 0 var(--space-2); }
+  .dl td { padding-top: 0; }
+  .dl tr:first-child th { padding-top: 0; }
+  .files th { white-space: normal; }
 }

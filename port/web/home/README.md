@@ -27,32 +27,26 @@ Then open <http://localhost:8000/>. The site is dark only.
 
 - `img/`: copies of `docs/images/*` (the reG2 logo for dark backgrounds, screenshots) and `port/resources/reg2_256.png`, so the
   page works when only this folder is published. Git stores identical files once, so the copies cost nothing
-  in the repository; replace them when the originals change.
-- `fonts/`: Saira (variable, latin subset, roman and italic) and Share Tech Mono, both under the SIL Open
-  Font License (licences next to them), from Google Fonts. `ds.css`
-  loads them from `fonts/` beside itself, which is this folder once published.
+  in the repository; replace them when the originals change. Only screenshots from the repository, and none
+  that show the GTA2 or Rockstar logos large.
+- `fonts/`: Michroma and Archivo (variable), latin subsets as woff2, both under the SIL Open Font License
+  (licences next to them), from the Google Fonts repository. `ds.css` loads them from `fonts/` beside itself,
+  which is this folder once published.
 - `home.css`: this page's layout only.
 
-## Design system (`ds.css`)
+## Design (`ds.css`)
 
-Shared by this page and the game page, dark only, in the spirit of GTA2's frontend: colour blocks with angled
-cuts, slanted display type, gang colours. Use the tokens instead of literal values:
+Shared by this page and the game page, dark only. The look follows the game's own frontend: a darkened city
+behind the menu, wide tracked capitals, white items and the selected one in red. One accent, red, and only
+for the selected or main action. The screenshots carry the colour.
 
-- Colours: `--bg`, `--bg-2` (raised surfaces), `--line`, `--text`, `--muted`, `--red` (the main action),
-  `--red-ink` (text on red), `--amber` (warnings), `--ok`, `--focus`.
-- Gang colours `--red`, `--amber`, `--cyan`, `--lime`, `--pink`. A section picks one with `.acc-red`,
-  `.acc-amber`, `.acc-cyan`, `.acc-lime` or `.acc-pink`, which sets `--accent`; labels, bullets, link
-  underlines, rules and image shadows inside it follow `--accent`. Text on an accent block uses `--accent-ink`.
-- `--lcd` and `--lcd-ink`: the pager (`.pager`), used for the beta warning.
-- Type: `--font-display` (Saira black italic at `--display-stretch`, 125% wide, for uppercase headings),
-  `--font-body` (Saira at normal width) and `--font-hud` (Share Tech Mono, for tags, captions, the pager and
-  `.hud` readouts); sizes `--step--1` to `--step-5`.
-- Shape: `--space-1` to `--space-7`, `--rule` (thick rules), `--radius` (square corners), `--cut` (angled
-  corners of `.btn.primary`), `--slant` (skew of `.slant`), `--measure`, `--page-max`, `--gutter`.
-- Components: `.btn` (`.primary`, `.big`, `.danger`), `.row`, `.panel` (`.warn`), `.label` (angled title
-  block, `<h2 class="label">Title</h2>`), `.tag` (sticker), `.pager`, `.hud`, `.scanlines` (faint CRT lines over a positioned box), `.slant`, `.bar`,
-  `.stripe` (on `body`), `.nocase` (keeps macOS or gta2_re in uppercase headings), `.foot`, `.skip`, `.lede`,
-  `.small`.
+- Colours: `--bg`, `--bg-2` (raised surfaces), `--line`, `--text`, `--muted`, `--red` (the selection and main
+  action), `--red-ink` (text on red), `--amber` (warnings), `--ok`, `--focus`.
+- Type: `--font-display` (Michroma, close to the square wide lettering of the game's menus and logo, for
+  headings, labels and menu paths), `--font-body` (Archivo), `--font-mono` (system monospace, for code),
+  `--track` (letter spacing of the capitals); sizes `--step--1` to `--step-3`.
+- Space: `--space-1` to `--space-7`, `--measure`, `--page-max`, `--gutter`.
+- Components: `.caps` (tracked capitals), `.menu` (a vertical menu, `.sel` on the selected item; the pointer
+  moves the selection), `.nocase` (keeps macOS or gta2_re in `.caps`), `.muted`, `.small`, `.skip`.
 
-One red main action per screen, one accent per section, amber for warnings. No Rockstar or GTA2 logos, fonts or
-trademarks as branding.
+No Rockstar or GTA2 logos, fonts or artwork as branding; no gradients, glows, tags or decorative effects.
