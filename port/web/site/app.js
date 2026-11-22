@@ -726,15 +726,18 @@ const game = {
     this.checkOrientation();
   },
 
-  // The graphics driver as the browser names it (unmasked where the browser allows), for the diagnostics.
+  // The graphics driver as the browser names it (unmasked where the browser allows), for the diagnostics. Read
+  // once: the query waits for the GPU to finish everything queued, tens of milliseconds in a game.
   glRenderer() {
+    if (this.renderer) return this.renderer;
     try {
       const gl = $('canvas').getContext('webgl2');
       const info = gl.getExtension('WEBGL_debug_renderer_info');
-      return info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+      this.renderer = info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
     } catch {
-      return '?';
+      this.renderer = '?';
     }
+    return this.renderer;
   },
 
   // ?stats: frames per second, the game code's time per frame, the display's period, the canvas and memory, on
@@ -764,7 +767,7 @@ const game = {
         }
         while (pending.length && gl.getQueryParameter(pending[0], gl.QUERY_RESULT_AVAILABLE)) {
           const q = pending.shift();
-          if (!gl.getParameter(timer.GPU_DISJOINT_EXT)) gpu.push(gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6);
+          gpu.push(gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6);
           gl.deleteQuery(q);
         }
         query = gl.createQuery();

@@ -33,6 +33,12 @@ self.addEventListener('fetch', (event) => {
     const key = request.mode === 'navigate' ? './' : request;
     const cached = await cache.match(key, { ignoreSearch: request.mode === 'navigate' });
     if (cached) return cached;
-    return fetch(request);
+    try {
+      return await fetch(request);
+    } catch {
+      // Offline with this build not cached yet (or cleared): the page from any build kept, else a plain error.
+      const any = request.mode === 'navigate' ? await caches.match('./', { ignoreSearch: true }) : null;
+      return any || Response.error();
+    }
   })());
 });
