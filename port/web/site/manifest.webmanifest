@@ -1,0 +1,16 @@
+{
+  "name": "reG2",
+  "short_name": "reG2",
+  "description": "GTA2, rebuilt from its decompiled source, with your own copy of the game.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "landscape",
+  "background_color": "#0d0f14",
+  "theme_color": "#0d0f14",
+  "icons": [
+    { "src": "icons/reg2_256.png", "sizes": "256x256", "type": "image/png" },
+    { "src": "icons/reg2_512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

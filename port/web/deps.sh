@@ -40,4 +40,12 @@ emcmake cmake -S "$B/libarchive-3.8.11" -B "$B/b_libarchive" $C -DBUILD_SHARED_L
       -DENABLE_PCRE2POSIX=OFF -DENABLE_LIBGCC=OFF -DENABLE_TAR=OFF -DENABLE_CPIO=OFF -DENABLE_CAT=OFF \
       -DENABLE_UNZIP=OFF -DENABLE_XATTR=OFF -DENABLE_ACL=OFF -DENABLE_ICONV=OFF -DENABLE_TEST=OFF -DPOSIX_REGEX_LIB=NONE
 ninja -C "$B/b_libarchive" -j"$J" install
+# The licences the site serves.
+mkdir -p "$P/licenses"
+cp "$B/SDL3-3.4.18/LICENSE.txt" "$P/licenses/SDL3.txt"
+cp "$B/unshield-1.6.2/LICENSE" "$P/licenses/unshield.txt"
+cp "$B/libarchive-3.8.11/COPYING" "$P/licenses/libarchive.txt"
+cp "$B/zlib-1.3.2/LICENSE" "$P/licenses/zlib.txt"
+cat "$B/xz-5.8.4/COPYING" "$B/xz-5.8.4/COPYING.0BSD" > "$P/licenses/xz.txt"
+cp "$HERE/../3rdParty/libbink/LICENSE" "$P/licenses/libbink.txt"
 touch "$P/.complete"

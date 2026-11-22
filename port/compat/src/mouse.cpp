@@ -115,7 +115,13 @@ void port_MouseEndFrame()
     if (grab != sGrabbed && pWindow)
     {
         sGrabbed = grab;
+#if defined(__EMSCRIPTEN__)
+        // A browser keeps the mouse in the page only with pointer lock: relative mode, whose motion SDL adds up
+        // into a position kept in the window.
+        SDL_SetWindowRelativeMouseMode(pWindow, grab);
+#else
         SDL_SetWindowMouseGrab(pWindow, grab);
+#endif
     }
     const bool show = port_MouseMode() && port_MenuUsesMouse();
     if (show != sCursorShown)

@@ -161,7 +161,13 @@ HWND WINAPI CreateWindowExA(DWORD exStyle, LPCSTR className, LPCSTR title, DWORD
     int windowW;
     int windowH;
     port_GetWindowSize(&windowW, &windowH);
-    SDL_Window* pSdl = SDL_CreateWindow(title, windowW, windowH, SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE);
+#if defined(__EMSCRIPTEN__)
+    // The canvas at the page's chosen pixel ratio (web/site/app.js sets devicePixelRatio).
+    const SDL_WindowFlags density = SDL_WINDOW_HIGH_PIXEL_DENSITY;
+#else
+    const SDL_WindowFlags density = 0;
+#endif
+    SDL_Window* pSdl = SDL_CreateWindow(title, windowW, windowH, SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | density);
     if (!pSdl)
     {
         SDL_Log("Window %dx%d: %s", windowW, windowH, SDL_GetError());

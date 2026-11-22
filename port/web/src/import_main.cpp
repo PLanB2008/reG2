@@ -30,7 +30,8 @@ void Quote(const std::string& s)
     sResult += '"';
 }
 
-// The result as JSON: {ok, error, addOnly, missing: [...], music: [found, total], movie, languages: {name: bool}}.
+// The result as JSON: {ok, cancelled, error, addOnly, check: {missing: [...], music: [found, total], movie,
+// languages: {name: bool}}}.
 const char* Report(const setup::InstallResult& r)
 {
     sResult = "{\"ok\":";
@@ -41,7 +42,7 @@ const char* Report(const setup::InstallResult& r)
     Quote(r.mError);
     sResult += ",\"addOnly\":";
     sResult += r.mAddOnly ? "true" : "false";
-    sResult += ",\"missing\":[";
+    sResult += ",\"check\":{\"missing\":[";
     for (size_t i = 0; i < r.mCheck.mMissing.size(); i++)
     {
         sResult += i ? "," : "";
@@ -57,7 +58,7 @@ const char* Report(const setup::InstallResult& r)
         Quote(r.mCheck.mLanguages[i].first);
         sResult += r.mCheck.mLanguages[i].second ? ":true" : ":false";
     }
-    sResult += "}}";
+    sResult += "}}}";
     return sResult.c_str();
 }
 

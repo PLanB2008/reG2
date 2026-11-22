@@ -18,7 +18,7 @@ target_link_libraries(reg2_import PRIVATE gta2setup)
 target_compile_options(reg2_import PRIVATE -fno-short-wchar)
 target_link_options(reg2_import PRIVATE -sALLOW_MEMORY_GROWTH -sMAXIMUM_MEMORY=4GB -sMODULARIZE
     -sEXPORT_NAME=createReg2Import -sENVIRONMENT=worker -sFORCE_FILESYSTEM -lworkerfs.js -sINVOKE_RUN=0
-    -sEXPORTED_RUNTIME_METHODS=FS,ccall -sEXPORTED_FUNCTIONS=_main,_import_check,_import_install,_import_done,_import_total)
+    -sEXPORTED_RUNTIME_METHODS=FS,WORKERFS,ccall -sEXPORTED_FUNCTIONS=_main,_import_check,_import_install,_import_done,_import_total)
 set_target_properties(reg2_import PROPERTIES SUFFIX .js)
 # The Khronos headers the renderer declares its OpenGL entry points with.
 target_include_directories(gta2 PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../renderer/khronos)
