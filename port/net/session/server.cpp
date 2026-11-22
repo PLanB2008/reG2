@@ -461,6 +461,7 @@ bool net::Server::Fill(Slot& s, const Snapshot& fixed, std::vector<Item>& items,
             }
         }
         Snapshot candidate = fixed;
+        candidate.entities.reserve(fixed.entities.size() + items.size());
         size_t fresh = 0;
         for (const Item& it : items)
         {
