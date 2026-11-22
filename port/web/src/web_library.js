@@ -2,7 +2,7 @@
 addToLibrary({
   // period: the display's frame period, the median of the last 31 intervals that look like one refresh.
   // busy: milliseconds the game ran between yields, summed until the page reads it (?stats in app.js).
-  $webFrames: { last: 0, deltas: [], period: 1000 / 60, resumed: 0, busy: 0, frames: 0 },
+  $webFrames: { last: 0, deltas: [], period: 1000 / 60, resumed: 0, busy: 0, frames: 0, presents: 0 },
   port_WebWaitFrame__async: true,
   port_WebWaitFrame__deps: ['$Asyncify', '$webFrames'],
   port_WebWaitFrame: () => Asyncify.handleSleep((wakeUp) => {
@@ -24,12 +24,20 @@ addToLibrary({
       wakeUp();
     });
   }),
+  // fsync: nothing to wait for in the memory file system (the page stores files as they are closed). Emscripten's
+  // own may wait for a sync, which with Asyncify would need every caller's stack instrumented.
+  fd_sync__async: false,
+  fd_sync: (fd) => 0,
   // The game quit (QUIT, SAVE AND QUIT): the page's onGameQuit (app.js).
   port_WebQuit: (code) => {
     Module['onGameQuit']?.(code);
   },
   port_WebLoadFile__deps: ['$UTF8ToString'],
   port_WebLoadFile: (path) => (Module['loadFile']?.(UTF8ToString(path)) ? 1 : 0),
+  port_WebCountPresent__deps: ['$webFrames'],
+  port_WebCountPresent: () => {
+    webFrames.presents++;
+  },
   port_WebFramePeriodMs__deps: ['$webFrames'],
   port_WebFramePeriodMs: () => webFrames.period,
 });

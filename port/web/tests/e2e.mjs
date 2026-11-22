@@ -5,7 +5,7 @@
 //   python3 -m http.server -d <site> 8000 &
 //   SITE=http://127.0.0.1:8000/ GTA2=~/GTA2INSTALLER.exe OUT=/tmp/shots node port/web/tests/e2e.mjs [chromium|firefox] [scenario...]
 //
-// Scenarios: import, play, save, contextloss, offline, tabs, hide, keys, escape, touch. Each runs in its own new profile (import first).
+// Scenarios: import, play, save, exit, contextloss, offline, tabs, hide, keys, escape, touch. Each runs in its own new profile (import first).
 import { chromium, firefox } from 'playwright';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -78,6 +78,19 @@ async function startGame(page, firstStart) {
   await page.waitForTimeout(3000);
 }
 
+// The pause menu's QUIT GAME, then option n of its question (0 SAVE AND QUIT, 1 QUIT): back in the menus.
+async function quitGame(page, option) {
+  await press(page, 'Escape');
+  await page.waitForTimeout(1000);
+  await press(page, 'ArrowUp');
+  await press(page, 'Enter');
+  await page.waitForTimeout(800);
+  for (let i = 0; i < option; i++) await press(page, 'ArrowDown');
+  await press(page, 'Enter');
+  await page.waitForFunction(() => window.reg2.state() === 1, null, { timeout: 30000 }).catch(() => {});
+  await page.waitForTimeout(1500);
+}
+
 async function hold(page, key, ms) {
   await page.keyboard.down(key);
   await page.waitForTimeout(ms);
@@ -105,34 +118,79 @@ const scenarios = {
   },
 
   // SAVE AND QUIT in the pause menu, a reload, then LOAD GAME.
+  // The pause menu's QUIT GAME, then SAVE AND QUIT (first) or QUIT (second, without saving).
   async save() {
     const { page, close } = await open();
     await importGame(page);
     await startGame(page, true);
     await hold(page, 'ArrowLeft', 1500);
-    await press(page, 'Escape');
-    await page.waitForTimeout(1500);
-    check('save: pause menu', (await state(page)) & 4);
-    await press(page, 'ArrowUp');
-    await press(page, 'Enter');
+    await quitGame(page, 0);
+    check('save: back in the menus', (await state(page)) === 1);
+    check('save: no failure screen', await hidden(page, 'crash'));
     await page.waitForTimeout(1000);
-    await press(page, 'Enter');
-    // The game quits after the save: the page stores the files and comes back.
-    await page.waitForFunction(() => !document.getElementById('ready').hidden, null, { timeout: 30000 });
-    check('save: back on the page', true);
     const files = await page.evaluate(() => import('./storage.js').then((s) => s.userFiles()));
     check('save: autosave stored', files.some((f) => /_auto_/.test(f)), files.join(' '));
+    // LOAD GAME on the PLAY page: the autosave, without leaving the page.
+    for (const key of ['Enter', 'ArrowDown', 'ArrowDown', 'Enter', 'Enter']) {
+      await press(page, key);
+      await page.waitForTimeout(key === 'Enter' ? 2000 : 400);
+    }
+    await page.waitForFunction(() => window.reg2.state() & 2, null, { timeout: 60000 });
+    check('save: loaded from the menus', true);
+    // QUIT without saving, then a new game.
+    await page.waitForTimeout(2000);
+    await quitGame(page, 1);
+    check('quit: back in the menus', (await state(page)) === 1);
+    for (const key of ['Enter', 'Enter', 'ArrowUp', 'Enter']) {
+      await press(page, key);
+      await page.waitForTimeout(2000);
+    }
+    await page.waitForFunction(() => window.reg2.state() & 2, null, { timeout: 60000 });
+    check('quit: another game started', true);
+    // After a reload, LOAD GAME again.
     await page.goto(SITE);
     await page.click('#play');
-    await page.waitForFunction(() => window.reg2 && window.reg2.module);
-    await page.waitForTimeout(6000);
+    await page.waitForFunction(() => window.reg2 && window.reg2.module && window.reg2.state() & 1);
+    await page.waitForTimeout(3000);
     for (const key of ['Enter', 'Enter', 'ArrowDown', 'ArrowDown', 'Enter', 'Enter']) {
       await press(page, key);
       await page.waitForTimeout(key === 'Enter' ? 2000 : 400);
     }
     await page.waitForFunction(() => window.reg2.state() & 2, null, { timeout: 60000 });
     check('save: loaded after reload', true);
-    await shot(page, 'save-loaded');
+    // The pause menu's LOAD GAME: warned, then the save.
+    await press(page, 'Escape');
+    await page.waitForTimeout(1000);
+    for (const key of ['ArrowDown', 'ArrowDown', 'ArrowDown', 'Enter']) await press(page, key);
+    await page.waitForTimeout(1000);
+    // The warning (CANCEL first), CONTINUE, then the save in the list.
+    await press(page, 'ArrowUp');
+    await press(page, 'Enter');
+    await page.waitForTimeout(1500);
+    await shot(page, 'pause-load-list');
+    await press(page, 'Enter');
+    await page.waitForFunction(() => window.reg2.state() === 2, null, { timeout: 60000 }).catch(() => {});
+    await page.waitForTimeout(3000);
+    await shot(page, 'pause-load-done');
+    check('pause load: in a game, not paused', (await state(page)) === 2);
+    check('pause load: no failure screen', await hidden(page, 'crash'));
+    await close();
+  },
+
+  // The start menu's QUIT: the game ends and the page comes back.
+  async exit() {
+    const { page, close } = await open();
+    await importGame(page);
+    await page.click('#play');
+    await page.waitForFunction(() => window.reg2 && window.reg2.module && window.reg2.state() & 1, null, { timeout: 60000 });
+    await page.waitForTimeout(3000);
+    for (const key of ['Enter', 'Enter', 'ArrowUp', 'Enter']) {
+      await press(page, key);
+      await page.waitForTimeout(1500);
+    }
+    await page.waitForFunction(() => !document.getElementById('ready').hidden, null, { timeout: 30000 }).catch(() => {});
+    check('exit: back on the page', !(await hidden(page, 'ready')));
+    check('exit: no failure screen', await hidden(page, 'crash'));
     await close();
   },
 

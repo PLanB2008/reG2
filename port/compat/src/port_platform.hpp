@@ -23,6 +23,7 @@ extern "C" unsigned long long port_WebRefreshNs();
 extern "C" void port_WebQuit(int code);
 // True when the page has the file and is reading it in from its storage (a music track kept out of memory).
 extern "C" bool port_WebLoadFile(const char* path);
+void port_WebCanvasResized();
 #endif
 // Windows (crash_win32.cpp): an unhandled exception or abort() reported in the log and a message box.
 void port_InstallCrashHandler();

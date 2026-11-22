@@ -387,6 +387,10 @@ void port_UpdateGameResolution()
     if (pWindow && SDL_GetWindowSizeInPixels(pWindow, &canvasW, &canvasH) && canvasW > 0 && canvasH > 0)
     {
         GameSize(canvasW, canvasH, &w, &h);
+        if (w != (int)ScreenGet("full_width", 0) || h != (int)ScreenGet("full_height", 0))
+        {
+            port_WebCanvasResized();
+        }
         ScreenSet("full_width", w);
         ScreenSet("full_height", h);
         ScreenSet("window_width", w);

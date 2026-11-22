@@ -583,6 +583,9 @@ const game = {
         // Phones: at most 2x anti-aliasing. Fewer flashes: no bloom (compat/src/video_port.cpp).
         if (isTouchDevice) M.ENV.GTA2_MSAA_CAP = '2';
         if (calm) M.ENV.GTA2_CALM = '1';
+        // ?msaa=N: the anti-aliasing cap, to compare frame rates.
+        const msaa = new URLSearchParams(location.search).get('msaa');
+        if (msaa !== null) M.ENV.GTA2_MSAA_CAP = msaa;
         // ?stats: the frame loop's rates in the console, every 5 seconds.
         if (new URLSearchParams(location.search).has('stats')) M.ENV.GTA2_LOOP_STATS = '1';
       }],
@@ -597,13 +600,8 @@ const game = {
     show('loading', false);
     $('canvas').focus();
     M.callMain([]);
-    if (new URLSearchParams(location.search).has('stats')) {
-      setInterval(() => {
-        const f = M.webFrames;
-        if (f && f.frames) console.log(`web: ${(f.busy / f.frames).toFixed(2)} ms of game code per frame, display period ${f.period.toFixed(2)} ms, wasm memory ${M.HEAPU8.length >> 20} MB`);
-        if (f) f.busy = f.frames = 0;
-      }, 5000);
-    }
+    this.logLine('WebGL: ' + this.glRenderer());
+    if (new URLSearchParams(location.search).has('stats')) this.showStats(M);
   },
 
   // A music track for the game (true if the page has it), read from storage while the stream waits silently.
@@ -722,6 +720,41 @@ const game = {
     this.applyPrefs();
     this.hookAudio();
     this.checkOrientation();
+  },
+
+  // The graphics driver as the browser names it (unmasked where the browser allows), for the diagnostics.
+  glRenderer() {
+    try {
+      const gl = $('canvas').getContext('webgl2');
+      const info = gl.getExtension('WEBGL_debug_renderer_info');
+      return info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+    } catch {
+      return '?';
+    }
+  },
+
+  // ?stats: frames per second, the game code's time per frame, the display's period, the canvas and memory, on
+  // the screen every second (and in the console every 5 s), for players to report.
+  showStats(M) {
+    const box = $('stats');
+    show('stats');
+    let lastPresents = 0;
+    let lastTime = performance.now();
+    let tick = 0;
+    setInterval(() => {
+      const f = M.webFrames;
+      if (!f) return;
+      const now = performance.now();
+      const fps = ((f.presents - lastPresents) * 1000) / (now - lastTime);
+      const busy = f.frames ? f.busy / f.frames : 0;
+      lastPresents = f.presents;
+      lastTime = now;
+      f.busy = f.frames = 0;
+      const canvas = $('canvas');
+      box.textContent = `${fps.toFixed(0)} fps  game ${busy.toFixed(1)} ms/frame  display ${(1000 / f.period).toFixed(0)} Hz\n` +
+        `canvas ${canvas.width}x${canvas.height} (x${devicePixelRatio.toFixed(2)})  wasm ${M.HEAPU8.length >> 20} MB\n${this.glRenderer()}`;
+      if (++tick % 5 === 0) console.log('web: ' + box.textContent.replace(/\n/g, ' | '));
+    }, 1000);
   },
 
   // The game's pause menu, in a game and not already open.
@@ -876,6 +909,7 @@ const game = {
       navigator.userAgent,
       'error: ' + String(detail && detail.stack || detail || ''),
       'wasm memory: ' + (this.module?.HEAPU8 ? (this.module.HEAPU8.length >> 20) + ' MB' : '?'),
+      'WebGL: ' + this.glRenderer(),
       '--- log',
       ...this.log.slice(-60),
     ].join('\n');
