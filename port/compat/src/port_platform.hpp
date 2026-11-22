@@ -15,6 +15,10 @@ const char* port_WriteLog(); // the log's UTF-8 path, empty if it could not be w
 std::string port_WithLogPath(const char* text); // text and, after it, the written log's path
 void port_LogWrite(const char* text, size_t size); // to the written log, without allocating
 void port_LogExit(int code);
+#if defined(__EMSCRIPTEN__)
+// A wait: the game's loop yields to the browser instead (web/src/web_platform.cpp).
+extern "C" void port_WebMarkIdle();
+#endif
 // Windows (crash_win32.cpp): an unhandled exception or abort() reported in the log and a message box.
 void port_InstallCrashHandler();
 

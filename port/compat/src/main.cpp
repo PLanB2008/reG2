@@ -43,6 +43,12 @@ __attribute__((constructor(101))) static void EnterGameFolderAtStart()
 {
     EnterGameFolder(__argc, __argv);
 }
+#elif defined(__EMSCRIPTEN__)
+// Constructors take no arguments in WebAssembly; the page gives the game none.
+__attribute__((constructor(101))) static void EnterGameFolderAtStart()
+{
+    EnterGameFolder(0, NULL);
+}
 #else
 // glibc and macOS pass the program's arguments to constructors.
 __attribute__((constructor(101))) static void EnterGameFolderAtStart(int argc, char** argv, char**)

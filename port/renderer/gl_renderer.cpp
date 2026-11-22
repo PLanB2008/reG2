@@ -661,6 +661,10 @@ bool GLRenderer::Init(GLFuncs::Loader loader, const char** ppError)
 
 void GLRenderer::ThrottleFrames()
 {
+#if defined(__EMSCRIPTEN__)
+    // The browser keeps the GPU at most a frame or two behind, and WebGL cannot wait on a fence.
+    return;
+#endif
     if (mFrameFence)
     {
         gl.glClientWaitSync(mFrameFence, GL_SYNC_FLUSH_COMMANDS_BIT, 1000000000ull);

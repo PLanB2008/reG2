@@ -3,6 +3,11 @@
 #include "present_log.hpp"
 #include <SDL3/SDL.h>
 
+#if defined(__EMSCRIPTEN__)
+// The browser shows the canvas once the game's loop yields (port/web/src/web_platform.cpp).
+extern "C" void port_WebMarkPresented();
+#endif
+
 namespace
 {
 class SDLGLContext : public IGLContext
@@ -31,8 +36,12 @@ class SDLGLContext : public IGLContext
     {
         PresentLog::BeforeSwap();
         // SDL's Wayland swap waits for the frame callback before the commands go out: send them first, so the GPU draws during the wait.
+#if defined(__EMSCRIPTEN__)
+        port_WebMarkPresented();
+#else
         mFlush();
         SDL_GL_SwapWindow(mWindow);
+#endif
         PresentLog::AfterSwap();
     }
     void MakeCurrent() override

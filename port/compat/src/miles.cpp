@@ -681,7 +681,11 @@ DXDEC S32 AILCALL AIL_set_preference(U32, S32)
 // Intervals of 1/60 s.
 DXDEC void AILCALL AIL_delay(S32 intervals)
 {
+#if defined(__EMSCRIPTEN__)
+    port_WebMarkIdle();
+#else
     SDL_Delay((Uint32)(intervals * 1000 / 60));
+#endif
 }
 
 // The game closes and reopens the driver to switch 3D sound on or off: the SDL device stays open

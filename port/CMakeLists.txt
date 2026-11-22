@@ -34,7 +34,7 @@ list(TRANSFORM lib_src PREPEND ${ROOT}/)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT EMSCRIPTEN)
     set(arch_flags -m32)
 endif()
 # No warnings, or only the 64 to 32-bit integer truncations, which build.sh checks in the Windows x64 build.
@@ -83,6 +83,10 @@ else()
     # or from GTA2_SETUP_DEPS_DIR (an install prefix with both built static, and zlib and xz, needed for MinGW).
     set(GTA2_SETUP_DEPS_DIR "" CACHE PATH "Install prefix of libarchive and unshield")
     file(GLOB setup_src ${CMAKE_CURRENT_LIST_DIR}/setup/*.cpp)
+    if(EMSCRIPTEN)
+        # The page imports the game's data with install.cpp alone (web/web.cmake's reg2_import).
+        set(setup_src ${CMAKE_CURRENT_LIST_DIR}/setup/install.cpp)
+    endif()
     add_library(gta2setup STATIC ${setup_src})
     target_link_libraries(gta2setup PRIVATE SDL3::SDL3)
     if(GTA2_SETUP_DEPS_DIR)
@@ -161,14 +165,21 @@ else()
     add_executable(gta2 ${lib_src} ${ROOT}/test.cpp ${ROOT}/StdAfx.cpp
         src/debug_stubs.cpp src/menu.cpp src/options_menu.cpp src/pause_menu.cpp src/lights.cpp src/heat_haze.cpp src/fire_smoke.cpp src/shadows.cpp src/settings.cpp src/game_hooks.cpp src/frame_loop.cpp src/interpolation.cpp src/view.cpp src/day_night.cpp src/ambient_occlusion.cpp src/twin_stick.cpp src/rumble.cpp src/ptr_slot.cpp src/saves.cpp src/autosave.cpp src/retry.cpp src/welcome.cpp src/prompts.cpp src/layout_checks.cpp ${compat_src})
     target_compile_definitions(gta2 PRIVATE GTA2_PORT_SDL)
-    # Off in the Flatpak, which has no network access and updates itself.
+    # Off in the Flatpak, which has no network access and updates itself, and on the web.
+    if(EMSCRIPTEN)
+        set(GTA2_UPDATE_CHECK OFF CACHE BOOL "" FORCE)
+    endif()
     option(GTA2_UPDATE_CHECK "Look for a newer release on GitHub at start, through curl or wget" ON)
     if(GTA2_UPDATE_CHECK)
         target_compile_definitions(gta2 PRIVATE GTA2_UPDATE_CHECK)
     endif()
     # reg2, not gta2: unpacked into a GTA2 folder, it must not replace the original's gta2.exe.
     set_target_properties(gta2 PROPERTIES OUTPUT_NAME reg2)
-    target_link_libraries(gta2 PRIVATE gta2gl gta2setup bink SDL3::SDL3)
+    if(EMSCRIPTEN)
+        include(${CMAKE_CURRENT_LIST_DIR}/web/web.cmake)
+    else()
+        target_link_libraries(gta2 PRIVATE gta2gl gta2setup bink SDL3::SDL3)
+    endif()
     if(openal_runtime AND NOT APPLE)
         add_custom_command(TARGET gta2 POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${openal_runtime} $<TARGET_FILE_DIR:gta2>)
@@ -209,7 +220,7 @@ else()
             # The Khronos header the renderer declares its OpenGL entry points with; macOS has none.
             target_include_directories(gta2 PRIVATE ${CMAKE_CURRENT_LIST_DIR}/renderer/khronos ${compat}/macos)
             target_include_directories(gta2gl PRIVATE ${CMAKE_CURRENT_LIST_DIR}/renderer/khronos)
-        else()
+        elseif(NOT EMSCRIPTEN)
             target_link_options(gta2 PRIVATE ${arch_flags} -Wl,--no-dependent-libraries -Wl,--error-limit=0)
         endif()
     endif()

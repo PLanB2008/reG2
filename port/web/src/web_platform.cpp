@@ -1,0 +1,56 @@
+// What the web build does in place of the desktop's: the game folder the page filled, and the yield to
+// the browser once per frame.
+#include <SDL3/SDL.h>
+#include <emscripten.h>
+#include <unistd.h>
+
+extern "C" {
+// web_library.js: resolves at the browser's next frame.
+void port_WebWaitFrame();
+void port_WebPresented();
+}
+
+namespace
+{
+bool sPresented;
+bool sIdle;
+Uint64 sLastYield;
+} // namespace
+
+// The page mounts the game's data and the player's files at /reG2 before main.
+bool port_PrepareGameFolder(bool)
+{
+    // SDL's own yields (in SDL_Delay and the swap) would need Asyncify on every stack that reaches them.
+    SDL_SetHint(SDL_HINT_EMSCRIPTEN_ASYNCIFY, "0");
+    return chdir("/reG2") == 0;
+}
+
+void port_SetWindowIcon(SDL_Window*)
+{
+}
+
+extern "C" void port_WebMarkPresented()
+{
+    sPresented = true;
+}
+
+extern "C" void port_WebMarkIdle()
+{
+    sIdle = true;
+}
+
+// Called at the top of GameWinMain's loop: after a frame was drawn, when the loop waits for the next step,
+// or at the latest every 50 ms, the browser gets its turn (events, presenting the canvas).
+extern "C" void port_WebYield()
+{
+    const Uint64 now = SDL_GetTicks();
+    if (sPresented || sIdle || now - sLastYield >= 50)
+    {
+        sPresented = false;
+        sIdle = false;
+        port_WebWaitFrame();
+        sLastYield = SDL_GetTicks();
+    }
+}
+
+// The touch controls' virtual gamepad and the page's commands: defined in web_input.cpp.

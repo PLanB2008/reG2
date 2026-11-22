@@ -112,7 +112,11 @@ unsigned long long port_NowNs()
 
 void port_DelayNs(unsigned long long ns)
 {
+#if defined(__EMSCRIPTEN__)
+    port_WebMarkIdle();
+#else
     SDL_DelayPrecise(ns);
+#endif
 }
 
 // The refresh period the swap waits for; 0 without vsync or when the screen does not say.
