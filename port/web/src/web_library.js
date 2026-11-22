@@ -24,6 +24,10 @@ addToLibrary({
       wakeUp();
     });
   }),
+  // The game quit (QUIT, SAVE AND QUIT): the page's onGameQuit (app.js).
+  port_WebQuit: (code) => {
+    Module['onGameQuit']?.(code);
+  },
   port_WebFramePeriodMs__deps: ['$webFrames'],
   port_WebFramePeriodMs: () => webFrames.period,
 });

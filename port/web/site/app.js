@@ -583,8 +583,8 @@ const game = {
         // ?stats: the frame loop's rates in the console, every 5 seconds.
         if (new URLSearchParams(location.search).has('stats')) M.ENV.GTA2_LOOP_STATS = '1';
       }],
-      onAbort: (what) => self.crash(t('crashTitle'), t('crashText'), what),
-      onExit: (code) => self.exited(code),
+      onAbort: (what) => self.exiting || self.crash(t('crashTitle'), t('crashText'), what),
+      onGameQuit: (code) => self.exited(code),
     };
     const M = await window.createReg2(Module);
     this.module = M;
@@ -597,7 +597,7 @@ const game = {
     if (new URLSearchParams(location.search).has('stats')) {
       setInterval(() => {
         const f = M.webFrames;
-        if (f && f.frames) console.log(`web: ${(f.busy / f.frames).toFixed(2)} ms of game code per frame, display period ${f.period.toFixed(2)} ms`);
+        if (f && f.frames) console.log(`web: ${(f.busy / f.frames).toFixed(2)} ms of game code per frame, display period ${f.period.toFixed(2)} ms, wasm memory ${M.HEAPU8.length >> 20} MB`);
         if (f) f.busy = f.frames = 0;
       }, 5000);
     }
@@ -835,6 +835,7 @@ const game = {
       'reG2 web ' + (window.REG2_VERSION || ''),
       navigator.userAgent,
       'error: ' + String(detail && detail.stack || detail || ''),
+      'wasm memory: ' + (this.module?.HEAPU8 ? (this.module.HEAPU8.length >> 20) + ' MB' : '?'),
       '--- log',
       ...this.log.slice(-60),
     ].join('\n');
@@ -854,11 +855,12 @@ const game = {
 // For tests and the console.
 window.reg2 = game;
 
+// After the game quit, the runtime's unwinding may trap: the page is already on its way back.
 addEventListener('error', (e) => {
-  if (game.module) game.crash(t('crashTitle'), t('crashText'), e.error || e.message);
+  if (game.module && !game.exiting) game.crash(t('crashTitle'), t('crashText'), e.error || e.message);
 });
 addEventListener('unhandledrejection', (e) => {
-  if (game.module) game.crash(t('crashTitle'), t('crashText'), e.reason);
+  if (game.module && !game.exiting) game.crash(t('crashTitle'), t('crashText'), e.reason);
 });
 
 function loadScript(src) {

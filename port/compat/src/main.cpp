@@ -91,6 +91,10 @@ int main(int argc, char** argv)
     port_InitTestInput();
 
     const int result = WinMain(reinterpret_cast<HINSTANCE>(1), NULL, &cmdLine[0], SW_SHOWNORMAL);
+#if defined(__EMSCRIPTEN__)
+    // The page takes over (stores the files, shows itself); the runtime stays, as exit() from a resumed stack traps.
+    port_WebQuit(result);
+#endif
     port_LogExit(result);
     SDL_Quit();
     return result;

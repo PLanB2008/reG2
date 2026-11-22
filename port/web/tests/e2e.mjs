@@ -34,6 +34,7 @@ async function open(mobile) {
   const ctx = await engine.launchPersistentContext(dir, options);
   const page = ctx.pages()[0] || (await ctx.newPage());
   page.on('pageerror', (e) => console.log('  page error:', e.message));
+  if (process.env.VERBOSE) page.on('console', (m) => console.log('  console:', m.text().slice(0, 300)));
   page.on('dialog', (d) => d.accept());
   return { ctx, page, close: async () => { await ctx.close(); rmSync(dir, { recursive: true, force: true }); } };
 }
@@ -116,7 +117,9 @@ const scenarios = {
     await press(page, 'Enter');
     await page.waitForTimeout(1000);
     await press(page, 'Enter');
-    await page.waitForTimeout(4000);
+    // The game quits after the save: the page stores the files and comes back.
+    await page.waitForFunction(() => !document.getElementById('ready').hidden, null, { timeout: 30000 });
+    check('save: back on the page', true);
     const files = await page.evaluate(() => import('./storage.js').then((s) => s.userFiles()));
     check('save: autosave stored', files.some((f) => /_auto_/.test(f)), files.join(' '));
     await page.goto(SITE);
@@ -151,6 +154,7 @@ const scenarios = {
     await page.waitForFunction(() => navigator.serviceWorker.controller, null, { timeout: 30000 }).catch(() => {});
     await ctx.setOffline(true);
     await page.goto(SITE);
+    await page.waitForTimeout(2000);
     check('offline: page', !(await hidden(page, 'ready')));
     await page.click('#play');
     await page.waitForFunction(() => window.reg2 && window.reg2.module && window.reg2.state() & 1, null, { timeout: 60000 });

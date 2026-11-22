@@ -20,6 +20,7 @@ void port_LogExit(int code);
 extern "C" void port_WebMarkIdle();
 extern "C" void port_WebMarkPresented();
 extern "C" unsigned long long port_WebRefreshNs();
+extern "C" void port_WebQuit(int code);
 #endif
 // Windows (crash_win32.cpp): an unhandled exception or abort() reported in the log and a message box.
 void port_InstallCrashHandler();
