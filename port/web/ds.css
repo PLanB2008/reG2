@@ -70,6 +70,9 @@ h1, h2, h3 { font-weight: 400; margin: 0 0 var(--space-4); line-height: 1.25; }
 .foot { border-top: 1px solid var(--line); font-size: var(--step--1); color: var(--muted); }
 .foot p { max-width: 48rem; }
 .foot a:hover { color: var(--text); }
+/* Inline SVG icons in the text's colour and size: marks (filled) from Simple Icons, line icons (.line) from Lucide. */
+.icon { width: 1.15em; height: 1.15em; flex: none; vertical-align: -0.2em; fill: currentColor; }
+.icon.line { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* A game-style menu: a vertical list of items, the selected one (.sel) in red and underlined.
    The pointer moves the selection, as the cursor does in the game. */

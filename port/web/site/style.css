@@ -73,6 +73,7 @@ progress { width: 100%; height: 0.8rem; accent-color: var(--red); }
 .field + .help { margin: -0.4rem 0 0.9rem 10.75rem; }
 .data { margin-top: 1rem; }
 .data .help { margin: 0 0 0.75rem; }
+.data .btn { display: inline-flex; align-items: center; gap: 0.6em; }
 .foot { margin-top: 3rem; padding-top: 1rem; }
 
 @media (max-width: 30rem) {

@@ -40,7 +40,7 @@ cp "$PORT/resources/reg2_256.png" "$PORT/resources/reg2_512.png" "$OUT/icons/"
 # The licences of what the site serves.
 {
     echo "reG2's web build. The port's code (port/) is under the MIT licence; the game code comes from gta2_re."
-    for f in "$PORT/LICENSE" "$P/licenses/"* "$OUT/vendor/"*.LICENSE "$OUT/fonts/"*.txt; do
+    for f in "$PORT/LICENSE" "$P/licenses/"* "$OUT/vendor/"*.LICENSE "$OUT/fonts/"*.txt "$HERE/home/icons-licenses.txt"; do
         [ -f "$f" ] || continue
         printf '\n==== %s\n\n' "$(basename "$f")"
         cat "$f"

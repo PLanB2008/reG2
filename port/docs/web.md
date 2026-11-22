@@ -189,6 +189,10 @@ the page shows Play and little else: the introduction is for the first visit.
 The footer's legal line is written once, in the landing page (`<p class="legal">` in `home/index.html`), and
 `build.sh` puts it in the game page's footer (`<!--@LEGAL@-->`); `.foot` is in `ds.css`. It stays in English.
 
+Icons are inline SVG in the text's colour (`.icon`, `.icon.line` in `ds.css`): the Apple and Linux marks from Simple
+Icons (CC0), a four-square Windows mark drawn for the site, and Lucide's line icons (ISC); `home/icons-licenses.txt`
+lists them, and `build.sh` adds it to the game page's `licenses.txt`.
+
 ### Sharing the landing page's design
 
 The page uses the site's design system, `port/web/ds.css` (tokens, fonts, buttons, panels; dark only), which
