@@ -16,7 +16,8 @@ mkdir -p "$OUT/icons"
 cp -R "$HERE/site/." "$OUT/"
 cp "$B/reg2.js" "$B/reg2.wasm" "$B/reg2_import.js" "$B/reg2_import.wasm" "$OUT/"
 cp "$ROOT/docs/images/reg2_logo_black.svg" "$OUT/logo-dark.svg"
-cp "$ROOT/docs/images/reg2_logo_light.svg" "$OUT/logo-light.svg"
+# The site's design system, beside the page's fonts so that the service worker keeps it for offline starts.
+cp "$HERE/ds.css" "$OUT/"
 cp "$PORT/resources/reg2_256.png" "$PORT/resources/reg2_512.png" "$OUT/icons/"
 
 # The licences of what the site serves.

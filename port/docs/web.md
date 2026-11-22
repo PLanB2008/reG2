@@ -119,9 +119,10 @@ million on a phone. Phones also get at most 2x anti-aliasing (`GTA2_MSAA_CAP`); 
 
 ### Sharing the landing page's design
 
-The game page keeps its own copy of the colours and fonts that `port/web/ds.css` also has, rather than linking
-`../ds.css`: the service worker's scope is `/play/`, so a file outside it would not be available offline, and
-the page must also work served on its own (local tests, forks).
+The page uses the site's design system, `port/web/ds.css` (tokens, fonts, buttons, panels; dark only), which
+`build.sh` copies into the game's site next to its fonts: one source file, and the service worker, whose scope is
+`/play/`, keeps it for offline starts. `site/style.css` only has what the game page adds (the import, the
+settings, the game's overlays and touch controls).
 
 ## Edge cases
 
@@ -153,10 +154,11 @@ the page must also work served on its own (local tests, forks).
 
 ## Tests
 
-Run with Playwright (Chromium and Firefox) against a local server, with the real 2004 installer as input:
-the import, a game started, walking, the pause menu's SAVE AND QUIT, a reload and LOAD GAME, the WebGL context
-loss (`WEBGL_lose_context`), an offline reload, and a phone-sized viewport with touch (the stick and the
-buttons). Screenshots stay outside the repository (they show the game).
+`port/web/tests/e2e.mjs` drives the site with Playwright (Chromium and Firefox), with the player's own GTA2 as
+input (`GTA2=...`; nothing of it is in the repository): the import, a game started and walked in, the pause
+menu's SAVE AND QUIT then a reload and LOAD GAME, the WebGL context loss (`WEBGL_lose_context`), an offline
+reload, two tabs, the tab hidden in a game, and a phone-sized viewport with touch (the menus, the stick). Its
+header says how to run it. Screenshots go outside the repository (they show the game).
 
 Not tested: a real iPhone or Android phone, Safari, real gamepads in a browser, real phone GPUs' frame times.
 

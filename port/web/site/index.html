@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>reG2</title>
 <meta name="description" content="Play GTA2 in your browser with your own copy of the game. The game files stay on your device.">
-<meta name="color-scheme" content="dark light">
+<meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#0d0f14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -14,23 +14,21 @@
 <link rel="icon" href="icons/reg2_256.png">
 <link rel="apple-touch-icon" href="icons/reg2_256.png">
 <link rel="preload" href="fonts/big-shoulders-800.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="ds.css">
 <link rel="stylesheet" href="style.css">
 <script type="module" src="app.js"></script>
 </head>
-<body>
+<body class="stripe">
 <a class="skip" href="#main" data-i18n="skip">Skip to content</a>
 
 <div id="page">
   <header class="top">
-    <picture class="logo">
-      <source srcset="logo-dark.svg" media="(prefers-color-scheme: dark)">
-      <img src="logo-light.svg" alt="reG2" width="88" height="88">
-    </picture>
+    <img class="logo" src="logo-dark.svg" alt="reG2" width="72" height="72">
   </header>
 
   <main id="main">
     <section class="hero" aria-labelledby="title">
-      <h1 id="title" data-i18n="title">reG2</h1>
+      <h1 id="title" class="bar" data-i18n="title">reG2</h1>
       <p class="lede" data-i18n="lede">Play GTA2 in your browser with your own copy of the game.</p>
     </section>
 
