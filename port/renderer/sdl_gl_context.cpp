@@ -98,7 +98,11 @@ IGLContext* CreateGLContext(SDL_Window* pWindow, const char** ppError)
     };
     SDL_Log("OpenGL: %s, %s, %s, GLSL %s", glString(GL_VERSION), glString(GL_VENDOR), glString(GL_RENDERER),
             glString(GL_SHADING_LANGUAGE_VERSION));
+#if !defined(__EMSCRIPTEN__)
+    // In a browser the page's frames pace the game (web/src/web_platform.cpp); SDL's swap interval there sets a
+    // main loop timing the port does not use.
     SDL_GL_SetSwapInterval(1);
+#endif
     PresentLog::Attach(pWindow);
     return new SDLGLContext(pWindow, ctx);
 }

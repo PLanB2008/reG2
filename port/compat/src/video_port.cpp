@@ -361,6 +361,9 @@ const SDL_DisplayMode* port_FullscreenMode()
 // VSYNC: adaptive where the driver has it (a late frame is shown at once), else plain.
 void port_ApplyVsync()
 {
+#if defined(__EMSCRIPTEN__)
+    return;
+#endif
     if (!SDL_GL_GetCurrentContext())
     {
         return;
