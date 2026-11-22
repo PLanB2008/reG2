@@ -122,6 +122,10 @@ void port_DelayNs(unsigned long long ns)
 // The refresh period the swap waits for; 0 without vsync or when the screen does not say.
 unsigned long long port_SwapRefreshNs()
 {
+#if defined(__EMSCRIPTEN__)
+    // The browser's frames, which the loop yields to (web/src/web_platform.cpp).
+    return port_WebRefreshNs();
+#endif
     SDL_Window* pWindow = port_MainSDLWindow();
     int interval = 0;
     if (!sVidSystem || !pWindow || !SDL_GL_GetSwapInterval(&interval) || !interval)
@@ -134,6 +138,11 @@ unsigned long long port_SwapRefreshNs()
 
 void port_PresentAgain()
 {
+#if defined(__EMSCRIPTEN__)
+    // The canvas keeps showing the last frame until something is drawn.
+    port_WebMarkPresented();
+    return;
+#endif
     if (sVidSystem)
     {
         sVidSystem->Represent();

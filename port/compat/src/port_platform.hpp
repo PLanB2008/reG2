@@ -18,6 +18,8 @@ void port_LogExit(int code);
 #if defined(__EMSCRIPTEN__)
 // A wait: the game's loop yields to the browser instead (web/src/web_platform.cpp).
 extern "C" void port_WebMarkIdle();
+extern "C" void port_WebMarkPresented();
+extern "C" unsigned long long port_WebRefreshNs();
 #endif
 // Windows (crash_win32.cpp): an unhandled exception or abort() reported in the log and a message box.
 void port_InstallCrashHandler();

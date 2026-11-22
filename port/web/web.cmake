@@ -9,7 +9,7 @@ target_link_options(gta2 PRIVATE
     -sASYNCIFY -sASYNCIFY_IGNORE_INDIRECT -sASYNCIFY_ONLY=@${web}/asyncify_only.json
     -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sALLOW_MEMORY_GROWTH -sINITIAL_MEMORY=64MB -sSTACK_SIZE=2MB
     -sMODULARIZE -sEXPORT_NAME=createReg2 -sENVIRONMENT=web -sFORCE_FILESYSTEM -sINVOKE_RUN=0 -sEXIT_RUNTIME
-    -sEXPORTED_RUNTIME_METHODS=FS,callMain,ccall -sEXPORTED_FUNCTIONS=_main
+    -sEXPORTED_RUNTIME_METHODS=FS,ENV,callMain,ccall -sEXPORTED_FUNCTIONS=_main
     --js-library ${web}/src/web_library.js)
 set_target_properties(gta2 PROPERTIES SUFFIX .js)
 
@@ -18,7 +18,7 @@ target_link_libraries(reg2_import PRIVATE gta2setup)
 target_compile_options(reg2_import PRIVATE -fno-short-wchar)
 target_link_options(reg2_import PRIVATE -sALLOW_MEMORY_GROWTH -sMAXIMUM_MEMORY=4GB -sMODULARIZE
     -sEXPORT_NAME=createReg2Import -sENVIRONMENT=worker -sFORCE_FILESYSTEM -lworkerfs.js -sINVOKE_RUN=0
-    -sEXPORTED_RUNTIME_METHODS=FS,ccall -sEXPORTED_FUNCTIONS=_main,_import_check,_import_install)
+    -sEXPORTED_RUNTIME_METHODS=FS,ccall -sEXPORTED_FUNCTIONS=_main,_import_check,_import_install,_import_done,_import_total)
 set_target_properties(reg2_import PROPERTIES SUFFIX .js)
 # The Khronos headers the renderer declares its OpenGL entry points with.
 target_include_directories(gta2 PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../renderer/khronos)

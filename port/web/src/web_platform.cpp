@@ -5,9 +5,9 @@
 #include <unistd.h>
 
 extern "C" {
-// web_library.js: resolves at the browser's next frame.
+// web_library.js: resolves at the browser's next frame; the browser's frame period in ms.
 void port_WebWaitFrame();
-void port_WebPresented();
+double port_WebFramePeriodMs();
 }
 
 namespace
@@ -37,6 +37,11 @@ extern "C" void port_WebMarkPresented()
 extern "C" void port_WebMarkIdle()
 {
     sIdle = true;
+}
+
+extern "C" unsigned long long port_WebRefreshNs()
+{
+    return static_cast<unsigned long long>(port_WebFramePeriodMs() * 1e6);
 }
 
 // Called at the top of GameWinMain's loop: after a frame was drawn, when the loop waits for the next step,
