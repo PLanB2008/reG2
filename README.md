@@ -51,9 +51,7 @@ A few things differ anyway, whatever you pick:
 car headlights, light from gunfire, explosions and fires, fire effects (heat haze, smoke and embers),
 ambient occlusion, soft shadows, bloom, anti-aliasing.
 
-<p><img src="docs/images/pc_graphics_classic.jpg" width="49%" alt="CLASSIC: a flamethrower sets a car on fire at dusk; the flame lights nothing around it"> <img src="docs/images/pc_graphics_enhanced.jpg" width="49%" alt="ENHANCED: the same frame; the flame casts orange light on the road and the pavement"></p>
-
-CLASSIC on the left, ENHANCED on the right: the same frame.
+![Classic and enhanced graphics](docs/images/pc_compare_graphics.png)
 
 **Day and night.** GAME > LIGHTING > DAY-NIGHT CYCLE instead of the fixed dusk.
 
