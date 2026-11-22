@@ -30,9 +30,10 @@ bool port_PrepareGameFolder(bool)
 {
     // SDL's own yields (in SDL_Delay and the swap) would need Asyncify on every stack that reaches them.
     SDL_SetHint(SDL_HINT_EMSCRIPTEN_ASYNCIFY, "0");
-    // The sound is mixed on the page's thread, between frames: SDL doubles this to 4096 frames, 85 ms at 48 kHz,
-    // which rides over the game's short hitches where its default 2048 ran dry.
-    SDL_SetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES, "2048");
+    // The sound is mixed on the page's thread, between frames: SDL doubles this to 2048 frames, 43 ms at 48 kHz,
+    // also the delay miles.cpp gives each sound to keep the game's rhythm. ?audioframes sets it (GTA2_AUDIO_FRAMES).
+    const char* pFrames = SDL_getenv("GTA2_AUDIO_FRAMES");
+    SDL_SetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES, pFrames ? pFrames : "1024");
     return chdir("/reG2") == 0;
 }
 

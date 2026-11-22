@@ -599,6 +599,8 @@ const game = {
         if (params.get('nofx') === '1') M.ENV.GTA2_NOFX = '1';
         // ?soundlog: the sound starts, those lost and their delay, once a second; =2 also each one (compat/src/miles.cpp).
         if (params.has('soundlog')) M.ENV.GTA2_SOUND_LOG = params.get('soundlog') || '1';
+        // ?audioframes=N: SDL's audio buffer hint for this session (web/src/web_platform.cpp).
+        if (params.get('audioframes')) M.ENV.GTA2_AUDIO_FRAMES = params.get('audioframes');
         // ?fps=N: the frame limit (0 a frame each refresh).
         if (params.get('fps') !== null) M.ENV.GTA2_MAX_FPS = params.get('fps');
         // ?stats: the frame loop's rates in the console, every 5 seconds.
@@ -865,7 +867,7 @@ const game = {
   // Save as): the browser's frame intervals, the time in the game, in Asyncify, in sound, in storage, long tasks,
   // and what happened (pointer lock, full screen, visibility, resizes, the audio context's state).
   debugLog(M) {
-    const d = { raf: [], audio: 0, audioCalls: 0, io: 0, long: [], events: [], gl: 0, draws: 0, fbos: 0, uploads: 0 };
+    const d = { raf: [], audio: 0, audioCalls: 0, audioLate: 0, audioSlack: Infinity, io: 0, long: [], events: [], gl: 0, draws: 0, fbos: 0, uploads: 0 };
     this.debug = d;
     // WebGL calls a second: all of them, draws, framebuffer binds, bytes of buffer and texture uploads.
     const gl = $('canvas').getContext('webgl2');
@@ -914,7 +916,12 @@ const game = {
       const node = sdl?.audio_playback?.scriptProcessorNode;
       if (!node || !node.onaudioprocess) return setTimeout(wrapAudio, 500);
       const inner = node.onaudioprocess;
+      event(`audio buffer ${node.bufferSize} frames at ${sdl.audioContext.sampleRate} Hz`);
       node.onaudioprocess = (e) => {
+        // How far ahead of the speakers this buffer is filled; behind them, it plays as a gap.
+        const slack = e.playbackTime - sdl.audioContext.currentTime;
+        d.audioSlack = Math.min(d.audioSlack, slack * 1000);
+        if (slack < 0) d.audioLate++;
         const t = performance.now();
         inner(e);
         d.audio += performance.now() - t;
@@ -943,11 +950,13 @@ const game = {
       console.log(`[reg2 debug] t=${++tick}s raf n=${r.length} min/avg/max ${r.length ? fmt(Math.min(...r)) : '-'}/` +
         `${r.length ? fmt(sum / r.length) : '-'}/${r.length ? fmt(Math.max(...r)) : '-'} >20ms:${r.filter((x) => x > 20).length} ` +
         `>33ms:${r.filter((x) => x > 33).length} | game ${fmt(busy)}ms in ${frames} yields, asyncify+callback ` +
-        `${fmt(callback - busy)}ms | audio ${fmt(d.audio)}ms in ${d.audioCalls} calls | storage (wall) ${fmt(d.io)}ms | ` +
+        `${fmt(callback - busy)}ms | audio ${fmt(d.audio)}ms in ${d.audioCalls} calls, late ${d.audioLate}, slack min ` +
+        `${d.audioCalls ? fmt(d.audioSlack) : '-'}ms | storage (wall) ${fmt(d.io)}ms | ` +
         `page thread busy (known) ${fmt(known)}ms of 1000 | state ${this.state()} | gl calls ${d.gl} draws ${d.draws} ` +
         `fbo binds ${d.fbos} uploads ${(d.uploads / 1048576).toFixed(1)} MB | long tasks: ${d.long.join(', ') || '-'} | ` +
         `events: ${d.events.join(', ') || '-'}`);
-      d.audio = d.audioCalls = d.io = d.gl = d.draws = d.fbos = d.uploads = 0;
+      d.audio = d.audioCalls = d.audioLate = d.io = d.gl = d.draws = d.fbos = d.uploads = 0;
+      d.audioSlack = Infinity;
       d.long.length = 0;
       d.events.length = 0;
     }, 1000);

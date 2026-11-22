@@ -165,7 +165,7 @@ frontend polls the clock between its 30 Hz updates without waiting, which kept t
 frame; the loop now yields after 2 ms of that (`port_WebYield`). In a game, short hitches (streaming, a level's
 first effects) left gaps of 80 to 370 ms between audio callbacks with SDL's 2048-frame buffer; the web build asks
 for 4096 frames (85 ms at 48 kHz, `SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES`), after which none was measured over 30 s
-of play. The browser's sample rate is used as is (SDL opens the device at it and converts the game's mix). An
+of play (since brought back to 2048, below). The browser's sample rate is used as is (SDL opens the device at it and converts the game's mix). An
 AudioWorklet would need the game's mixer in another thread, so pthreads.
 
 With 85 ms buffers, a sample started between two callbacks used to begin at the next buffer's start: a machine gun
@@ -173,6 +173,14 @@ firing every 100 ms (3 steps) was heard at 85, 85, 85, 85, 171 ms, faster with a
 window dropped the first shot. `compat/src/miles.cpp` now times each start and stop and places it at the same point
 of the next buffer, for a constant delay of one buffer: the shots are heard 100 ms apart, as natively (measured with
 `?soundlog=2` and `GTA2_SOUND_LOG=2`, the same weapon held 15 s).
+
+That delay is one buffer, so the buffer went back down once the page's thread had no more stalls (the clock busy
+wait, the `?stats` GPU query, half the GL calls). `?debug` counts the audio callbacks that came after their buffer
+was due (`late`) and the least margin (`slack`); `?audioframes=N` sets SDL's hint for a session (SDL doubles it).
+Measured over 150 s of play each, headless at 60 Hz: 4096 frames, 0 late, margin 85 ms; 2048, 0 late, 37 ms;
+1024, 0 late, 11 ms. On the real display at 120 Hz, 2048 frames: 0 late, margin 40 ms. The default is 2048 frames
+(43 ms at 48 kHz): 1024 leaves too little margin for a phone. Natively the delay is one device buffer: PipeWire
+gives SDL 1024 frames at 44.1 kHz, 23 ms.
 
 ### Short key presses
 
