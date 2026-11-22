@@ -48,8 +48,8 @@ cuts, slanted display type, gang colours. Use the tokens instead of literal valu
   `--font-body` (Saira at normal width) and `--font-hud` (Share Tech Mono, for tags, captions, the pager and
   `.hud` readouts); sizes `--step--1` to `--step-5`.
 - Shape: `--space-1` to `--space-7`, `--rule` (thick rules), `--radius` (square corners), `--cut` (angled
-  corners of `.btn.primary`), `--slant` (skew of `.slant` and `.label`), `--measure`, `--page-max`, `--gutter`.
-- Components: `.btn` (`.primary`, `.big`, `.danger`), `.row`, `.panel` (`.warn`), `.label` (slanted title
+  corners of `.btn.primary`), `--slant` (skew of `.slant`), `--measure`, `--page-max`, `--gutter`.
+- Components: `.btn` (`.primary`, `.big`, `.danger`), `.row`, `.panel` (`.warn`), `.label` (angled title
   block, `<h2 class="label">Title</h2>`), `.tag` (sticker), `.pager`, `.hud`, `.scanlines` (faint CRT lines over a positioned box), `.slant`, `.bar`,
   `.stripe` (on `body`), `.nocase` (keeps macOS or gta2_re in uppercase headings), `.foot`, `.skip`, `.lede`,
   `.small`.
