@@ -21,11 +21,11 @@ cp -R port/web/site/. "$P/play/"   # optional: the game page, or leave /play/ em
 python3 -m http.server -d "$P" 8000
 ```
 
-Then open <http://localhost:8000/>. Light and dark follow the system setting.
+Then open <http://localhost:8000/>. The site is dark only.
 
 ## Files
 
-- `img/`: copies of `docs/images/*` (the reG2 logos, screenshots) and `port/resources/reg2_256.png`, so the
+- `img/`: copies of `docs/images/*` (the reG2 logo for dark backgrounds, screenshots) and `port/resources/reg2_256.png`, so the
   page works when only this folder is published. Git stores identical files once, so the copies cost nothing
   in the repository; replace them when the originals change.
 - `fonts/`: Big Shoulders and Barlow, both under the SIL Open Font License (licences next to them). `ds.css`
@@ -34,17 +34,23 @@ Then open <http://localhost:8000/>. Light and dark follow the system setting.
 
 ## Design system (`ds.css`)
 
-Shared by this page and the game page. Use the tokens instead of literal values:
+Shared by this page and the game page, dark only, in the spirit of GTA2's frontend: colour blocks with angled
+cuts, slanted display type, gang colours. Use the tokens instead of literal values:
 
-- Colours: `--bg`, `--bg-2` (raised surfaces), `--line`, `--text`, `--muted`, `--red` (the accent, links and
-  the main action), `--red-ink` (text on red), `--amber` (warnings, the beta notice), `--ok`, `--focus`.
-  Dark is the default; the light values apply under `prefers-color-scheme: light`.
-- Type: `--font-display` (Big Shoulders, uppercase headings only) and `--font-body` (Barlow); sizes
+- Colours: `--bg`, `--bg-2` (raised surfaces), `--line`, `--text`, `--muted`, `--red` (the main action),
+  `--red-ink` (text on red), `--amber` (warnings), `--ok`, `--focus`.
+- Gang colours `--red`, `--amber`, `--cyan`, `--lime`, `--pink`. A section picks one with `.acc-red`,
+  `.acc-amber`, `.acc-cyan`, `.acc-lime` or `.acc-pink`, which sets `--accent`; labels, bullets, link
+  underlines, rules and image shadows inside it follow `--accent`. Text on an accent block uses `--accent-ink`.
+- `--lcd` and `--lcd-ink`: the pager (`.pager`), used for the beta warning.
+- Type: `--font-display` (Big Shoulders, uppercase headings) and `--font-body` (Barlow); sizes
   `--step--1` to `--step-5`.
-- Spacing `--space-1` to `--space-7`, `--rule` (the thick left rules), `--radius` (square corners),
-  `--measure` (line length), `--page-max`, `--gutter`.
-- Components: `.btn` (`.primary`, `.big`, `.danger`), `.row`, `.panel` (`.warn`), `.notice`, `.foot`,
-  `.skip`, `.lede`, `.small`, `.bar` (red bar under a heading), `.stripe` (on `body`: the street-light
-  stripe), `.nocase` (keeps the case of names like macOS in uppercase headings).
+- Shape: `--space-1` to `--space-7`, `--rule` (thick rules), `--radius` (square corners), `--cut` (angled
+  corners of `.btn.primary`), `--slant` (skew of `.slant` and `.label`), `--measure`, `--page-max`, `--gutter`.
+- Components: `.btn` (`.primary`, `.big`, `.danger`), `.row`, `.panel` (`.warn`), `.label` (slanted title
+  block, `<h2 class="label"><span>Title</span></h2>`), `.tag` (sticker), `.pager`, `.slant`, `.bar`,
+  `.stripe` (on `body`), `.nocase` (keeps macOS or gta2_re in uppercase headings), `.foot`, `.skip`, `.lede`,
+  `.small`.
 
-One red action per screen, amber only for warnings. No Rockstar logos, fonts or trademarks as branding.
+One red main action per screen, one accent per section, amber for warnings. No Rockstar or GTA2 logos, fonts or
+trademarks as branding.
