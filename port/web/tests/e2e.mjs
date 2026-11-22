@@ -132,8 +132,8 @@ const scenarios = {
     await page.waitForTimeout(1000);
     const files = await page.evaluate(() => import('./storage.js').then((s) => s.userFiles()));
     check('save: autosave stored', files.some((f) => /_auto_/.test(f)), files.join(' '));
-    // LOAD GAME on the PLAY page: the autosave, without leaving the page.
-    for (const key of ['Enter', 'ArrowDown', 'ArrowDown', 'Enter', 'Enter']) {
+    // LOAD GAME, where the PLAY page opens with a save: the autosave, without leaving the page.
+    for (const key of ['Enter', 'Enter', 'Enter']) {
       await press(page, key);
       await page.waitForTimeout(key === 'Enter' ? 2000 : 400);
     }
@@ -143,9 +143,9 @@ const scenarios = {
     await page.waitForTimeout(2000);
     await quitGame(page, 1);
     check('quit: back in the menus', (await state(page)) === 1);
-    for (const key of ['Enter', 'Enter', 'ArrowUp', 'Enter']) {
+    for (const key of ['Enter', 'ArrowDown', 'ArrowDown', 'Enter', 'ArrowUp', 'Enter']) {
       await press(page, key);
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(key === 'Enter' || key === 'ArrowUp' ? 2000 : 400);
     }
     await page.waitForFunction(() => window.reg2.state() & 2, null, { timeout: 60000 });
     check('quit: another game started', true);
@@ -154,7 +154,7 @@ const scenarios = {
     await page.click('#play');
     await page.waitForFunction(() => window.reg2 && window.reg2.module && window.reg2.state() & 1);
     await page.waitForTimeout(3000);
-    for (const key of ['Enter', 'Enter', 'ArrowDown', 'ArrowDown', 'Enter', 'Enter']) {
+    for (const key of ['Enter', 'Enter', 'Enter', 'Enter']) {
       await press(page, key);
       await page.waitForTimeout(key === 'Enter' ? 2000 : 400);
     }
