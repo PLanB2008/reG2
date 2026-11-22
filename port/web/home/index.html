@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>reG2: GTA2 on Windows, Linux and macOS</title>
+<meta name="description" content="Play GTA2 natively on Windows, Linux and macOS: the original game, rebuilt from its decompiled source, with optional extras like smoother frame rates, better lighting and twin-stick controls. You need your own copy of the game.">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0d0f14" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f3f1ec" media="(prefers-color-scheme: light)">
+<link rel="canonical" href="https://reg2-project.github.io/reG2/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="reG2">
+<meta property="og:title" content="reG2: GTA2 on Windows, Linux and macOS">
+<meta property="og:description" content="The original GTA2, rebuilt from its decompiled source, with optional extras. Bring your own copy of the game; the free 2004 release works.">
+<meta property="og:url" content="https://reg2-project.github.io/reG2/">
+<meta property="og:image" content="https://reg2-project.github.io/reG2/img/pc_night_street.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="720">
+<meta property="og:image:alt" content="A GTA2 street at night in reG2">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="img/icon-256.png">
+<link rel="apple-touch-icon" href="img/icon-256.png">
+<link rel="preload" href="fonts/big-shoulders-800.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="ds.css">
+<link rel="stylesheet" href="home.css">
+</head>
+<body class="stripe">
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top wrap">
+  <a class="logo" href="./" aria-label="reG2, home">
+    <picture>
+      <source srcset="img/logo-dark.svg" media="(prefers-color-scheme: dark)">
+      <img src="img/logo-light.svg" alt="" width="1024" height="1024">
+    </picture>
+  </a>
+  <nav aria-label="Main">
+    <ul>
+      <li><a href="#download">Download</a></li>
+      <li><a href="play/">Play in your browser</a></li>
+      <li><a href="https://github.com/reG2-project/reG2">GitHub</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main id="main">
+  <section class="hero wrap" aria-labelledby="title">
+    <div class="hero-text">
+      <h1 id="title" class="bar">GTA2 on Windows, Linux and <span class="nocase">macOS</span></h1>
+      <p class="lede">The original game, rebuilt from its decompiled source, with optional extras like smoother frame rates, better lighting and twin-stick controls.</p>
+      <div class="row">
+        <a class="btn primary" href="https://github.com/reG2-project/reG2/releases/latest">Download reG2</a>
+        <a class="btn" href="play/">Play in your browser</a>
+      </div>
+      <p class="small">You need your own copy of GTA2 for PC. The free 2004 release works.</p>
+      <p class="notice"><strong>reG2 is a beta.</strong> Expect bugs, and please <a href="https://github.com/reG2-project/reG2/issues">report them</a>. No multiplayer for now.</p>
+    </div>
+    <figure class="hero-shot">
+      <img src="img/pc_night_street.png" width="1280" height="720" alt="Top-down view of a red-lit square at night, under a JESUS SAVES sign" fetchpriority="high">
+      <figcaption>Downtown at night</figcaption>
+    </figure>
+  </section>
+
+  <section class="band" aria-labelledby="about-title">
+    <div class="wrap split">
+      <h2 id="about-title">Built on <span class="nocase">gta2_re</span></h2>
+      <div class="prose">
+        <p>reG2 is a fork of <a href="https://github.com/CriminalRETeam/gta2_re">gta2_re</a> by the CriminalRETeam, and all the credit for the game itself goes to them: they rebuilt GTA2 (PC, version 10.5) function by function, in C++ that compiles back to the original machine code.</p>
+        <p>reG2 just adds what you need to run it today (SDL3, OpenGL, sound, gamepads) and some extras on top. The game plays the same.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap feature" aria-labelledby="style-title">
+    <div class="prose">
+      <h2 id="style-title">Classic or enhanced</h2>
+      <p>On first start, CHOOSE YOUR STYLE asks how you want to play.</p>
+      <dl class="choices">
+        <div>
+          <dt>Classic</dt>
+          <dd>The game as it was in 1999: same lighting, same controls, saves at churches only.</dd>
+        </div>
+        <div>
+          <dt>Enhanced</dt>
+          <dd>Refined lights and shadows, the day and night cycle, twin stick controls, autosave, job retry and frenzy respawn.</dd>
+        </div>
+      </dl>
+      <p>Nothing is forced: every extra can be turned on or off later in OPTIONS (start menu, or Escape in game), one by one.</p>
+    </div>
+    <figure>
+      <img src="img/pc_welcome.png" width="1278" height="720" loading="lazy" decoding="async" alt="The CHOOSE YOUR STYLE screen, with the CLASSIC and ENHANCED choices">
+      <figcaption>CHOOSE YOUR STYLE</figcaption>
+    </figure>
+  </section>
+
+  <section class="wrap feature solo" aria-labelledby="same-title">
+    <div class="prose">
+      <h2 id="same-title">Whatever you pick</h2>
+      <ul class="dash">
+        <li>It runs at your screen's resolution, and a wide screen shows a bit more on the sides.</li>
+        <li>It draws a frame each time your screen refreshes, while the game itself keeps its original speed.</li>
+        <li>The settings are in the game: OPTIONS replaces GTA2 Manager, in five pages (GAME, GRAPHICS, DISPLAY, SOUND, CONTROLS). Escape pauses the game and opens the same menu.</li>
+        <li>Every menu works with the mouse, the keyboard or a gamepad.</li>
+        <li>A few crashes of the original are fixed, among them some the community found (<a href="https://gtamp.com/gta2/">Vike's GTA2 11.44</a> patch).</li>
+        <li>No intro movie for now.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="extras-title">
+    <div class="wrap">
+      <h2 id="extras-title" class="bar">Extras</h2>
+      <p class="lede">All optional, all in OPTIONS.</p>
+
+      <article class="extra wide">
+        <div class="prose">
+          <h3>Graphics</h3>
+          <p>GRAPHICS &gt; PRESET switches between CLASSIC and ENHANCED: true colour, per-pixel lighting, car headlights, light from gunfire, explosions and fires, fire effects (heat haze, smoke and embers), ambient occlusion, soft shadows, bloom, anti-aliasing.</p>
+        </div>
+        <figure>
+          <img src="img/pc_compare_graphics.png" width="1600" height="482" loading="lazy" decoding="async" alt="The same street scene with an explosion, side by side: CLASSIC graphics on the left, ENHANCED on the right">
+          <figcaption>Classic and enhanced graphics</figcaption>
+        </figure>
+      </article>
+
+      <article class="extra">
+        <div class="prose">
+          <h3>Day and night</h3>
+          <p>GAME &gt; LIGHTING &gt; DAY-NIGHT CYCLE instead of the fixed dusk.</p>
+          <h3>Frame rate</h3>
+          <p>As fast as your screen, or a fixed limit up to 240 fps (DISPLAY &gt; FRAME LIMIT, where 30 ORIGINAL brings back the original's rate). The game still runs at its 30 steps per second and the frames in between are interpolated, so it plays exactly the same, just smoother.</p>
+        </div>
+        <figure>
+          <img src="img/pc_day_night.gif" width="640" height="360" loading="lazy" decoding="async" alt="Animation: a full day and night cycle over the city in 20 seconds">
+          <figcaption>A full day in 20 seconds</figcaption>
+        </figure>
+      </article>
+
+      <article class="extra flip">
+        <div class="prose">
+          <h3>Controls</h3>
+          <p>CONTROLS lets you change every key, in three columns: the original keys, a second set and the gamepad.</p>
+          <ul class="dash">
+            <li><strong>Keyboard and mouse:</strong> the second set is ready to use: WASD to move, F to get in and out of cars, left click to shoot, the wheel to change weapon.</li>
+            <li><strong>Gamepad:</strong> any pad plugged in, analog driving, every menu, its own button pictures.</li>
+            <li><strong>Twin stick</strong>, in the style of Hotline Miami: move with one stick or WASD, aim with the other or the mouse. The camera leads a little ahead the way you aim, and the turrets of the fire truck, tank and gun jeep aim the same way.</li>
+          </ul>
+        </div>
+        <figure>
+          <img src="img/pc_twin_stick.gif" width="640" height="360" loading="lazy" decoding="async" alt="Animation: walking with twin stick controls, shooting toward the mouse cursor">
+          <figcaption>Twin stick</figcaption>
+        </figure>
+      </article>
+
+      <p class="also"><strong>And also</strong> 3D sound, camera zoom, HUD scale, a frame rate counter. The new menus follow the game's language, as far as your copy of the game has it.</p>
+    </div>
+  </section>
+
+  <section class="wrap feature" aria-labelledby="saves-title">
+    <div class="prose">
+      <h2 id="saves-title">Saves</h2>
+      <p>Church saves work exactly as before: same cost, and the same file the original reads. reG2 also keeps one per city, so you can go back to a city you left.</p>
+      <ul class="dash">
+        <li><strong>Autosave</strong> after each job or kill frenzy and as you leave a city.</li>
+        <li><strong>Retry jobs:</strong> when a job or a kill frenzy fails, retry it from the pause menu, a few steps from where it started, with the money you had then.</li>
+        <li><strong>Frenzy respawn:</strong> a failed kill frenzy comes back on the map at once. A passed frenzy never comes back.</li>
+      </ul>
+      <p>These three are off unless you turn them on, or pick ENHANCED. With CLASSIC, only churches save, as in the original. RESUME SAVED STATUS shows all your saves, with a tab per city.</p>
+    </div>
+    <figure>
+      <img src="img/pc_retry.png" width="740" height="162" loading="lazy" decoding="async" alt="The pause menu offering RETRY: GET ZITZAKI!, with the gang, the money and the time of the retry point">
+      <figcaption>RETRY in the pause menu</figcaption>
+    </figure>
+  </section>
+
+  <section id="download" class="band" aria-labelledby="download-title">
+    <div class="wrap">
+      <h2 id="download-title" class="bar">Download</h2>
+      <p class="lede">You need your own copy of GTA2 for PC. On first start reG2 asks for the game files: it can copy an existing GTA2 install, or install from the free Rockstar Classics installer or the CD.</p>
+
+      <ul class="downloads">
+        <li>
+          <div>
+            <h3>Windows</h3>
+            <p class="small">Windows 10 or later</p>
+          </div>
+          <div>
+            <p><a class="btn primary" href="https://github.com/reG2-project/reG2/releases/latest/download/reG2-windows-x64.zip">reG2-windows-x64.zip</a></p>
+            <p>Unzip anywhere and run <code>reg2.exe</code>.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3>Linux</h3>
+            <p class="small">x86-64</p>
+          </div>
+          <div>
+            <p><a class="btn primary" href="https://github.com/reG2-project/reG2/releases/latest/download/reG2-x86_64.AppImage">reG2-x86_64.AppImage</a></p>
+            <p>The AppImage is the simplest: make it executable and run it. Also as a <a href="https://github.com/reG2-project/reG2/releases/latest/download/reG2-x86_64.flatpak">Flatpak</a> (<code>flatpak install --user reG2-x86_64.flatpak</code>, needs Flathub set up) or a <a href="https://github.com/reG2-project/reG2/releases/latest/download/reG2-linux-x86_64.tar.gz">tar.gz</a> (run <code>./reg2</code>). Nothing else to install.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3><span class="nocase">macOS</span></h3>
+            <p class="small">macOS 11 or later, Apple Silicon and Intel</p>
+          </div>
+          <div>
+            <p><a class="btn primary" href="https://github.com/reG2-project/reG2/releases/latest/download/reG2-macos.dmg">reG2-macos.dmg</a></p>
+            <p>Untested: the builds come straight from GitHub's CI, so please tell us if it works. The app isn't signed by Apple, so the first time, right-click it and choose Open.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3>Browser</h3>
+            <p class="small">A recent Chrome, Edge, Firefox or Safari</p>
+          </div>
+          <div>
+            <p><a class="btn" href="play/">Play in your browser</a></p>
+            <p>Give the page your copy of GTA2. Nothing is uploaded: the game files stay in your browser, on your device.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3>Nintendo 3DS</h3>
+            <p class="small">Homebrew</p>
+          </div>
+          <div>
+            <p><a class="btn" href="https://github.com/reG2-project/reG2-3DS">reG2 3DS</a></p>
+            <p>Its own repository.</p>
+          </div>
+        </li>
+      </ul>
+
+      <p>All releases, with their notes, are on the <a href="https://github.com/reG2-project/reG2/releases">releases page</a>.</p>
+
+      <div class="panel" id="no-game">
+        <h3>No copy of GTA2?</h3>
+        <p>Rockstar gave GTA2 away for free in 2004, and that release works with reG2. The Internet Archive keeps it: download GTA2INSTALLER.exe (about 350 MB) from <a href="https://archive.org/details/gta2_rockstar-classics">archive.org/details/gta2_rockstar-classics</a>, then point reG2 to it on first start.</p>
+      </div>
+
+      <details class="files">
+        <summary>Where files go</summary>
+        <p>reG2 looks for the game in <code>GTA2_DIR</code>, the current folder and its own folder, else in the per-user folder below, where the first start copies it. Settings (<code>gta2_registry.ini</code>) and saves (<code>player/</code>) sit next to the game data; <code>reG2.log</code> is written only after a crash or an error.</p>
+        <table>
+          <thead><tr><th scope="col">System</th><th scope="col">Per-user folder</th></tr></thead>
+          <tbody>
+            <tr><td>Windows</td><td><code>%APPDATA%\reG2\</code></td></tr>
+            <tr><td>Linux (AppImage, tar.gz)</td><td><code>~/.local/share/reG2/</code></td></tr>
+            <tr><td>Linux (Flatpak)</td><td><code>~/.var/app/io.github.reG2_project.reG2/data/reG2/</code></td></tr>
+            <tr><td>macOS</td><td><code>~/Library/Application Support/reG2/</code></td></tr>
+          </tbody>
+        </table>
+      </details>
+    </div>
+  </section>
+</main>
+
+<footer class="foot wrap">
+  <p>The game code is the work of the <a href="https://github.com/CriminalRETeam/gta2_re">gta2_re</a> decompilation; reG2 adds the ports. Source and build instructions on <a href="https://github.com/reG2-project/reG2">GitHub</a>. Built with <a href="https://libsdl.org">SDL3</a> and <a href="https://openal-soft.org">OpenAL Soft</a>. Fonts: <a href="fonts/OFL-BigShoulders.txt">Big Shoulders</a> and <a href="fonts/OFL-Barlow.txt">Barlow</a> (OFL); the logo uses <a href="https://github.com/googlefonts/Michroma-font">Michroma</a> (OFL).</p>
+  <p>Grand Theft Auto and GTA2 are trademarks of Take-Two Interactive. reG2 is not affiliated with or endorsed by Rockstar Games or Take-Two. It contains no game data: you need your own copy of the game.</p>
+</footer>
+</body>
+</html>

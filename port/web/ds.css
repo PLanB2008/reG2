@@ -81,6 +81,8 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; text-transform:
 h1 { font-size: var(--step-5); letter-spacing: 0.005em; }
 h2 { font-size: var(--step-3); letter-spacing: 0.01em; }
 h3 { font-size: var(--step-2); }
+/* Names whose case matters (macOS, gta2_re) inside an uppercase heading. */
+.nocase { text-transform: none; }
 
 /* The street-light stripe across the top of every page. */
 .stripe::before {
