@@ -146,7 +146,25 @@ bool OnRails(const Train* t, const net::EntityState& e)
         return false;
     }
     s32 railZ = 0;
-    return gMap_0x370->FindRailwayAtCoord(x.ToInt(), y.ToInt(), railZ) && gMap_0x370->GetBlock(x.ToInt(), y.ToInt(), (z - Fix16(1)).ToInt());
+    const gmp_block_info* under = gMap_0x370->GetBlock(x.ToInt(), y.ToInt(), (z - Fix16(1)).ToInt());
+    if (!gMap_0x370->FindRailwayAtCoord(x.ToInt(), y.ToInt(), railZ) || !under)
+    {
+        return false;
+    }
+    // As the server's trains are: on the centre line of a block, at the height SnapZToRailway gives it (the block it reads
+    // there and, on a slope, the one at its floor exist), so that the wagons' walk from it stays on blocks
+    const int32_t half = 1 << 13, mask = (1 << 14) - 1;
+    if ((e.f[kTrainX] & mask) != half && (e.f[kTrainY] & mask) != half)
+    {
+        return false;
+    }
+    if ((IS_SLOPE_IN_BLOCK_ABOVE(under->mSlopeType) || z.GetFracValue() != Fix16(0)) && !gMap_0x370->GetBlock(x.ToInt(), y.ToInt(), z.ToInt()))
+    {
+        return false;
+    }
+    Fix16 snapped = z;
+    gMap_0x370->SnapZToRailway(x, y, &snapped, false, false);
+    return snapped == z;
 }
 } // namespace
 
