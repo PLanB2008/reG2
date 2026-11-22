@@ -1767,7 +1767,8 @@ uint32_t net::Client::BotMapChoice() const
 
 void net::Client::BotRound()
 {
-    if (!mBot || !mConnected || mFrame < mBotSentFrame + 90)
+    // Not synced: the round is the last game's still, its flags by the slots before a map change renumbered them
+    if (!mBot || !mConnected || !mSynced || mFrame < mBotSentFrame + 90)
     {
         return;
     }
