@@ -200,7 +200,8 @@ from what the frames before showed (the state before the tick, after the last ho
 one's rollback and blend, and a correction is spread over the frames of a tick. Objects and particles go from the
 corrected game's place before the tick instead (recorded before the shown tick is resimulated, `engine::ResimStepStart`):
 after a rollback the same sprite slot and id may hold another object in the prediction. A server and a replay run the
-original's frame path in `winmain.cpp` (a step, then a frame): a server draws nothing, a replay runs as fast as it can.
+original's frame path in `winmain.cpp` (a step, then a frame): a headless server skips `Game::Draw` (`gPortNoDraw`: its
+steps don't depend on it, an arena's world is the same tick by tick without it), a replay runs as fast as it can.
 
 ### The server
 
@@ -556,7 +557,7 @@ The netcode's hooks, declared in `port/src/net_hooks.hpp`; those in `Source/` ar
 | `Game.cpp` | `gPortDrawOverlay` | drawn last: the status, the round's panel, chat completion |
 | `Car.cpp`, `Char_Pool.cpp` | `PortTrafficLimit()`, `gPortSpawnPlayers` | the spawn limits times the players |
 | `port/src/options_menu.cpp` | `gPortFrontendSetup`, `gPortFrontendInput` | the network page, beside reG2's options |
-| `winmain.cpp` | `gPortNextNetworkGame`, `gPortLeaveNetworkGame`, `gPortNetFrameLoop` | a map change goes to the next game; a client that left goes to the network page; a client runs reG2's frame loop |
+| `winmain.cpp` | `gPortNextNetworkGame`, `gPortLeaveNetworkGame`, `gPortNetFrameLoop`, `gPortNoDraw` | a map change goes to the next game; a client that left goes to the network page; a client runs reG2's frame loop; a headless server draws nothing |
 | `map_0x370.cpp` | a file static in port builds | the restart zones' turn, a function's static in the original: registered from the start, so rolled back and sent |
 | `sprite.cpp` | `gPortSpriteMovedHook` | a sprite moved: the grid check (`GTA2_NET_CHECKGRID`) |
 | `port/src/game_hooks.cpp` | `gPortLeavePromptShown` | the leave prompt is up: a gamepad's A and B answer it |
