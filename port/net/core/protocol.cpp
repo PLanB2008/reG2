@@ -256,6 +256,7 @@ void net::WriteMapChange(BitWriter& w, const MapChange& m)
     WriteString(w, m.scr);
     WritePrint(w, m.print);
     w.Bits(m.game, 16);
+    w.Bits(m.players, BitsFor(kMaxPlayers));
 }
 
 bool net::ReadMapChange(BitReader& r, MapChange& m)
@@ -263,7 +264,8 @@ bool net::ReadMapChange(BitReader& r, MapChange& m)
     const bool ok = ReadString(r, m.map) && ReadString(r, m.gmp) && ReadString(r, m.sty) && ReadString(r, m.scr);
     ReadPrint(r, m.print);
     m.game = (uint16_t)r.Bits(16);
-    return ok && !r.Overflow();
+    m.players = (uint8_t)r.Bits(BitsFor(kMaxPlayers));
+    return ok && !r.Overflow() && m.players >= 1 && m.players <= kMaxPlayers;
 }
 
 void net::WriteCommands(BitWriter& w, uint32_t ackTick, const InputCmd* cmds, int count)

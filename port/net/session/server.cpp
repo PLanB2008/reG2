@@ -74,8 +74,8 @@ bool net::Server::Start(const ServerConfig& config, std::string* error)
 {
     mConfig = config;
     mConfig.packets = config.packets < 1 ? 1 : config.packets > kMaxParts ? kMaxParts : config.packets;
-    mSlots.assign(config.game.players, Slot());
-    mTransport.reset(CreateServerTransport(config.port, (uint32_t)config.game.players + 4, error));
+    mSlots.assign(config.game.players, Slot()); // the first map's players; ChangeToMap and StartOver resize it
+    mTransport.reset(CreateServerTransport(config.port, (uint32_t)config.slots + 4, error));
     if (!mTransport)
     {
         return false;
@@ -86,7 +86,7 @@ bool net::Server::Start(const ServerConfig& config, std::string* error)
     }
     if (config.arena.size() > mSlots.size())
     {
-        *error = "more arena bots than player slots";
+        *error = "more arena bots than the map takes players (" + std::to_string(mSlots.size()) + ")";
         return false;
     }
     if (!mArena.Start(config.arena, error))
@@ -108,6 +108,13 @@ bool net::Server::Start(const ServerConfig& config, std::string* error)
     mMap = (size_t)(mConfig.currentMap >= 0 ? mConfig.currentMap : 0);
     mRounds.Start(mConfig.rules, mapNames, mConfig.currentMap);
     mRounds.SetMapTitles(titles);
+    std::vector<int> takes;
+    for (const MapFiles& m : mConfig.voteMaps)
+    {
+        takes.push_back(m.players);
+    }
+    mRounds.SetMapPlayers(takes);
+    mGamePlayers = (int)mSlots.size();
     engine::CurrentRound() = mRounds.State();
     mProbe.Start();
     mSession = std::random_device{}() | 1; // never 0: a welcome's session is always set
@@ -115,7 +122,8 @@ bool net::Server::Start(const ServerConfig& config, std::string* error)
     mPrint.gmp = engine::DataFileCrc(mConfig.game.gmp);
     mPrint.sty = engine::DataFileCrc(mConfig.game.sty);
     mPrint.scr = engine::DataFileCrc(mConfig.game.scr);
-    printf("net: server on port %u, %d player slots, %s, reG2 %s\n", config.port, config.game.players, config.game.scr.c_str(), config.build.c_str());
+    printf("net: server on port %u, %d player slots (%d on this map), %s, reG2 %s\n", config.port, config.slots, config.game.players,
+           config.game.scr.c_str(), config.build.c_str());
     return true;
 }
 
@@ -220,7 +228,12 @@ void net::Server::OnHello(uint32_t peer, BitReader& r)
         {
             Reject reject;
             reject.reason = "the server is full";
+            if ((int)mSlots.size() < mConfig.slots && mMap < mConfig.voteMaps.size())
+            {
+                reject.reason += ": " + MapTitle(mConfig.voteMaps[mMap].name) + " takes " + std::to_string(mSlots.size()) + " players";
+            }
             WriteReject(w, reject);
+            printf("net: turned away a client: %s\n", reject.reason.c_str());
         }
         else
         {
@@ -238,7 +251,7 @@ void net::Server::OnHello(uint32_t peer, BitReader& r)
             s.token = token;
             Welcome welcome;
             welcome.slot = (uint8_t)slot;
-            welcome.players = (uint8_t)mSlots.size();
+            welcome.players = (uint8_t)mGamePlayers; // a map change's next game, if one is pending
             welcome.gameType = (uint8_t)mConfig.game.gameType;
             welcome.fragLimit = (uint32_t)mConfig.game.fragLimit;
             welcome.timeLimitMin = (uint16_t)mConfig.game.timeLimitMin;
@@ -788,6 +801,7 @@ std::vector<net::RoundPlayer> net::Server::RoundPlayers(const Snapshot& world) c
     std::vector<RoundPlayer> players(mSlots.size());
     for (size_t i = 0; i < mSlots.size(); i++)
     {
+        players[i].taken = mSlots[i].used;
         players[i].in = mSlots[i].used && engine::SlotInGame((int)i);
         players[i].voter = mSlots[i].used && mSlots[i].peer != kArenaPeer;
         players[i].alwaysReady = mSlots[i].peer == kArenaPeer;
@@ -944,6 +958,33 @@ void net::Server::ChangeToMap(int map)
 {
     mMap = (size_t)map;
     const MapFiles& m = mConfig.voteMaps[mMap];
+    // Its players: the slots past them are free (the round flow picks a map only if they are, RoundFlow::Fits) and
+    // stay closed through the pause; more open with the new game (StartOver)
+    mGamePlayers = m.players < mConfig.slots ? m.players : mConfig.slots;
+    for (size_t i = (size_t)mGamePlayers; i < mSlots.size(); i++)
+    {
+        if (!mSlots[i].used)
+        {
+            continue;
+        }
+        printf("net: player %zu (%s) has no place on %s\n", i, mSlots[i].name.c_str(), m.name.c_str());
+        if (mSlots[i].peer != kArenaPeer)
+        {
+            BitWriter w;
+            Reject reject;
+            reject.reason = MapTitle(m.name) + " takes " + std::to_string(mGamePlayers) + " players";
+            WriteReject(w, reject);
+            mTransport->Send(mSlots[i].peer, kChannelReliable, w.Data().data(), w.ByteCount(), true);
+            mTransport->Flush();
+            mTransport->Disconnect(mSlots[i].peer);
+        }
+        mRounds.Left((int)i);
+        engine::TakeOutOfGame((int)i);
+    }
+    if ((int)mSlots.size() > mGamePlayers)
+    {
+        mSlots.resize((size_t)mGamePlayers);
+    }
     mConfig.game.gmp = m.gmp; // for the welcome of those joining
     mConfig.game.sty = m.sty;
     mConfig.game.scr = m.scr;
@@ -958,6 +999,7 @@ void net::Server::ChangeToMap(int map)
     change.sty = m.sty;
     change.scr = m.scr;
     change.game = (uint16_t)(engine::GameGeneration() + 1);
+    change.players = (uint8_t)mGamePlayers;
     BitWriter w;
     WriteMapChange(w, change);
     for (const Slot& s : mSlots)
@@ -969,7 +1011,7 @@ void net::Server::ChangeToMap(int map)
     }
     // The round flow showed the results already: half a second for the clients to hear of it. Without it (an arena's
     // rotation) the pause shows the winner
-    engine::ChangeMap(m.gmp, m.sty, m.scr, mConfig.rules.enabled ? 15 : 90);
+    engine::ChangeMap(m.gmp, m.sty, m.scr, mGamePlayers, mConfig.rules.enabled ? 15 : 90);
 }
 
 void net::Server::Shutdown()
@@ -1010,6 +1052,7 @@ void net::Server::StartOver()
 {
     mGeneration = engine::GameGeneration();
     mStarted = false;
+    mSlots.resize((size_t)mGamePlayers); // the slots this map takes open
     for (Slot& s : mSlots)
     {
         s.ackTick = 0; // the old game's snapshots are no baseline: full ones again

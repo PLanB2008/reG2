@@ -14,7 +14,6 @@
 #include "Source/Car.hpp"
 #include "Source/map_0x370.hpp"
 #include "Source/ped_graphic_type.hpp"
-#include "Source/enums.hpp"
 #include <string.h>
 
 namespace
@@ -23,16 +22,6 @@ namespace
 u8 gRemap[MAX_PLAYERS];
 int gRemapGame = -1;
 
-// The maps' scripts make 6 player peds. A slot past them takes the first of these looks no script slot has (the gang
-// looks, then the police's, which Industrial's script gives a player too), the same on every end of the game
-const u8 kExtraLooks[] = {ped_remap_enum::ped_remap_red_head_redneck, ped_remap_enum::ped_remap_blond_head_redneck,
-                          ped_remap_enum::ped_remap_yellow_scientist, ped_remap_enum::ped_remap_zaibatsu,
-                          ped_remap_enum::ped_remap_kristna, ped_remap_enum::ped_remap_russian, ped_remap_enum::ped_remap_lonny,
-                          ped_remap_enum::ped_remap_elvis, ped_remap_enum::ped_remap_yakuza, ped_remap_enum::ped_remap_blue_police,
-                          ped_remap_enum::ped_remap_prison_uniform, ped_remap_enum::ped_remap_army};
-const int kScriptSlots = 6;
-static_assert(sizeof(kExtraLooks) >= MAX_PLAYERS, "a look for every slot");
-
 void ForgetLooksOfLastGame()
 {
     if (gRemapGame != net::engine::GameGeneration())
@@ -40,45 +29,6 @@ void ForgetLooksOfLastGame()
         gRemapGame = net::engine::GameGeneration();
         memset(gRemap, 0, sizeof(gRemap));
     }
-}
-
-// The look of a slot the script gave a ped (-1: none or not known), its ped's while it still has it
-int ScriptLook(int slot)
-{
-    if (gRemap[slot])
-    {
-        return gRemap[slot] - 1;
-    }
-    Player* p = net::engine::GetPlayer(slot);
-    return p && p->mInUse && p->mPlayerPed ? (u8)p->mPlayerPed->mRemap : -1;
-}
-
-u8 SlotLook(int slot)
-{
-    ForgetLooksOfLastGame();
-    if (gRemap[slot])
-    {
-        return (u8)(gRemap[slot] - 1);
-    }
-    if (slot < kScriptSlots)
-    {
-        return 0;
-    }
-    int next = 0;
-    for (u8 look : kExtraLooks)
-    {
-        bool taken = false;
-        for (int i = 0; i < kScriptSlots && !taken; i++)
-        {
-            taken = ScriptLook(i) == look;
-        }
-        if (!taken && next++ == slot - kScriptSlots)
-        {
-            gRemap[slot] = (u8)(look + 1);
-            return look;
-        }
-    }
-    return 0;
 }
 } // namespace
 
@@ -176,7 +126,8 @@ void net::engine::PutInGame(int slot, bool freshScore)
     }
     const Fix16 x = Fix16(zone->mX + zone->mW / 2), y = Fix16(zone->mY + zone->mH / 2);
     const Fix16 z = gMap_0x370->FindGroundZForCoord(x, y);
-    const u8 remap = slot < MAX_PLAYERS ? SlotLook(slot) : 0;
+    ForgetLooksOfLastGame();
+    const u8 remap = slot < MAX_PLAYERS && gRemap[slot] ? (u8)(gRemap[slot] - 1) : 0;
     Ped* ped = gPedManager->SpawnPedAt(x, y, z, remap, Ang16((s16)0, (u8)0));
     if (!ped)
     {
@@ -214,31 +165,6 @@ void net::engine::PutInGame(int slot, bool freshScore)
     p->mAuxGameCamera.UpdateFollowPedCamera(ped);
     p->mAuxGameCamera.CommitPendingTarget();
     p->mAuxCamActive = false;
-}
-
-void net::engine::GivePlayersWithoutScriptPeds()
-{
-    for (int slot = 0; slot < PlayerCount(); slot++)
-    {
-        Player* p = GetPlayer(slot);
-        gmp_map_zone* zone = p && p->mInUse && !p->mPlayerPed ? gMap_0x370->GetNextZoneOfTypeRoundRobin(0x10) : NULL;
-        if (!zone)
-        {
-            continue;
-        }
-        // As ScriptThread::Handle_PLAYER_PED, at a free spot of the zone
-        const Fix16 x = Fix16(zone->mX + zone->mW / 2), y = Fix16(zone->mY + zone->mH / 2);
-        Ped* ped = gPedManager->SpawnPedAt(x, y, gMap_0x370->FindGroundZForCoord(x, y), SlotLook(slot), Ang16((s16)0, (u8)0));
-        if (!ped)
-        {
-            continue;
-        }
-        ped->SetPedType(ped_type::player_2);
-        ped->set_health(100);
-        p->InitPlayerPed(ped);
-        ped->mGraphicType = ped_graphic_type::character_1;
-        ped->RespawnPed(zone);
-    }
 }
 
 // For a slot that joins and every slot of a new game, not only at a round's start: else the server's players have

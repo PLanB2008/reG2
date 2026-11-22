@@ -2,6 +2,7 @@
 #include "check.hpp"
 #include "../core/bitstream.hpp"
 #include "../core/crc32.hpp"
+#include "../core/map_players.hpp"
 #include "../core/protocol.hpp"
 #include "../core/snapshot.hpp"
 #include <stdio.h>
@@ -316,13 +317,14 @@ void TestMessages()
     mc.map = "mp1-6p";
     mc.print.sty = 12345;
     mc.game = 513;
+    mc.players = (uint8_t)net::kMaxPlayers;
     net::BitWriter mw;
     net::WriteMapChange(mw, mc);
     net::BitReader mr(mw.Data().data(), mw.ByteCount());
     CHECK(mr.Bits(8) == net::kMsgMapChange);
     net::MapChange mgot;
     CHECK(net::ReadMapChange(mr, mgot) && mgot.gmp == mc.gmp && mgot.sty == mc.sty && mgot.scr == mc.scr && mgot.game == 513 && mgot.map == mc.map &&
-          mgot.print.sty == 12345 && mgot.print.gmp == 0);
+          mgot.print.sty == 12345 && mgot.print.gmp == 0 && mgot.players == net::kMaxPlayers);
 
     // The last two have a key press: what it typed follows each (0xE9: an AZERTY's é)
     net::InputCmd cmds[5] = {{100, 1, 0}, {101, 1, 0}, {102, 0x10, 0}, {103, 0x3FFFFF, 0xE9}, {104, 0x3FFFFF, 'q'}};
@@ -519,6 +521,21 @@ void TestEntryBits()
     }
 }
 
+// The players a map takes: the test map's script (testdata/tiny-10p.scr, scripts/mis2scr.py) has 10 PLAYER_PEDs
+void TestMapPlayers()
+{
+    FILE* f = fopen(NET_TESTDATA "/tiny-10p.scr", "rb");
+    CHECK(f);
+    std::vector<uint8_t> scr(100000);
+    const size_t n = fread(scr.data(), 1, scr.size(), f);
+    fclose(f);
+    CHECK(net::ScriptPlayerPeds(scr.data(), n) == 10);
+    CHECK(net::ScriptPlayerPeds(scr.data(), 1000) == -1);
+    CHECK(net::MapPlayers(10, 0) == 10 && net::MapPlayers(6, 0) == 6 && net::MapPlayers(6, 4) == 4 && net::MapPlayers(6, 8) == 6);
+    CHECK(net::MapPlayers(net::kMaxPlayers + 2, 0) == net::kMaxPlayers && net::MapPlayers(0, 6) == 0);
+    printf("map players ok\n");
+}
+
 int main()
 {
     TestBits();
@@ -535,6 +552,7 @@ int main()
     TestNames();
     TestFileNames();
     TestPrintable();
+    TestMapPlayers();
     printf("messages ok\n");
     printf("net core tests passed\n");
     return 0;

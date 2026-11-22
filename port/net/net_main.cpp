@@ -238,7 +238,7 @@ int NetMain_Init(std::vector<std::string>& args)
         {
             SDL_SetEnvironmentVariable(SDL_GetEnvironment(), "GTA2_HEADLESS", "1", true); // what port_Headless reads
         }
-        if (sc.game.players < 1 || sc.game.players > net::kMaxPlayers)
+        if (sc.game.players < 1)
         {
             fprintf(stderr, "net: --players 1-%d\n", net::kMaxPlayers);
             return -1;

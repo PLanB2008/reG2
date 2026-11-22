@@ -91,6 +91,7 @@ struct MapChange
     std::string gmp, sty, scr; // file names in data/
     MapPrint print; // the server's copy of gmp, sty and scr
     uint16_t game = 0; // the server's game on it (its snapshots' world.game)
+    uint8_t players = 0; // that game's (the map's, at most the server's slots)
 };
 
 struct InputCmd

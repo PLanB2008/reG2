@@ -50,9 +50,6 @@ inline s32 PortTrafficLimit()
 // network server, which moves a client's cameras' bounds to where that client already shows them (its lag ahead): a car
 // or ped spawned out of sight here would come into a fast client's view
 extern void (*gPortAfterPlayersHook)();
-// Called in Game::BootGame once the map script made its player peds, before the players are set up; NULL but in a
-// network game, whose slots past the scripts' 6 get a ped there
-extern void (*gPortScriptPlayersHook)();
 // Asked in Game::UpdateGame after the players' tick: true, and nothing else runs this tick but the HUD (a network
 // game's results: the world stands still, the chat goes on)
 extern bool (*gPortWorldStill)();

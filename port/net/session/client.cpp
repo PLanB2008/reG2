@@ -948,12 +948,12 @@ void net::Client::OnMapChange(BitReader& r)
     MapChange m;
     if (ReadMapChange(r, m))
     {
-        ChangeGame(m.map, m.gmp, m.sty, m.scr, m.print, m.game, 90);
+        ChangeGame(m.map, m.gmp, m.sty, m.scr, m.print, m.game, m.players, 90);
     }
 }
 
 bool net::Client::ChangeGame(const std::string& map, const std::string& gmp, const std::string& sty, const std::string& scr, const MapPrint& print,
-                             int game, int pauseTicks)
+                             int game, int players, int pauseTicks)
 {
     std::string missing;
     if (!PlainNames(BadMapName(map, gmp, sty, scr), "the server", &missing) || !HaveMap(gmp, sty, scr, &missing) || !SameMap(map, gmp, sty, scr, print, &missing))
@@ -964,7 +964,7 @@ bool net::Client::ChangeGame(const std::string& map, const std::string& gmp, con
         return false;
     }
     printf("net: frame %u, the next map: %s\n", mFrame, scr.c_str());
-    engine::ChangeMap(gmp, sty, scr, pauseTicks);
+    engine::ChangeMap(gmp, sty, scr, players, pauseTicks);
     mScr = scr;
     mServerGame = game; // from now on: the old game's snapshots would put its things into the next map's
     return true;
@@ -984,8 +984,8 @@ void net::Client::StartOver()
     {
         p = Parts();
     }
-    std::fill(mRemote.begin(), mRemote.end(), 0u);
-    std::fill(mRemoteSeen.begin(), mRemoteSeen.end(), 0u);
+    mRemote.assign(engine::PlayerCount(), 0); // the new game's players
+    mRemoteSeen.assign(engine::PlayerCount(), 0);
     mKnown = ForwardedInputs();
     mKnownTick = 0;
     mBot.reset(); // and its map of the old one
@@ -1265,7 +1265,7 @@ void net::Client::Rejoined(const Welcome& welcome)
     }
     // The server's game went on to another (a round's fresh game, another map) while we were away: that one here too
     if ((welcome.scr != mScr || (mServerGame >= 0 && welcome.game != mServerGame)) &&
-        !ChangeGame(welcome.map, welcome.gmp, welcome.sty, welcome.scr, welcome.print, welcome.game, 1))
+        !ChangeGame(welcome.map, welcome.gmp, welcome.sty, welcome.scr, welcome.print, welcome.game, welcome.players, 1))
     {
         return;
     }

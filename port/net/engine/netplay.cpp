@@ -24,6 +24,7 @@ bool gActive;
 bool gChecked;
 net::engine::FrameHook gHook;
 bool gNextPending; // a map change: the game that ends goes straight into the next (gPortNextNetworkGame)
+int gNextPlayers; // its players: PlayerCount stays the running game's until then
 int gGeneration; // the games started since the boot's
 void* gHookUser;
 bool NextNetworkGame(); // gPortNextNetworkGame
@@ -86,7 +87,6 @@ void net::engine::StartNetworkGame(const NetworkGame& game)
     gPortWorldStill = WorldStill;
     gPortTagTimeCounts = true;
     gPortScoreBonusHook = net::engine::ScoreBonus;
-    gPortScriptPlayersHook = net::engine::GivePlayersWithoutScriptPeds;
     gNetPlay.mPlayerIdx = game.localPlayer;
     gNetPlay.mN2.mPlayersCount = 2; // > 1: the game calls SendToAll every frame
 }
@@ -127,7 +127,6 @@ void net::engine::StopNetworkGame()
     gPortTagTimeCounts = false;
     gPortChatChar = NULL;
     gPortScoreBonusHook = NULL;
-    gPortScriptPlayersHook = NULL;
     gNetPlay.mPlayerIdx = 0;
     gNetPlay.mN2.mPlayersCount = 0;
     // Off, not as before: a network game cleared them at its start (ClearDebugFlags)
@@ -169,14 +168,16 @@ bool NextNetworkGame()
     gGameSession.SetStyleName(path);
     snprintf(path, sizeof(path), "data\\%s", gNetGame.scr.c_str());
     gGameSession.SetScriptName(path);
+    gNetGame.players = gNextPlayers;
     net::engine::ResetForNewGame();
     gGeneration++;
     return true;
 }
 } // namespace
 
-void net::engine::SetNextMap(const std::string& gmp, const std::string& sty, const std::string& scr)
+void net::engine::SetNextMap(const std::string& gmp, const std::string& sty, const std::string& scr, int players)
 {
+    gNextPlayers = players;
     gNetGame.gmp = gmp;
     gNetGame.sty = sty;
     gNetGame.scr = scr;

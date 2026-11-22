@@ -23,6 +23,7 @@ add_executable(test_transport ${NET}/tests/test_transport.cpp ${net_transport_sr
 target_link_libraries(test_transport PRIVATE enet)
 add_executable(test_bot ${NET}/tests/test_bot.cpp ${NET}/session/bot_nav.cpp)
 add_executable(test_rounds ${NET}/tests/test_rounds.cpp ${NET}/session/round_flow.cpp)
+target_compile_definitions(test_core PRIVATE NET_TESTDATA="${NET}/testdata")
 set(net_tests test_core test_transport test_bot test_rounds)
 foreach(t ${net_tests})
     target_compile_options(${t} PRIVATE ${arch_flags})

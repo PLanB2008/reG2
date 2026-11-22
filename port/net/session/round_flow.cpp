@@ -231,7 +231,7 @@ net::RoundActions net::RoundFlow::Tick(uint32_t tick, const std::vector<RoundPla
             mState.phaseLeft = Seconds(mPhaseEnd > tick ? mPhaseEnd - tick : 0);
             if (tick >= mPhaseEnd)
             {
-                const int next = NextMap();
+                const int next = NextMap(players);
                 FreshGame(tick, next >= 0 ? next : mCurrentMap, out); // NewGame: the warmup instead if too few are left
             }
             break;
@@ -272,7 +272,7 @@ void net::RoundFlow::EndRound(uint32_t tick, const std::vector<RoundPlayer>& pla
     if (!mRules.enabled)
     {
         // Without the round flow: the next round at once, or the rotation's next map
-        const int next = mRules.rotation && mMaps.size() > 1 ? (mCurrentMap + 1) % (int)mMaps.size() : mCurrentMap;
+        const int next = RotationNext(players);
         if (next != mCurrentMap)
         {
             out.changeMap = next;
@@ -288,14 +288,40 @@ void net::RoundFlow::EndRound(uint32_t tick, const std::vector<RoundPlayer>& pla
     Enter(tick, kPhaseResults, out);
 }
 
-int net::RoundFlow::NextMap() const
+bool net::RoundFlow::Fits(int map, const std::vector<RoundPlayer>& players) const
+{
+    const int takes = map >= 0 && map < (int)mTakes.size() ? mTakes[map] : kRoundSlots;
+    for (size_t i = (size_t)(takes > 0 ? takes : 0); i < players.size(); i++)
+    {
+        if (players[i].taken)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+int net::RoundFlow::RotationNext(const std::vector<RoundPlayer>& players) const
+{
+    for (int k = 1; mRules.rotation && k < (int)mMaps.size(); k++)
+    {
+        const int m = (mCurrentMap + k) % (int)mMaps.size();
+        if (Fits(m, players))
+        {
+            return m;
+        }
+    }
+    return mCurrentMap;
+}
+
+int net::RoundFlow::NextMap(const std::vector<RoundPlayer>& players) const
 {
     int votes[16] = {};
     int most = 0;
     for (int i = 0; i < kRoundSlots; i++)
     {
         const int c = mState.mapChoice[i] - 1;
-        if (c >= 0 && c < (int)mMaps.size() && c < 16)
+        if (c >= 0 && c < (int)mMaps.size() && c < 16 && Fits(c, players))
         {
             most = ++votes[c] > most ? votes[c] : most;
         }
@@ -313,7 +339,7 @@ int net::RoundFlow::NextMap() const
         static std::mt19937 sRandom{std::random_device{}()}; // not the game's random: that one is part of its state
         return tied[sRandom() % tied.size()];
     }
-    return mRules.rotation && !mMaps.empty() ? (mCurrentMap + 1) % (int)mMaps.size() : mCurrentMap;
+    return RotationNext(players);
 }
 
 int net::RoundFlow::FindMap(const std::string& arg) const
@@ -403,6 +429,11 @@ void net::RoundFlow::Command(uint32_t tick, int slot, const std::string& text, c
             out.notices.push_back({slot, "Maps: " + list});
             return;
         }
+        if (!Fits(m, players))
+        {
+            out.notices.push_back({slot, Title(m) + " takes " + std::to_string(mTakes[m]) + " players: the slots past them are in use"});
+            return;
+        }
         if (mState.phase == kPhaseResults && mRules.enabled)
         {
             mState.mapChoice[slot] = (uint8_t)(m + 1); // the results' choice, no vote needed
@@ -485,11 +516,11 @@ void net::RoundFlow::DecideVote(uint32_t tick, const std::vector<RoundPlayer>& p
     printf("net: round flow: vote %d (%d) %s, %d of %d\n", (int)kind, arg, passed ? "passed" : "failed", yes, n);
     if (passed)
     {
-        Carry(kind, arg, tick, out);
+        Carry(kind, arg, tick, players, out);
     }
 }
 
-void net::RoundFlow::Carry(VoteKind kind, int arg, uint32_t tick, RoundActions& out)
+void net::RoundFlow::Carry(VoteKind kind, int arg, uint32_t tick, const std::vector<RoundPlayer>& players, RoundActions& out)
 {
     if (kind == kVoteKick)
     {
@@ -499,6 +530,11 @@ void net::RoundFlow::Carry(VoteKind kind, int arg, uint32_t tick, RoundActions& 
     if (kind == kVoteStart && mState.phase == kPhaseWarmup)
     {
         FreshGame(tick, mCurrentMap, out);
+        return;
+    }
+    if (kind == kVoteMap && !Fits(arg, players))
+    {
+        out.notices.push_back({-1, Title(arg) + " takes " + std::to_string(mTakes[arg]) + " players: the slots past them are in use now"});
         return;
     }
     if (kind == kVoteMap)

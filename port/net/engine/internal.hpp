@@ -242,7 +242,7 @@ void ClearRandOwners(); // back to the game's own streams (a single-player game 
 void KeepPlayerArrows(); // an arrow on the HUD to each other player in the game, made again when one is missing (guards.cpp)
 float SnapshotReach(const Snapshot& snap); // schema.cpp
 void ResetForNewGame(); // what the engine keeps of a game: the replicas, pickups, death counts (rounds.cpp)
-void SetNextMap(const std::string& gmp, const std::string& sty, const std::string& scr); // netplay.cpp: the next game's
+void SetNextMap(const std::string& gmp, const std::string& sty, const std::string& scr, int players); // netplay.cpp: the next game's
 
 // Players (players.cpp)
 void CapturePlayer(int slot, Snapshot& out);

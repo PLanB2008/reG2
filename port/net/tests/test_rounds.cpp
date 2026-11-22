@@ -12,6 +12,7 @@ std::vector<net::RoundPlayer> Players(int in)
     std::vector<net::RoundPlayer> p(net::kRoundSlots);
     for (int i = 0; i < in; i++)
     {
+        p[i].taken = true;
         p[i].in = true;
         p[i].voter = true;
         p[i].name = "P" + std::to_string(i);
@@ -236,6 +237,32 @@ int main()
             f.Command(tick, i, "/yes", players, k);
         }
         CHECK(k.kick == last);
+    }
+    // Maps that take fewer players than are in: not voted for, not chosen, skipped by the rotation
+    {
+        net::RoundRules rot = rules;
+        rot.rotation = true;
+        net::RoundFlow f;
+        f.Start(rot, maps, 0);
+        f.SetMapPlayers({10, 6, 10});
+        auto eight = Players(8);
+        CHECK(f.Fits(0, eight) && !f.Fits(1, eight) && f.Fits(1, Players(6)));
+        auto gap = Players(2);
+        gap[7].taken = true; // connecting: its slot counts
+        CHECK(!f.Fits(1, gap));
+        uint32_t tick = RunTo(f, 1, net::kPhasePlaying, eight, 120 * kTps);
+        net::RoundActions m;
+        f.Command(tick, 0, "/map 2", eight, m);
+        CHECK(f.State().voteKind == net::kVoteNone && !m.notices.empty() && m.notices.back().second.find("takes 6") != std::string::npos);
+        tick = RunTo(f, tick, net::kPhaseResults, eight, 120 * kTps);
+        net::RoundActions c;
+        for (int i = 0; i < 8; i++)
+        {
+            f.Command(tick, i, "/map 2", eight, c); // refused: no choice made
+        }
+        net::RoundActions next;
+        RunTo(f, tick, net::kPhaseCountdown, eight, 30 * kTps, &next);
+        CHECK(next.changeMap == 2); // the rotation's next that fits, not mp2-6p
     }
     // Off (an arena): the round from the start, the frag limit starts the next at once
     {
