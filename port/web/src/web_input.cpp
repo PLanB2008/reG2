@@ -79,7 +79,9 @@ EMSCRIPTEN_KEEPALIVE void port_WebPad(int buttons, int lx, int ly, int rx, int r
     {
         SDL_SetJoystickVirtualButton(sTouchPad, i, (buttons >> i) & 1);
     }
-    const int axes[SDL_GAMEPAD_AXIS_COUNT] = {lx, ly, rx, ry, lt, rt};
+    // SDL reads a virtual trigger's whole range, -32768 to 32767, as 0 to 32767: at rest it is -32768, as 0 would
+    // be a trigger held halfway (RT attacks with TWIN STICK, LT and RT are specials or the pedals).
+    const int axes[SDL_GAMEPAD_AXIS_COUNT] = {lx, ly, rx, ry, lt * 2 - 32768, rt * 2 - 32768};
     for (int i = 0; i < SDL_GAMEPAD_AXIS_COUNT; i++)
     {
         SDL_SetJoystickVirtualAxis(sTouchPad, i, (Sint16)SDL_clamp(axes[i], -32768, 32767));
