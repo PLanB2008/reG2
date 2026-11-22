@@ -128,8 +128,12 @@ the game as installed.
     with TWIN STICK (state bit 16) the right half is a second floating stick that aims and fires while pushed past
     a third of its range (right stick and RT), with JUMP, ENTER and the weapons in a column at the edge;
   - in a vehicle the left stick steers; GAS and BRAKE (RT, LT), HAND BRAKE, FIRE, HORN (special 1) and EXIT;
-  - PAUSE in the top right corner in a game, BACK top left in the menus; the menus are tapped (SDL turns a tap
-    into the mouse);
+  - PAUSE at the right edge in a game, under the HUD's money, hearts and weapon (the top fifth);
+  - in the menus (the frontend, the port's menus, the pause menu), a d-pad at the bottom left, OK and BACK at the
+    right edge: the pad's d-pad, A and B, which drive every page as a gamepad does, the player's name included (up
+    and down pick a letter, right adds one, left deletes one). A direction held repeats after 400 ms, every 180 ms;
+    each press and release lasts at least 80 ms, as the game reads the pad once a frame and the page's timers run
+    late while the game works. The menus can still be tapped (SDL turns a tap into the mouse);
   - buttons 56 to 96 px, inside the safe areas, a short vibration on each press where the browser has it.
   The sticks are drawn by `touch.js` (about 60 lines): nipplejs placed its stick from its zone's position measured
   when it was made, while hidden, so the stick appeared away from the thumb.
