@@ -190,8 +190,9 @@ that wasn't ending.
 Every network step runs the tick, then `NetPlay::SendToAll`, where the original sent its inputs. The port's `NetPlay`
 (`engine/netplay.cpp`) makes that the netcode's frame hook, once per tick: after tick T, before anything is drawn.
 There the server reads its clients and sets every player's input for T+1; the client sends its command, applies
-snapshots and rolls back. Between steps both poll the network about every millisecond (`gPortIdleHook`) for pings, so
-neither the tick nor the frame adds to the ping.
+snapshots and rolls back. Between steps both answer pings at once (`gPortIdleHook`): the client polls the network about
+every millisecond, the server waits on it until about 2 ms before its next step (`engine::NetworkWaitMs`) and polls the
+last stretch, so neither the tick nor the frame adds to the ping.
 
 A client runs reG2's frame loop (`port/src/frame_loop.cpp`, `gPortNetFrameLoop`), as single player does: ticks at the
 game's rate, frames at the FRAME LIMIT, each drawn between the last two ticks (`port/src/interpolation.cpp`), SHOW FPS.

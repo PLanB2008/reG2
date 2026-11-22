@@ -654,8 +654,18 @@ void net::Server::Idle()
         }
         waited = true;
     }
-    while (waited || mTransport->Poll(e))
+    // Then whatever came, and while none comes, a wait on the network until shortly before the next step is due: a ping
+    // is answered as it comes, and the loop wakes about once a step rather than every millisecond
+    for (;;)
     {
+        if (!waited && !mTransport->Poll(e))
+        {
+            const int ms = engine::NetworkWaitMs();
+            if (ms <= 0 || !mTransport->Wait(e, ms))
+            {
+                break;
+            }
+        }
         waited = false;
         if (e.type == TransportEvent::kReceive && e.channel == kChannelUnreliable && !e.data.empty() && e.data[0] == kMsgPing)
         {

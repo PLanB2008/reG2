@@ -223,6 +223,7 @@ void net::engine::ShowLeavePrompt(bool shown)
 }
 
 bool port_PadMode(); // compat/src/pad.cpp
+double port_ClockSpeed(); // compat/src/kernel.cpp: GTA2_SPEED
 
 void net::engine::SetRoundPad(bool results)
 {
@@ -243,6 +244,14 @@ void net::engine::IdleWait()
     {
         Sleep(1);
     }
+}
+
+int net::engine::NetworkWaitMs()
+{
+    const int kMarginMs = 2, kMostMs = 50;
+    static const u32& sNextStep = PortStatic<u32>(0x6F5A28);
+    const int ms = (int)((s32)(sNextStep - timeGetTime()) / port_ClockSpeed()) - kMarginMs; // GTA2_SPEED: the game's ms
+    return ms <= 0 ? 0 : ms < kMostMs ? ms : kMostMs;
 }
 
 void net::engine::HoldStep()
