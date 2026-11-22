@@ -109,6 +109,7 @@ void port_SetGameCursor(); // cursor.cpp
 bool port_MouseLeftDown();
 // The position in the game's frame.
 void port_MousePos(float* pX, float* pY);
+void port_MouseWindowPos(float* pX, float* pY);
 
 // The size of the frame the game draws (video_port.cpp).
 void port_FrameSize(int* pW, int* pH);

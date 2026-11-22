@@ -90,6 +90,13 @@ bool port_TakeMouse(float* pX, float* pY, int* pLeft, int* pRight, int* pWheel)
     return moved;
 }
 
+// In window coordinates, where the game draws its cursor or TWIN STICK's reticle.
+void port_MouseWindowPos(float* pX, float* pY)
+{
+    *pX = sX;
+    *pY = sY;
+}
+
 bool port_MouseLeftDown()
 {
     return sLeftDown;

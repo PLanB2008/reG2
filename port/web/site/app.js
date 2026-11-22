@@ -728,12 +728,53 @@ const game = {
       idleTimer = setTimeout(() => $('game-bar').classList.add('idle'), 2500);
     });
     idleTimer = setTimeout(() => $('game-bar').classList.add('idle'), 4000);
+    this.lockedPointing(M);
     if (!document.fullscreenEnabled && !document.webkitFullscreenEnabled) document.body.classList.add('no-fullscreen');
     $('crash-reload').onclick = () => location.reload();
     $('crash-copy').onclick = () => this.copyDiagnostic();
     this.touch = new TouchControls($('touch'), M, () => this.state(), prefs);
     this.applyPrefs();
     this.checkOrientation();
+  },
+
+  // With the pointer locked (TWIN STICK's mouse aim) the page's pointer is gone: the game's cursor points at the
+  // pause and full screen buttons instead, and a click on one goes to the button, not to the game.
+  lockedPointing(M) {
+    const canvas = $('canvas');
+    const buttons = [$('pause-button'), $('fs-button')];
+    let aimed = null;
+    let swallowUp = false;
+    const under = () => {
+      if (document.pointerLockElement !== canvas || $('game-bar').classList.contains('idle')) return null;
+      const c = canvas.getBoundingClientRect();
+      const x = c.left + M._port_WebCursorX();
+      const y = c.top + M._port_WebCursorY();
+      return buttons.find((b) => {
+        const r = b.getBoundingClientRect();
+        return r.width && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+      }) || null;
+    };
+    const aim = (b) => {
+      if (b === aimed) return;
+      aimed?.classList.remove('aimed');
+      b?.classList.add('aimed');
+      aimed = b;
+    };
+    addEventListener('pointermove', () => aim(under()));
+    document.addEventListener('pointerlockchange', () => aim(null));
+    addEventListener('pointerdown', (e) => {
+      const b = e.button === 0 ? under() : null;
+      if (!b) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      swallowUp = true;
+      b.click();
+    }, true);
+    addEventListener('pointerup', (e) => {
+      if (!swallowUp) return;
+      swallowUp = false;
+      e.stopImmediatePropagation();
+    }, true);
   },
 
   // The graphics driver as the browser names it (unmasked where the browser allows), for the diagnostics. Read

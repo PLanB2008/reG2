@@ -9,6 +9,7 @@
 
 bool port_GameRunning();
 bool port_FrontendActive();
+void port_MouseWindowPos(float* pX, float* pY);
 
 namespace
 {
@@ -37,6 +38,22 @@ EMSCRIPTEN_KEEPALIVE void port_WebPause()
     {
         PortPauseMenu::HandleKey(DIK_ESCAPE, gGame_0x40->mLocalPlayer);
     }
+}
+
+// The mouse in the canvas' CSS pixels, where the game draws its cursor: with the pointer locked, the page's own
+// buttons are pointed at with it.
+EMSCRIPTEN_KEEPALIVE float port_WebCursorX()
+{
+    float x, y;
+    port_MouseWindowPos(&x, &y);
+    return x;
+}
+
+EMSCRIPTEN_KEEPALIVE float port_WebCursorY()
+{
+    float x, y;
+    port_MouseWindowPos(&x, &y);
+    return y;
 }
 
 // The touch controls as a gamepad: SDL_GamepadButton bits, the sticks and triggers from -32768 to 32767
