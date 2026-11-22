@@ -232,7 +232,7 @@ bool net::SetUpMaps(const std::string& firstMap, const std::string& maps, Server
     {
         most = m.players > most ? m.players : most;
     }
-    sc.slots = asked < most ? asked : most;
+    sc.slots = asked && asked < most ? asked : most;
     if (asked > most)
     {
         printf("net: --players %d: the maps here take %d players at most, %d player slots\n", asked, most, sc.slots);

@@ -36,7 +36,7 @@ where **Network game** joins a server (below). The command line (`port/net/cmdli
 
 | | Options |
 |---|---|
-| Server | `--port` (27920), `--map <data/*.mmp>` (downtown-6p), `--maps a,b,c` (a rotation), `--players N` (6; at most what the maps take), `--gametype 1-3` (frags, points, tag), `--fraglimit` (frags, 10; a points game's is money, 10000 as the original lobby's), `--timelimit` (minutes), `--tickms`, `--police [stars]` (off by default, as the lobby; up to the game's 1 star, or 1-6), `--traffic N` (ambient cars per player, 16), `--packets N` (a snapshot's parts at most, 4), `--interest blocks` (24) |
+| Server | `--port` (27920), `--map <data/*.mmp>` (downtown-6p), `--maps a,b,c` (a rotation), `--players N` (1-10, a cap; by default what the maps take), `--gametype 1-3` (frags, points, tag), `--fraglimit` (frags, 10; a points game's is money, 10000 as the original lobby's), `--timelimit` (minutes), `--tickms`, `--police [stars]` (off by default, as the lobby; up to the game's 1 star, or 1-6), `--traffic N` (ambient cars per player, 16), `--packets N` (a snapshot's parts at most, 4), `--interest blocks` (24) |
 | Round flow | `--minplayers N` (2), `--warmup s` (60), `--results s` (15), `--votes start,map,kick` (or `none`), `--rounds on\|off` |
 | Arena | `--arena brain,...` (bots on the server itself), `--ticks N` (the result printed and the server ended at tick N), `--seed N` |
 | Client | `--connect host[:port]`, `--name`, `--bot [brain]` (simple, carhop, rammer, soldier, hunter, `nn:<file>`), `--replay <file>` |
@@ -50,7 +50,8 @@ other, so a map takes as many players as its script has `PLAYER_PED`s, at most i
 one (maps since Vike's 11.3 leave it out: any number; Mini City has one script and an `.mmp` for each of 2 to 6
 players), at most 10 (`core/map_players.cpp`). The game's maps take 6.
 
-A server has `--players` slots, at most what its biggest map takes (more are cut, with a message). The game on a map has
+A server has as many slots as its biggest map takes, fewer with `--players N` (more than the maps take are cut, with a
+message). The game on a map has
 that map's players: past them a client is turned away ("the server is full: Downtown takes 6 players"), and the slots
 open again with a map that takes more. A vote, a results' choice and the rotation go to a map only if every taken slot
 has a place on it (`RoundFlow::Fits`): with 10 in, a map of 6 isn't played; with players in slots 0-5 only, it is.
@@ -58,7 +59,7 @@ has a place on it (`RoundFlow::Fits`): with 10 in, a map of 6 isn't played; with
 `port/net/testdata/tiny-10p` is a 10-player map on the game's Tiny Town (`MP1-comp.gmp`, `bil.sty`): a player at each
 of its 10 restart zones in 10 looks, a few weapon generators. Its script is ours, `tiny-10p.mis`, compiled by
 `port/net/scripts/mis2scr.py` (only what it needs: `PLAYER_PED`, `GENERATOR`, `SWITCH_GENERATOR`, `LEVELSTART`,
-`LEVELEND`). To play it, copy `tiny-10p.mmp` and `tiny-10p.scr` into `data/`: `--map tiny-10p --players 10`.
+`LEVELEND`). To play it, copy `tiny-10p.mmp` and `tiny-10p.scr` into `data/`: `--map tiny-10p`.
 
 ## Hosting a game
 
