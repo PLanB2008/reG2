@@ -152,7 +152,8 @@ past 1 MB, copying all of it each time (about 2.7 GB copied for the installer's 
 reads of the chosen file go 4 MB ahead, one `FileReaderSync` call each. With `?debug` the page logs the phases.
 The free installer on a desktop (ms): before, source reads 1300 to 1650, memory writes 3000, unpacking 2250, sending
 200, total 8300 to 9000; after, 550 to 980, 420 to 750, 2200, 130 to 210, total 4300 to 5200. The unpacking (zlib in
-unshield) is CPU bound; the copies were memory bound, which phones pay most for.
+unshield) is CPU bound; the copies were memory bound, which phones pay most for. On a Poco F1 (Snapdragon 845) the
+free installer went from several minutes to about 40 s.
 
 Over plain HTTP (a LAN address) the page works without what browsers keep for secure contexts (service worker,
 storage persistence, wake lock, the tab lock) and says so above everything else.
@@ -253,6 +254,12 @@ reload, two tabs, the tab hidden in a game, and a phone-sized viewport with touc
 header says how to run it. Screenshots go outside the repository (they show the game).
 
 Not tested: a real iPhone or Android phone, Safari, real gamepads in a browser, real phone GPUs' frame times.
+
+## Possible improvements
+
+- The import's unpacking in 2 to 4 workers, each extracting a subset of the files: at most about 1.5 to 2 times
+  faster in total (the reads and the storing stay serial), for more memory. A phone takes about 40 s for the
+  free installer as it is.
 
 ## Inspirations
 
