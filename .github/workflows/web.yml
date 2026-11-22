@@ -1,7 +1,7 @@
 name: Web
 
-# The web build (port/web): the game compiled to WebAssembly and the page around it, published on GitHub Pages
-# from main; port/** branches build it without publishing. No game data is involved.
+# The web build (port/web): the game compiled to WebAssembly and its page, published on GitHub Pages under /play/
+# from main, with the landing page (port/web/home) at the root; port/** branches build it without publishing. No game data is involved.
 on:
   push:
     branches: ['main', 'port/**']
@@ -45,9 +45,18 @@ jobs:
           [ -f "$W/prefix/.complete" ] || sh port/web/deps.sh "$W/dl" "$W/prefix" "$W/b"
           sh port/web/build.sh "$W/prefix" "$W/build" "$W/site"
 
+      # The landing page (port/web/home) at the root, the game's page under /play/.
+      - name: Site
+        run: |
+          P="$RUNNER_TEMP/pages"
+          mkdir -p "$P"
+          [ -d port/web/home ] && cp -R port/web/home/. "$P/"
+          [ -f port/web/ds.css ] && cp port/web/ds.css "$P/"
+          cp -R "$RUNNER_TEMP/web/site" "$P/play"
+
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: ${{ runner.temp }}/web/site
+          path: ${{ runner.temp }}/pages
 
   deploy:
     if: github.ref == 'refs/heads/main'
