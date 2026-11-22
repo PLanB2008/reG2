@@ -1,22 +1,32 @@
 /* reG2 design system: tokens, fonts and base components shared by the landing page (/) and the game page (/play/).
-   Published at the site root next to fonts/; see port/web/home/README.md. */
+   Published at the site root next to fonts/; see port/web/home/README.md. Dark only. */
 
 @font-face { font-family: "Big Shoulders"; src: url(fonts/big-shoulders-800.woff2) format("woff2"); font-weight: 800; font-display: swap; }
 @font-face { font-family: "Barlow"; src: url(fonts/barlow-400.woff2) format("woff2"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Barlow"; src: url(fonts/barlow-600.woff2) format("woff2"); font-weight: 600; font-display: swap; }
 
 :root {
-  /* Colours: dark is the default, light follows the system setting. */
-  --bg: #0d0f14;
-  --bg-2: #161a22;
-  --line: #2a303c;
-  --text: #ecebe6;
-  --muted: #a3a7b0;
-  --red: #e0213f;
+  --bg: #0b0c11;
+  --bg-2: #15171f;
+  --line: #2b2f3b;
+  --text: #f0eee6;
+  --muted: #a6a9b2;
+  --red: #e8213f;
   --red-ink: #ffffff;
   --amber: #ffb627;
   --ok: #4cd38a;
   --focus: #ffb627;
+
+  /* Gang colours, one per section through --accent. */
+  --cyan: #2cc8ea;
+  --lime: #a3e635;
+  --pink: #ff4fa3;
+  --accent: var(--red);
+  --accent-ink: #0b0c11;
+
+  /* The pager: a lit LCD. */
+  --lcd: #b8d84a;
+  --lcd-ink: #10140a;
 
   --font-display: "Big Shoulders", "Barlow", system-ui, sans-serif;
   --font-body: "Barlow", system-ui, sans-serif;
@@ -24,10 +34,10 @@
   --step--1: 0.9rem;
   --step-0: 1.0625rem;
   --step-1: 1.2rem;
-  --step-2: 1.35rem;
-  --step-3: 1.9rem;
+  --step-2: 1.45rem;
+  --step-3: clamp(1.9rem, 5vw, 2.6rem);
   --step-4: clamp(2.2rem, 6vw, 3.2rem);
-  --step-5: clamp(2.9rem, 11vw, 5.4rem);
+  --step-5: clamp(2.9rem, 11vw, 5.8rem);
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -35,32 +45,18 @@
   --space-4: 1rem;
   --space-5: 1.5rem;
   --space-6: 2.5rem;
-  --space-7: 4rem;
+  --space-7: 4.5rem;
 
   --radius: 0;
-  --radius-pill: 999px;
   --rule: 6px;
+  --cut: 14px;
+  --slant: -8deg;
   --measure: 38rem;
-  --page-max: 68rem;
+  --page-max: 70rem;
   --gutter: 1rem;
 
   color-scheme: dark;
 }
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg: #f3f1ec;
-    --bg-2: #ffffff;
-    --line: #cfccc4;
-    --text: #15171c;
-    --muted: #555a63;
-    --red: #a20f29;
-    --amber: #8a5a00;
-    --ok: #17703f;
-    --focus: #a20f29;
-    color-scheme: light;
-  }
-}
-
 
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
@@ -71,18 +67,19 @@ body {
   font: 400 var(--step-0)/1.55 var(--font-body);
 }
 img { max-width: 100%; height: auto; }
-a { color: inherit; text-decoration-color: var(--red); text-underline-offset: 0.2em; text-decoration-thickness: 2px; }
-a:hover { color: var(--red); }
+a { color: inherit; text-decoration-color: var(--accent); text-underline-offset: 0.2em; text-decoration-thickness: 2px; }
+a:hover { color: var(--accent); }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 [hidden] { display: none !important; }
 code { font: 0.92em/1.4 ui-monospace, "Cascadia Mono", "DejaVu Sans Mono", monospace; background: var(--bg-2); border: 1px solid var(--line); padding: 0 0.25em; overflow-wrap: anywhere; }
 
-h1, h2, h3 { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; line-height: 0.95; margin: 0 0 var(--space-3); }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; line-height: 0.92; margin: 0 0 var(--space-3); }
 h1 { font-size: var(--step-5); letter-spacing: 0.005em; }
 h2 { font-size: var(--step-3); letter-spacing: 0.01em; }
-h3 { font-size: var(--step-2); }
+h3 { font-size: var(--step-2); letter-spacing: 0.02em; }
 /* Names whose case matters (macOS, gta2_re) inside an uppercase heading. */
 .nocase { text-transform: none; }
+.slant { display: inline-block; transform: skewX(var(--slant)); }
 
 /* The street-light stripe across the top of every page. */
 .stripe::before {
@@ -92,8 +89,36 @@ h3 { font-size: var(--step-2); }
   background: repeating-linear-gradient(90deg, var(--red) 0 48px, transparent 48px 64px, var(--amber) 64px 72px, transparent 72px 88px);
 }
 
-/* A short red bar under a heading. */
-.bar::after { content: ""; display: block; width: 3.5rem; height: 0.45rem; background: var(--red); margin-top: 1.1rem; }
+.acc-red { --accent: var(--red); }
+.acc-amber { --accent: var(--amber); }
+.acc-cyan { --accent: var(--cyan); }
+.acc-lime { --accent: var(--lime); }
+.acc-pink { --accent: var(--pink); }
+
+/* A short accent bar under a heading. */
+.bar::after { content: ""; display: block; width: 3.5rem; height: 0.45rem; background: var(--accent); margin-top: 1.1rem; }
+
+/* A slanted colour block with an angled end, like the game's menu title bars. */
+.label {
+  display: inline-block;
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: 0.3em 1.1em 0.22em 0.6em;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 0.7em) 100%, 0 100%);
+}
+.label > span { display: inline-block; transform: skewX(var(--slant)); }
+
+/* A sticker: small uppercase tag, outlined in the accent. */
+.tag {
+  display: inline-block;
+  font: 800 var(--step--1)/1 var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.4em 0.6em 0.32em;
+  border: 2px solid var(--accent);
+  color: var(--text);
+  background: var(--bg);
+}
 
 .skip { position: absolute; left: -999px; top: 0; background: var(--red); color: var(--red-ink); padding: var(--space-2) var(--space-4); z-index: 10; }
 .skip:focus { left: var(--space-4); }
@@ -101,7 +126,7 @@ h3 { font-size: var(--step-2); }
 .lede { font-size: var(--step-1); max-width: var(--measure); }
 .small { font-size: var(--step--1); color: var(--muted); }
 
-/* Buttons: square, outlined by default; .primary is the one main action. Works on <a> and <button>. */
+/* Buttons: outlined by default; .primary is the one main action, with angled corners. Works on <a> and <button>. */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -117,22 +142,36 @@ h3 { font-size: var(--step-2); }
   cursor: pointer;
 }
 .btn:hover { background: var(--text); color: var(--bg); }
-.btn.primary { background: var(--red); border-color: var(--red); color: var(--red-ink); }
-.btn.primary:hover { filter: brightness(1.12); color: var(--red-ink); }
+.btn.primary {
+  background: var(--red); border-color: var(--red); color: var(--red-ink);
+  font: 800 var(--step-1)/1 var(--font-display); text-transform: uppercase; letter-spacing: 0.05em;
+  padding-inline: 1.5rem;
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+}
+.btn.primary:hover { filter: brightness(1.15); color: var(--red-ink); }
 .btn.big { font: 800 2rem/1 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; padding: 1rem 3rem; }
 .btn.danger { border-color: var(--red); color: var(--red); }
 .btn.danger:hover { background: var(--red); color: var(--red-ink); }
 .btn:disabled { opacity: 0.45; cursor: default; }
 .row { display: flex; flex-wrap: wrap; gap: var(--space-3); margin: var(--space-3) 0; }
 
-/* A container with the red rule on its left; .warn turns the rule amber. */
-.panel { background: var(--bg-2); border: 1px solid var(--line); border-left: var(--rule) solid var(--red); padding: var(--space-5) 1.25rem; margin: 0 0 2rem; }
+/* A container with the accent rule on its left; .warn turns the rule amber. */
+.panel { background: var(--bg-2); border: 1px solid var(--line); border-left: var(--rule) solid var(--accent); padding: var(--space-5) 1.25rem; margin: 0 0 2rem; }
 .panel.warn { border-left-color: var(--amber); }
 .panel > :last-child { margin-bottom: 0; }
 
-/* A one-line notice, for the beta warning. */
-.notice { border-left: var(--rule) solid var(--amber); padding: var(--space-2) var(--space-4); background: color-mix(in srgb, var(--amber) 10%, transparent); }
-.notice strong { color: var(--amber); }
+/* The beta warning, as a message on the in-game pager. */
+.pager {
+  background: var(--lcd);
+  color: var(--lcd-ink);
+  border: 3px solid #000;
+  box-shadow: 0 0 0 2px var(--line), inset 0 0 0 2px color-mix(in srgb, var(--lcd) 60%, #fff);
+  padding: var(--space-3) var(--space-4);
+  font-weight: 600;
+}
+.pager a { text-decoration-color: currentColor; }
+.pager a:hover { color: inherit; }
+.pager strong { text-transform: uppercase; letter-spacing: 0.06em; margin-right: 0.3em; }
 
 /* Footer with the credits and disclaimers. */
 .foot { border-top: 1px solid var(--line); margin-top: 3rem; padding-top: var(--space-4); font-size: 0.88rem; color: var(--muted); }
