@@ -78,14 +78,15 @@ service worker trick).
 
 IndexedDB, through `idb-keyval`: one entry per file of the game folder (`data/...`, `player/...`,
 `gta2_registry.ini`, `gta2gl.ini`) as a Blob, and a record saying whether the imported data is complete. At Play,
-the files are copied into Emscripten's in-memory file system under `/reG2` (the music after the game started, as
-it is only streamed). The game's writes outside `data/` are stored again 250 ms after the file is closed (a
+the files are copied into Emscripten's in-memory file system under `/reG2`, except the music: its tracks are empty
+files until the game opens one (`compat/src/miles.cpp` calls `port_WebLoadFile`); the page then reads it from
+IndexedDB while the stream plays silence, and keeps the last two tracks in memory. That keeps about 90 to 120 MB
+of game files in memory instead of 380 MB (a track is 6 to 32 MB). The game's writes outside `data/` are stored again 250 ms after the file is closed (a
 wrapper on `FS.close`, `FS.unlink` and `FS.rename`), and on `pagehide` and when the tab is hidden. After an import
 the page asks for persistent storage (`navigator.storage.persist`).
 
 OPFS was not used: synchronous access needs a worker (so the game in a worker, with OffscreenCanvas), and
-Emscripten's OPFS backend needs pthreads. The cost of the in-memory copy is memory: about 380 MB of JavaScript
-memory with the music, beside a 64 to 100 MB wasm heap.
+Emscripten's OPFS backend needs pthreads. The wasm heap stays at 64 MB in a game.
 
 ### Import
 
@@ -106,6 +107,20 @@ the game as installed.
   bindings). The stick is nipplejs. On foot: attack, jump, enter, previous and next weapon; in a vehicle: gas,
   brake, hand brake, exit, fire; always: pause; in the menus: back (menus are tapped, which SDL turns into the
   mouse). They show while touch is in use and hide at a key, a mouse move or a gamepad button.
+
+### Short key presses
+
+The game reads the keyboard once per logic step in a game (DirectInput's buffered events, applied in order) and
+its state once per frame in the menus. In the original, as in the port before, a tap shorter than that interval was
+lost: the press and the release cancel out in one read, or both fall between two reads of the state. The port's
+DirectInput (`compat/src/dinput.cpp`) now shows a pressed key in the state once, and holds a release back to the
+next pass of buffered reads when its press was given in the same pass. This is the same on the desktop builds.
+Touch buttons still hold 40 ms: SDL reads the virtual pad's state once a frame.
+
+### The ImGui debug window
+
+The log's "ImGui debug enabled" comes from the original's hook (`LoadBeginSceneCBPtr` in `Source/winmain.cpp`); in
+every port build the hooked function is an empty stub (`port/src/debug_stubs.cpp`), so no debug UI exists to reach.
 
 ### Settings
 
@@ -137,7 +152,8 @@ settings, the game's overlays and touch controls).
 | Tab hidden, phone call, notification | The pause menu opens, sound is suspended, files are stored, the wake lock is released |
 | Leaving during a game | The browser asks to confirm (only in a game, not in the menus) |
 | QUIT or SAVE AND QUIT | The game hands over to the page (`port_WebQuit`), which stores the files and shows itself again |
-| Crash or abort | A message with Reload and Copy details (version, browser, the last 60 log lines) |
+| Crash or abort | A message with Reload and Copy details (version, browser, memory, the last 60 log lines); only for a trap in the game's code, an abort or an error in `reg2.js` |
+| A browser refusing a request (pointer lock just after Escape, full screen, wake lock, orientation, audio) | Logged, never fatal; pointer lock is asked again at the next click |
 | WebGL context lost | Files are stored, a message offers a reload; the game's textures are not rebuilt in place |
 | Portrait phone | A "turn your device" overlay; the game pauses behind it; `screen.orientation.lock` is tried in full screen |
 | iPhone (no full screen API) | A hint to Add to Home Screen; the manifest asks for full screen and landscape |
