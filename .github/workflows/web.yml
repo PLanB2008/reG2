@@ -1,7 +1,8 @@
 name: Web
 
 # The web build (port/web): the game compiled to WebAssembly and its page, published on GitHub Pages under /play/
-# from main, with the landing page (port/web/home) at the root; port/** branches build it without publishing. No game data is involved.
+# from main, with the landing page (port/web/home) at the root; port/** branches build it without publishing.
+# No game data is involved.
 on:
   push:
     branches: ['main', 'port/**']

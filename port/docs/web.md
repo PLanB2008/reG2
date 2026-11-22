@@ -136,6 +136,7 @@ settings, the game's overlays and touch controls).
 | Two tabs | Web Locks: the second tab offers to take over; the first one stops its game |
 | Tab hidden, phone call, notification | The pause menu opens, sound is suspended, files are stored, the wake lock is released |
 | Leaving during a game | The browser asks to confirm (only in a game, not in the menus) |
+| QUIT or SAVE AND QUIT | The game hands over to the page (`port_WebQuit`), which stores the files and shows itself again |
 | Crash or abort | A message with Reload and Copy details (version, browser, the last 60 log lines) |
 | WebGL context lost | Files are stored, a message offers a reload; the game's textures are not rebuilt in place |
 | Portrait phone | A "turn your device" overlay; the game pauses behind it; `screen.orientation.lock` is tried in full screen |

@@ -11,9 +11,12 @@ Scratch notes for following the work on `port/web`; `web.md` is the documentatio
 - Phone viewport with touch: menus by tapping, touch stick and buttons drive the game.
 - Native Linux build still builds and runs; MSVC6 build: 3430/3430.
 
+- `port/web/tests/e2e.mjs`: all scenarios pass in Chromium and Firefox (touch: Chromium only).
+- Memory in a game: 64 MB of wasm memory, plus about 380 MB of game files in JavaScript memory (290 MB music).
+
 ## Next
-- Firefox: finish the e2e run (the import used to wait on Firefox's persistent storage prompt, fixed).
-- Align with the landing page's latest style (ds.css adopted).
+- Not tested on real phones, Safari or iPhone; real gamepads in a browser.
+- Possible: music read on demand rather than all loaded, to save about 290 MB on phones.
 
 ## Decisions
 - Main loop: Asyncify limited to main, WinMain, GameWinMain, port_WebYield (`port/web/asyncify_only.json`):
