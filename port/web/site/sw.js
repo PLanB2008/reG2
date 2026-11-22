@@ -36,9 +36,12 @@ self.addEventListener('fetch', (event) => {
     try {
       return await fetch(request);
     } catch {
-      // Offline with this build not cached yet (or cleared): the page from any build kept, else a plain error.
-      const any = request.mode === 'navigate' ? await caches.match('./', { ignoreSearch: true }) : null;
-      return any || Response.error();
+      // Offline with this build not cached yet (or cleared), or the request was cancelled: the page from any build
+      // kept, a short page saying so, or a plain error for a file.
+      if (request.mode !== 'navigate') return Response.error();
+      return (await caches.match('./', { ignoreSearch: true })) ||
+        new Response('<!doctype html><title>reG2</title><p>reG2 needs the network once to start.</p>',
+          { status: 503, headers: { 'content-type': 'text/html' } });
     }
   })());
 });

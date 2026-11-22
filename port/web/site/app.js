@@ -470,7 +470,12 @@ $('play').onclick = () => game.start();
 const realPixelRatio = window.devicePixelRatio || 1;
 // SDL sizes the canvas by devicePixelRatio: the page sets it from the picture setting, so that a phone's 3x
 // screen is not drawn at its full resolution unless asked.
+// ?scale=0.5: the canvas at that part of its resolution, to compare frame rates.
+const urlScale = Math.min(2, Math.max(0.25, +new URLSearchParams(location.search).get('scale') || 1));
 function gamePixelRatio() {
+  return urlScale * pagePixelRatio();
+}
+function pagePixelRatio() {
   const dpr = realPixelRatio;
   if (prefs.quality === 'sharp') return dpr;
   if (prefs.quality === 'fast') return Math.min(dpr, 1);
@@ -583,9 +588,14 @@ const game = {
         // Phones: at most 2x anti-aliasing. Fewer flashes: no bloom (compat/src/video_port.cpp).
         if (isTouchDevice) M.ENV.GTA2_MSAA_CAP = '2';
         if (calm) M.ENV.GTA2_CALM = '1';
-        // ?msaa=N: the anti-aliasing cap, to compare frame rates.
-        const msaa = new URLSearchParams(location.search).get('msaa');
-        if (msaa !== null) M.ENV.GTA2_MSAA_CAP = msaa;
+        // Toggles for this session, to compare frame rates: ?msaa=N caps the anti-aliasing, ?bloom=0 turns bloom off,
+        // ?nofx=1 every ENHANCED rendering pass (lighting, shadows, occlusion, fire, bloom, anti-aliasing).
+        const params = new URLSearchParams(location.search);
+        if (params.get('msaa') !== null) M.ENV.GTA2_MSAA_CAP = params.get('msaa');
+        if (params.get('bloom') === '0') M.ENV.GTA2_CALM = '1';
+        if (params.get('nofx') === '1') M.ENV.GTA2_NOFX = '1';
+        // ?fps=N: the frame limit (0 a frame each refresh).
+        if (params.get('fps') !== null) M.ENV.GTA2_MAX_FPS = params.get('fps');
         // ?stats: the frame loop's rates in the console, every 5 seconds.
         if (new URLSearchParams(location.search).has('stats')) M.ENV.GTA2_LOOP_STATS = '1';
       }],
@@ -750,7 +760,8 @@ const game = {
     const gpu = [];
     let late = 0;
     const gl = $('canvas').getContext('webgl2');
-    const timer = gl && gl.getExtension('EXT_disjoint_timer_query_webgl2');
+    // Only with ?gpu=1: a query every frame may change how the browser paces them.
+    const timer = gl && new URLSearchParams(location.search).has('gpu') && gl.getExtension('EXT_disjoint_timer_query_webgl2');
     let query = null;
     const pending = [];
     let lastFrame = 0;
@@ -806,8 +817,29 @@ const game = {
   // Save as): the browser's frame intervals, the time in the game, in Asyncify, in sound, in storage, long tasks,
   // and what happened (pointer lock, full screen, visibility, resizes, the audio context's state).
   debugLog(M) {
-    const d = { raf: [], audio: 0, audioCalls: 0, io: 0, long: [], events: [] };
+    const d = { raf: [], audio: 0, audioCalls: 0, io: 0, long: [], events: [], gl: 0, draws: 0, fbos: 0, uploads: 0 };
     this.debug = d;
+    // WebGL calls a second: all of them, draws, framebuffer binds, bytes of buffer and texture uploads.
+    const gl = $('canvas').getContext('webgl2');
+    const draws = new Set(['drawArrays', 'drawElements', 'drawArraysInstanced', 'drawElementsInstanced', 'drawRangeElements']);
+    const bytes = (a) => (a && a.byteLength) || 0;
+    for (const name of Object.getOwnPropertyNames(WebGL2RenderingContext.prototype)) {
+      const fn = gl && gl[name];
+      if (typeof fn !== 'function' || name === 'constructor') continue;
+      gl[name] = function (...args) {
+        d.gl++;
+        if (draws.has(name)) d.draws++;
+        else if (name === 'bindFramebuffer') d.fbos++;
+        else if (name === 'bufferData' || name === 'bufferSubData') {
+          // (target, data or offset, ...): Emscripten passes the heap with an offset and a length.
+          const src = name === 'bufferData' ? args[1] : args[2];
+          const length = name === 'bufferData' ? args[4] : args[4];
+          if (typeof src === 'object' && src) d.uploads += length !== undefined ? length * (src.BYTES_PER_ELEMENT || 1) : bytes(src);
+        } else if (name === 'texImage2D' && args.length >= 9 && args[8]) d.uploads += args[3] * args[4] * 4;
+        else if (name === 'texSubImage2D' && args.length >= 9 && args[8]) d.uploads += args[4] * args[5] * 4;
+        return fn.apply(gl, args);
+      };
+    }
     let last = 0;
     const frame = (t) => {
       if (last) d.raf.push(t - last);
@@ -864,9 +896,10 @@ const game = {
         `${r.length ? fmt(sum / r.length) : '-'}/${r.length ? fmt(Math.max(...r)) : '-'} >20ms:${r.filter((x) => x > 20).length} ` +
         `>33ms:${r.filter((x) => x > 33).length} | game ${fmt(busy)}ms in ${frames} yields, asyncify+callback ` +
         `${fmt(callback - busy)}ms | audio ${fmt(d.audio)}ms in ${d.audioCalls} calls | storage (wall) ${fmt(d.io)}ms | ` +
-        `page thread busy (known) ${fmt(known)}ms of 1000 | state ${this.state()} | long tasks: ${d.long.join(', ') || '-'} | ` +
+        `page thread busy (known) ${fmt(known)}ms of 1000 | state ${this.state()} | gl calls ${d.gl} draws ${d.draws} ` +
+        `fbo binds ${d.fbos} uploads ${(d.uploads / 1048576).toFixed(1)} MB | long tasks: ${d.long.join(', ') || '-'} | ` +
         `events: ${d.events.join(', ') || '-'}`);
-      d.audio = d.audioCalls = d.io = 0;
+      d.audio = d.audioCalls = d.io = d.gl = d.draws = d.fbos = d.uploads = 0;
       d.long.length = 0;
       d.events.length = 0;
     }, 1000);

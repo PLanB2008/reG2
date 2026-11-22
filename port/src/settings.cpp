@@ -1,4 +1,5 @@
 #include "settings.hpp"
+#include <stdlib.h>
 #include "frame_loop.hpp"
 #include "Camera.hpp"
 #include "Frontend.hpp"
@@ -554,6 +555,15 @@ s32 ScreenDefault(Id id)
 
 s32 Screen(Id id)
 {
+#if defined(__EMSCRIPTEN__)
+    // The page's ?nofx (web/site/app.js): the ENHANCED rendering passes off for this session, to compare frame rates.
+    static const bool sNoFx = getenv("GTA2_NOFX") != NULL;
+    if (sNoFx && (id == kPerPixelLighting || id == kShadows || id == kAmbientOcclusion || id == kFireEffects ||
+                  id == kBloom || id == kAntiAliasing))
+    {
+        return 0;
+    }
+#endif
     return gRegistry.Get_Screen_Setting(ScreenName(id), ScreenDefault(id));
 }
 
