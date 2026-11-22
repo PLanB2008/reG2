@@ -27,9 +27,12 @@ function check(name, ok, detail = '') {
 
 async function open(mobile) {
   const dir = mkdtempSync(join(tmpdir(), 'reg2-e2e-'));
-  const options = { headless: true, locale: 'en-US', viewport: { width: 1280, height: 720 } };
+  // Silent: the game's sound would reach the speakers otherwise.
+  const options = { headless: true, locale: 'en-US', viewport: { width: 1280, height: 720 }, args: ['--mute-audio'],
+    firefoxUserPrefs: { 'media.volume_scale': '0.0' } };
+  if (which === 'firefox') delete options.args;
   // GPU=vulkan (or gl): Chromium on the machine's GPU instead of SwiftShader.
-  if (which === 'chromium' && process.env.GPU) options.args = ['--use-angle=' + process.env.GPU, '--enable-gpu', '--ignore-gpu-blocklist'];
+  if (which === 'chromium' && process.env.GPU) options.args.push('--use-angle=' + process.env.GPU, '--enable-gpu', '--ignore-gpu-blocklist');
   if (mobile) {
     Object.assign(options, { viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, hasTouch: true, isMobile: which === 'chromium' });
   }
