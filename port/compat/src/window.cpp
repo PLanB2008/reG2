@@ -128,6 +128,10 @@ SDL_Window* port_MainSDLWindow()
 
 void port_SetFullscreen(HWND h, bool fullscreen)
 {
+#if defined(__EMSCRIPTEN__)
+    // The page owns full screen (web/site/app.js): its button, F11 and Alt+Enter.
+    return;
+#endif
     if (h)
     {
         sFullscreen = fullscreen;

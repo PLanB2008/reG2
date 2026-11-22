@@ -54,9 +54,10 @@ const s32 kNumGameSettings = sizeof(kGameSettings) / sizeof(kGameSettings[0]);
 const Id kGraphicsSettings[] = {kPreset,
                                 kLightingGroup, kPerPixelLighting, kShadows, kAmbientOcclusion, kFireEffects, kHeadlights,
                                 kLightEffects, kBloom, kImageGroup, kTrueColour, kTextureFilter, kAntiAliasing};
-// The web build has no display modes, its frames follow the browser's and it has no OpenAL for 3D sound.
+// On the web the page owns full screen, there are no display modes, the frames follow the browser's and
+// there is no OpenAL for 3D sound.
 #if defined(__EMSCRIPTEN__)
-const Id kDisplaySettings[] = {kScreenGroup, kFullScreen, kFrameLimit, kShowFps, kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea};
+const Id kDisplaySettings[] = {kScreenGroup, kFrameLimit, kShowFps, kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea};
 #else
 const Id kDisplaySettings[] = {kScreenGroup, kFullScreen, kDisplayMode, kVsync, kFrameLimit, kShowFps,
                                kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea};

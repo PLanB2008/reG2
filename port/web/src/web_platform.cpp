@@ -57,5 +57,3 @@ extern "C" void port_WebYield()
         sLastYield = SDL_GetTicks();
     }
 }
-
-// The touch controls' virtual gamepad and the page's commands: defined in web_input.cpp.
