@@ -58,9 +58,11 @@ function registerServiceWorker() {
       reg.installing?.addEventListener('statechange', () => offer(reg));
     });
   }).catch((e) => console.warn('service worker:', e));
+  // The first install also changes the controller (clients.claim): only a replaced build needs the reload.
+  const hadController = !!navigator.serviceWorker.controller;
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!reloading && idle()) {
+    if (hadController && !reloading && idle()) {
       reloading = true;
       location.reload();
     }
@@ -344,7 +346,8 @@ $('do-import').onclick = async () => {
     await store.setInstall({ complete: true, date: Date.now(), check: result.check });
     importing = false;
     pending = null;
-    await store.persist();
+    // Not awaited: Firefox asks the player, and the answer may never come.
+    store.persist().then(updateStorageInfo);
     show('import', false);
     showHome();
   } catch (e) {
