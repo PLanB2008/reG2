@@ -1281,21 +1281,36 @@ void GLRenderer::Flush()
         mBatch.clear();
         return;
     }
-    BindTarget();
     const int scene = (mOptions.mBloom > 0.0f || mOptions.mPerPixelLighting || mTargetsShadows || mAoStrength > 0.0f) ? 1 : 0;
     if (scene != mActiveScene)
     {
         mActiveScene = scene;
         mStateValid = false;
     }
-    gl.glUseProgram(mScene[scene].mId);
-    gl.glUniform2f(mScene[scene].mScale, 2.0f / mLogicalW, 2.0f / mLogicalH);
-    gl.glUniform1i(mScene[scene].mSmooth, mSmoothMagnify && !(mBatchState & RS_TEXELS) ? 1 : 0);
-    gl.glBindVertexArray(mVao);
+    // The target, program and vertex array stay from the last batch unless something else drew since (mStateValid).
+    if (!mStateValid)
+    {
+        BindTarget();
+        gl.glUseProgram(mScene[scene].mId);
+        gl.glBindVertexArray(mVao);
+        gl.glActiveTexture(GL_TEXTURE0);
+        mFlushScale[0] = 0.0f;
+        mFlushSmooth = -1;
+    }
+    if (mFlushScale[0] != 2.0f / mLogicalW || mFlushScale[1] != 2.0f / mLogicalH)
+    {
+        mFlushScale[0] = 2.0f / mLogicalW;
+        mFlushScale[1] = 2.0f / mLogicalH;
+        gl.glUniform2f(mScene[scene].mScale, mFlushScale[0], mFlushScale[1]);
+    }
+    const int smooth = mSmoothMagnify && !(mBatchState & RS_TEXELS) ? 1 : 0;
+    if (smooth != mFlushSmooth)
+    {
+        mFlushSmooth = smooth;
+        gl.glUniform1i(mScene[scene].mSmooth, smooth);
+    }
     gl.glBindBuffer(GL_ARRAY_BUFFER, mVbo);
-    gl.glBufferData(GL_ARRAY_BUFFER, kMaxBatchVerts * sizeof(RVertex), NULL, GL_STREAM_DRAW);
-    gl.glBufferSubData(GL_ARRAY_BUFFER, 0, mBatch.size() * sizeof(RVertex), &mBatch[0]);
-    gl.glActiveTexture(GL_TEXTURE0);
+    gl.glBufferData(GL_ARRAY_BUFFER, mBatch.size() * sizeof(RVertex), &mBatch[0], GL_STREAM_DRAW);
     gl.glBindTexture(GL_TEXTURE_2D, mBatchTex ? mBatchTex->mId : mWhiteTex);
     const bool mipmap = mOptions.mTextureFilter > 0 && mBatchTex && mBatchTex->mLevels > 1 &&
                         (mBatchState & (RS_FILTER_LINEAR | RS_PIXEL_EXACT)) == RS_FILTER_LINEAR;

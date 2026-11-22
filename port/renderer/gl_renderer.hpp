@@ -169,6 +169,9 @@ class GLRenderer : public IRenderer
     u32 mBatchState;
     u32 mAppliedState;
     bool mStateValid;
+    // While mStateValid, what the last Flush set that the next may keep (each call costs in a browser).
+    f32 mFlushScale[2] = {0.0f, 0.0f};
+    int mFlushSmooth = -1;
 
     f32 mOffsetX;
     f32 mOffsetY;
