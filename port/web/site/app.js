@@ -52,6 +52,7 @@ function registerServiceWorker() {
     if (reg.waiting && navigator.serviceWorker.controller && idle()) reg.waiting.postMessage('update');
   };
   navigator.serviceWorker.register('sw.js').then((reg) => {
+    if (!reg) return;
     offer(reg);
     reg.addEventListener('updatefound', () => {
       reg.installing?.addEventListener('statechange', () => offer(reg));
