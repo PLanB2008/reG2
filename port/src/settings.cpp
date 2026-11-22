@@ -54,15 +54,24 @@ const s32 kNumGameSettings = sizeof(kGameSettings) / sizeof(kGameSettings[0]);
 const Id kGraphicsSettings[] = {kPreset,
                                 kLightingGroup, kPerPixelLighting, kShadows, kAmbientOcclusion, kFireEffects, kHeadlights,
                                 kLightEffects, kBloom, kImageGroup, kTrueColour, kTextureFilter, kAntiAliasing};
+// The web build has no display modes, its frames follow the browser's and it has no OpenAL for 3D sound.
+#if defined(__EMSCRIPTEN__)
+const Id kDisplaySettings[] = {kScreenGroup, kFullScreen, kFrameLimit, kShowFps, kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea};
+#else
 const Id kDisplaySettings[] = {kScreenGroup, kFullScreen, kDisplayMode, kVsync, kFrameLimit, kShowFps,
                                kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea};
+#endif
 #else
 const Id kGraphicsSettings[] = {kHeadlights, kLightEffects};
 const Id kDisplaySettings[] = {kScreenGroup, kFullScreen, kFrameLimit, kShowFps, kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea};
 #endif
 const s32 kNumGraphicsSettings = sizeof(kGraphicsSettings) / sizeof(kGraphicsSettings[0]);
 const s32 kNumDisplaySettings = sizeof(kDisplaySettings) / sizeof(kDisplaySettings[0]);
+#if defined(__EMSCRIPTEN__)
+const Id kSoundSettings[] = {kSfxVolume, kMusicVolume};
+#else
 const Id kSoundSettings[] = {kSfxVolume, kMusicVolume, k3dSound};
+#endif
 const s32 kNumSoundSettings = sizeof(kSoundSettings) / sizeof(kSoundSettings[0]);
 
 namespace
