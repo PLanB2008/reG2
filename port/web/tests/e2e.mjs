@@ -8,7 +8,7 @@
 //
 // Scenarios: import, play, save, exit, contextloss, offline, tabs, hide, keys, escape, resize, update, touch. Each runs in its own new profile (import first).
 import { chromium, firefox } from 'playwright';
-import { cpSync, createReadStream, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, createReadStream, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { extname, join } from 'node:path';
@@ -360,6 +360,23 @@ const scenarios = {
     await tab.goto(url);
     const got = await tab.waitForFunction(() => document.title === 'reG2 next', null, { timeout: 30000 }).then(() => true, () => false);
     check('update: a new tab has the new build', got, await tab.title());
+    // The first tab, opened before the new build and idle since, starts the importer from its old build folder:
+    // gone from the site and from the new worker's cache, so the page reloads once into the new build.
+    const build = readdirSync(dir).find((f) => f.startsWith('build-'));
+    renameSync(join(dir, build), join(dir, 'build-0000000000aa'));
+    writeFileSync(join(dir, 'app.js'), readFileSync(join(dir, 'app.js'), 'utf8').replace(build + '/', 'build-0000000000aa/'));
+    writeFileSync(join(dir, 'sw.js'), readFileSync(join(dir, 'sw.js'), 'utf8').replaceAll(build + '/', 'build-0000000000aa/')
+      .replace(/const VERSION = '[^']*'/, "const VERSION = 'third'"));
+    writeFileSync(join(dir, 'index.html'), readFileSync(join(dir, 'index.html'), 'utf8').replace('<title>reG2 next</title>', '<title>reG2 third</title>'));
+    // Another tab brings the new worker, which drops the old build's cache.
+    const third = await ctx.newPage();
+    await third.goto(url);
+    await third.waitForTimeout(5000);
+    await third.close();
+    const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#pick-file')]);
+    await chooser.setFiles(GTA2);
+    const moved = await page.waitForFunction(() => document.title === 'reG2 third', null, { timeout: 30000 }).then(() => true, () => false);
+    check('update: an old tab reloads into the new build', moved, await page.title());
     // The other tabs hold the storage: left first, as a player would.
     await page.goto('about:blank');
     await tab.close();

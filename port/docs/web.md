@@ -215,7 +215,7 @@ settings, the game's overlays and touch controls).
 | Reduced motion | No transitions on the page |
 | Photosensitivity | "Fewer flashes" turns bloom off |
 | Offline | The service worker serves the build; the game data is in IndexedDB |
-| New build | The usual service worker shape (`site/sw.js`): the page and its small scripts from the network first (3 s at most, else the cache), the game in a `build-<hash>/` folder from the cache first, a new worker taking over at once (skipWaiting, clients.claim). A new tab gets the new build; a tab already playing keeps the game it loaded in memory; offline, the cached build starts |
+| New build | The usual service worker shape (`site/sw.js`): the page and its small scripts from the network first (3 s at most, else the cache), the game in a `build-<hash>/` folder from the cache first, a new worker taking over at once (skipWaiting, clients.claim). A new tab gets the new build; a tab already playing keeps the game it loaded in memory; a tab opened before the new build reloads once when it finds its build folder gone; offline, the cached build starts |
 
 ## Tests
 

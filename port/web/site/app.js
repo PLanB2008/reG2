@@ -47,6 +47,21 @@ applyTranslations();
 registerServiceWorker();
 start();
 
+// A tab opened before a new build was published asks for its old build folder, gone from the site: it reloads once
+// for the new one, instead of failing.
+async function reloadIfBuildGone() {
+  try {
+    if (!navigator.onLine || sessionStorage.getItem('reg2-reloaded')) return false;
+    const response = await fetch(BUILD + 'reg2.js', { method: 'HEAD', cache: 'no-store' });
+    if (response.status !== 404) return false;
+    sessionStorage.setItem('reg2-reloaded', '1');
+    location.reload();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // The service worker (sw.js) keeps the site for offline starts and gets new builds by itself.
 function registerServiceWorker() {
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
@@ -208,7 +223,9 @@ function runWorker(message, onFile) {
         reject(new Error(data.message));
       }
     };
-    w.onerror = (e) => reject(new Error(e.message || 'worker'));
+    w.onerror = async (e) => {
+      if (!(await reloadIfBuildGone())) reject(new Error(e.message || 'worker'));
+    };
     w.postMessage(message);
   });
 }
@@ -506,7 +523,7 @@ const game = {
       await loadScript(BUILD + 'reg2.js');
       await this.run(wasm, files);
     } catch (e) {
-      this.crash(t('startFailedTitle'), t('startFailed', e.message || e), e);
+      if (!(await reloadIfBuildGone())) this.crash(t('startFailedTitle'), t('startFailed', e.message || e), e);
     }
   },
 
@@ -591,6 +608,9 @@ const game = {
     };
     const M = await window.createReg2(Module);
     this.module = M;
+    try {
+      sessionStorage.removeItem('reg2-reloaded');
+    } catch {}
     this.watchWrites(M.FS);
     this.setupPage(M);
     show('loading', false);
