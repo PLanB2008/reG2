@@ -5,7 +5,7 @@
 //   python3 -m http.server -d <site> 8000 &
 //   SITE=http://127.0.0.1:8000/ GTA2=~/GTA2INSTALLER.exe OUT=/tmp/shots node port/web/tests/e2e.mjs [chromium|firefox] [scenario...]
 //
-// Scenarios: import, play, save, contextloss, offline, tabs, hide, keys, touch. Each runs in its own new profile (import first).
+// Scenarios: import, play, save, contextloss, offline, tabs, hide, keys, escape, touch. Each runs in its own new profile (import first).
 import { chromium, firefox } from 'playwright';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -213,6 +213,32 @@ const scenarios = {
     await page.waitForTimeout(1500);
     check('keys: no failure screen', await hidden(page, 'crash'));
     check('keys: still in a game', (await state(page)) & 2);
+    await close();
+  },
+
+  // Escape opens the pause menu whether the game or the browser gets it (the browser takes it to leave pointer
+  // lock); Escape again resumes, a click takes the pointer again; the page's pause button opens the menu too.
+  async escape() {
+    const { page, close } = await open();
+    await importGame(page);
+    await startGame(page, true);
+    // In a game with TWIN STICK the browser may hold the pointer (lock), so the button is clicked by script.
+    await page.evaluate(() => document.getElementById('pause-button').click());
+    await page.waitForTimeout(800);
+    check('escape: pause button', (await state(page)) & 4);
+    await press(page, 'Escape');
+    await page.waitForTimeout(800);
+    for (let round = 0; round < 3; round++) {
+      await page.mouse.click(640, 360);
+      await page.waitForTimeout(500);
+      await press(page, 'Escape');
+      await page.waitForTimeout(800);
+      check(`escape: pause menu (${round + 1})`, (await state(page)) & 4);
+      await press(page, 'Escape');
+      await page.waitForTimeout(800);
+      check(`escape: resumed (${round + 1})`, !((await state(page)) & 4));
+    }
+    check('escape: no failure screen', await hidden(page, 'crash'));
     await close();
   },
 

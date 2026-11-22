@@ -22,6 +22,9 @@ bool port_PrepareGameFolder(bool)
 {
     // SDL's own yields (in SDL_Delay and the swap) would need Asyncify on every stack that reaches them.
     SDL_SetHint(SDL_HINT_EMSCRIPTEN_ASYNCIFY, "0");
+    // The sound is mixed on the page's thread, between frames: SDL doubles this to 4096 frames, 85 ms at 48 kHz,
+    // which rides over the game's short hitches where its default 2048 ran dry.
+    SDL_SetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES, "2048");
     return chdir("/reG2") == 0;
 }
 
@@ -44,12 +47,15 @@ extern "C" unsigned long long port_WebRefreshNs()
     return static_cast<unsigned long long>(port_WebFramePeriodMs() * 1e6);
 }
 
+bool port_FrontendActive();
+
 // Called at the top of GameWinMain's loop: after a frame was drawn, when the loop waits for the next step,
-// or at the latest every 50 ms, the browser gets its turn (events, presenting the canvas).
+// or at the latest every 50 ms, the browser gets its turn (events, sound, presenting the canvas). The frontend
+// polls the clock between its 30 Hz updates without waiting: after 2 ms of that, it yields too.
 extern "C" void port_WebYield()
 {
     const Uint64 now = SDL_GetTicks();
-    if (sPresented || sIdle || now - sLastYield >= 50)
+    if (sPresented || sIdle || now - sLastYield >= 50 || (now - sLastYield >= 2 && port_FrontendActive()))
     {
         sPresented = false;
         sIdle = false;

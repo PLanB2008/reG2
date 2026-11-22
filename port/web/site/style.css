@@ -88,12 +88,14 @@ body.playing { overflow: hidden; overscroll-behavior: none; }
 #rotate p::before { content: "\21BB"; display: block; font-size: 3rem; color: var(--amber); }
 
 #game-bar { position: absolute; top: max(0.5rem, env(safe-area-inset-top)); right: calc(50% + 6px); z-index: 3; }
-#fs-button {
+#fs-button, #pause-button {
   width: 48px; height: 48px; border: 2px solid rgba(255,255,255,0.5); background: rgba(0,0,0,0.35); cursor: pointer;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5'%3E%3Cpath d='M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'/%3E%3C/svg%3E");
   background-size: 24px; background-repeat: no-repeat; background-position: center; opacity: 0.6;
 }
-#fs-button:hover { opacity: 1; }
+#fs-button:hover, #pause-button:hover { opacity: 1; }
+#pause-button { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Crect x='6' y='5' width='4' height='14'/%3E%3Crect x='14' y='5' width='4' height='14'/%3E%3C/svg%3E"); margin-right: 8px; }
+#toast { position: absolute; top: 4.5rem; left: 50%; transform: translateX(-50%); margin: 0; padding: 0.5rem 1rem; background: rgba(0, 0, 0, 0.75); color: #fff; z-index: 4; pointer-events: none; }
 #game-bar { transition: opacity 0.3s; }
 #game-bar.idle { opacity: 0; pointer-events: none; }
 body.no-fullscreen #fs-button, body.fullscreen #fs-button { display: none; }

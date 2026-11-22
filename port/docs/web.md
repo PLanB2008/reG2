@@ -108,6 +108,25 @@ the game as installed.
   brake, hand brake, exit, fire; always: pause; in the menus: back (menus are tapped, which SDL turns into the
   mouse). They show while touch is in use and hide at a key, a mouse move or a gamepad button.
 
+### Escape and the pause menu
+
+The browser takes the first Escape to leave pointer lock (held in a game with TWIN STICK) or full screen, so the
+game would never see it. In full screen the page asks for Keyboard Lock (Chromium) so Escape reaches the game, and
+says once that holding Escape leaves full screen. Losing pointer lock or full screen during play opens the pause
+menu, as the player's Escape would; an Escape the browser delivers as well within 400 ms is dropped, else the menu
+would close again. The pause menu also opens from the page's pause button, the touch controls' and a gamepad's
+Start. Leaving it, the next click on the game takes the pointer again (a refusal just after Escape is retried).
+
+### Sound
+
+SDL plays through a ScriptProcessorNode, mixed on the page's thread between frames. The menus used to crackle: the
+frontend polls the clock between its 30 Hz updates without waiting, which kept the thread busy for 32 ms of every
+frame; the loop now yields after 2 ms of that (`port_WebYield`). In a game, short hitches (streaming, a level's
+first effects) left gaps of 80 to 370 ms between audio callbacks with SDL's 2048-frame buffer; the web build asks
+for 4096 frames (85 ms at 48 kHz, `SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES`), after which none was measured over 30 s
+of play. The browser's sample rate is used as is (SDL opens the device at it and converts the game's mix). An
+AudioWorklet would need the game's mixer in another thread, so pthreads.
+
 ### Short key presses
 
 The game reads the keyboard once per logic step in a game (DirectInput's buffered events, applied in order) and

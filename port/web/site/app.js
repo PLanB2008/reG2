@@ -701,6 +701,12 @@ const game = {
     screen.orientation?.addEventListener?.('change', () => this.checkOrientation());
     document.addEventListener('fullscreenchange', () => this.onFullscreen());
     $('fs-button').onclick = () => toggleFullscreen();
+    $('pause-button').onclick = () => this.pause();
+    // The browser takes the first Escape to leave pointer lock (or full screen) and the game never sees it: losing
+    // either during play counts as the player's Escape.
+    document.addEventListener('pointerlockchange', () => {
+      if (!document.pointerLockElement && lockWanted) this.pause();
+    });
     // The full screen button shows while the mouse moves, then fades: it sits over the HUD's corner.
     let idleTimer = 0;
     addEventListener('pointermove', () => {
@@ -716,6 +722,27 @@ const game = {
     this.applyPrefs();
     this.hookAudio();
     this.checkOrientation();
+  },
+
+  // The game's pause menu, in a game and not already open.
+  pause() {
+    const state = this.state();
+    if (!(state & 2) || state & 4) return;
+    this.pausedAt = performance.now();
+    try {
+      this.module._port_WebPause();
+    } catch {}
+  },
+
+  // A short message over the game, shown once per page load for each text.
+  toast(text) {
+    this.toasts ??= new Set();
+    if (this.toasts.has(text)) return;
+    this.toasts.add(text);
+    const el = $('toast');
+    el.textContent = text;
+    show('toast');
+    setTimeout(() => show('toast', false), 4000);
   },
 
   state() {
@@ -754,9 +781,7 @@ const game = {
 
   onVisibility() {
     if (document.hidden) {
-      try {
-        this.module?._port_WebPause();
-      } catch {}
+      this.pause();
       this.audioContext()?.suspend().catch(() => {});
       this.flush();
       this.releaseWakeLock();
@@ -768,6 +793,13 @@ const game = {
 
   onKey(e) {
     if (!this.module) return;
+    // A browser that also delivers the Escape that left pointer lock or full screen: the pause menu just opened
+    // for it, and the game would close it again.
+    if (e.key === 'Escape' && performance.now() - (this.pausedAt || 0) < 400) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return;
+    }
     // Alt+Enter: full screen, as the desktop builds.
     if (e.key === 'Enter' && e.altKey) {
       e.preventDefault();
@@ -782,19 +814,20 @@ const game = {
   onFullscreen() {
     const on = !!document.fullscreenElement;
     document.body.classList.toggle('fullscreen', on);
-    // In full screen, Escape goes to the game (the pause menu); holding it leaves full screen.
-    if (on) navigator.keyboard?.lock?.(['Escape']).catch(() => {});
+    // In full screen, Escape goes to the game (the pause menu); holding it leaves full screen (Chromium's Keyboard
+    // Lock). Without it, the Escape that left full screen opens the pause menu.
+    if (on) {
+      navigator.keyboard?.lock?.(['Escape']).then(() => this.toast(t('holdEscape'))).catch(() => {});
+    } else {
+      this.pause();
+    }
     if (on && isTouchDevice) screen.orientation?.lock?.('landscape').catch(() => {});
     this.checkOrientation();
   },
 
   checkOrientation() {
     const portrait = isTouchDevice && innerHeight > innerWidth;
-    if (portrait && $('rotate').hidden) {
-      try {
-        this.module?._port_WebPause();
-      } catch {}
-    }
+    if (portrait && $('rotate').hidden) this.pause();
     show('rotate', portrait);
   },
 
