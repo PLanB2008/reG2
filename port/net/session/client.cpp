@@ -956,7 +956,11 @@ bool net::Client::ChangeGame(const std::string& map, const std::string& gmp, con
                              int game, int players, int pauseTicks)
 {
     std::string missing;
-    if (!PlainNames(BadMapName(map, gmp, sty, scr), "the server", &missing) || !HaveMap(gmp, sty, scr, &missing) || !SameMap(map, gmp, sty, scr, print, &missing))
+    if (players <= mSlot)
+    {
+        missing = "the server's next map takes " + std::to_string(players) + " players, not enough for us (player " + std::to_string(mSlot) + ")";
+    }
+    if (!missing.empty() || !PlainNames(BadMapName(map, gmp, sty, scr), "the server", &missing) || !HaveMap(gmp, sty, scr, &missing) || !SameMap(map, gmp, sty, scr, print, &missing))
     {
         printf("net: frame %u, %s\n", mFrame, missing.c_str());
         SendLeave(missing);
