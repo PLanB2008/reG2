@@ -941,20 +941,21 @@ void Hud_Arrow::DrawArrow()
             pCam = pPlayer->get_camera();
 
 #if defined(GTA2_PORT)
-            // Port: an arrow with a user remap in its high byte (SetPlayerArrowColour)
-            const s16 arrow_remap = mTargets.mArrowSprtIdx >> 8;
-            if (arrow_remap)
+            // Port: a look's arrow may have a palette of its own (PortArrowIndex, SetPlayerArrowColour)
+            s32 arrow_sprite, arrow_type, arrow_remap;
+            PortArrowDecode(mTargets.mArrowSprtIdx, &arrow_sprite, &arrow_type, &arrow_remap);
+            if (arrow_type)
             {
-                arrow_palette_type = palette_types_enum::user_remaps_7;
+                arrow_palette_type = arrow_type;
             }
             DrawFigure(sprite_types_enum::user_6,
-                       mTargets.mArrowSprtIdx & 0xFF,
+                       (s16)arrow_sprite,
                        mScreenPosX,
                        mScreenPosY,
                        mRotation,
                        pCam->mUiScale,
                        arrow_palette_type,
-                       arrow_remap,
+                       (s16)arrow_remap,
                        1,
                        14u,
                        true);
@@ -1024,11 +1025,11 @@ MATCH_FUNC(0x5d0dc0)
 void Hud_Arrow::SetPlayerArrowColour(Ped* pPed)
 {
 #if defined(GTA2_PORT)
-    // Port: each look's arrow from one table (port/src/player_looks.hpp); a user remap goes in the high byte (DrawArrow)
+    // Port: each look's arrow from one table (port/src/player_looks.hpp), its palette with it (DrawArrow)
     const PortPlayerLook* pLook = PortLookOf(pPed->mRemap);
     if (pLook && pLook->mArrowSprite)
     {
-        mTargets.mArrowSprtIdx = (s16)(pLook->mArrowSprite | pLook->mArrowRemap << 8);
+        mTargets.mArrowSprtIdx = PortArrowIndex(*pLook);
     }
 #else
     switch (pPed->mRemap)
