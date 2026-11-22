@@ -5,7 +5,7 @@
 //   python3 -m http.server -d <site> 8000 &
 //   SITE=http://127.0.0.1:8000/ GTA2=~/GTA2INSTALLER.exe OUT=/tmp/shots node port/web/tests/e2e.mjs [chromium|firefox] [scenario...]
 //
-// Scenarios: import, play, save, exit, contextloss, offline, tabs, hide, keys, escape, touch. Each runs in its own new profile (import first).
+// Scenarios: import, play, save, exit, contextloss, offline, tabs, hide, keys, escape, resize, touch. Each runs in its own new profile (import first).
 import { chromium, firefox } from 'playwright';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -297,6 +297,23 @@ const scenarios = {
       check(`escape: resumed (${round + 1})`, !((await state(page)) & 4));
     }
     check('escape: no failure screen', await hidden(page, 'crash'));
+    await close();
+  },
+
+  // The page resized in a game (as full screen does): the game takes the canvas' new size, not a scaled frame.
+  async resize() {
+    const { page, close } = await open();
+    const modes = [];
+    page.on('console', (m) => { if (/Vid_SetMode \d+: \d+x\d+/.test(m.text())) modes.push(m.text().match(/(\d+x\d+)/)[1]); });
+    await importGame(page);
+    await startGame(page, true);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.waitForTimeout(2000);
+    check('resize: game at the new size', modes.includes('1280x900'), modes.join(' '));
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.waitForTimeout(2000);
+    check('resize: and back', modes[modes.length - 1] === '1280x720', modes.join(' '));
+    await shot(page, 'resize');
     await close();
   },
 

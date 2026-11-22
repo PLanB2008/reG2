@@ -738,6 +738,34 @@ const game = {
   showStats(M) {
     const box = $('stats');
     show('stats');
+    // The GPU's time for each browser frame (EXT_disjoint_timer_query_webgl2, where the browser has it), and the
+    // frames that came late (more than 1.5 display periods after the previous one).
+    const gpu = [];
+    let late = 0;
+    const gl = $('canvas').getContext('webgl2');
+    const timer = gl && gl.getExtension('EXT_disjoint_timer_query_webgl2');
+    let query = null;
+    const pending = [];
+    let lastFrame = 0;
+    const frame = (t) => {
+      if (lastFrame && t - lastFrame > 1.5 * (M.webFrames?.period || 16.7)) late++;
+      lastFrame = t;
+      if (timer && !gl.isContextLost()) {
+        if (query) {
+          gl.endQuery(timer.TIME_ELAPSED_EXT);
+          pending.push(query);
+        }
+        while (pending.length && gl.getQueryParameter(pending[0], gl.QUERY_RESULT_AVAILABLE)) {
+          const q = pending.shift();
+          if (!gl.getParameter(timer.GPU_DISJOINT_EXT)) gpu.push(gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6);
+          gl.deleteQuery(q);
+        }
+        query = gl.createQuery();
+        gl.beginQuery(timer.TIME_ELAPSED_EXT, query);
+      }
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
     let lastPresents = 0;
     let lastTime = performance.now();
     let tick = 0;
@@ -751,8 +779,12 @@ const game = {
       lastTime = now;
       f.busy = f.frames = 0;
       const canvas = $('canvas');
-      box.textContent = `${fps.toFixed(0)} fps  game ${busy.toFixed(1)} ms/frame  display ${(1000 / f.period).toFixed(0)} Hz\n` +
+      const gpuMs = gpu.length ? gpu.reduce((a, b) => a + b, 0) / gpu.length : NaN;
+      gpu.length = 0;
+      box.textContent = `${fps.toFixed(0)} fps  game ${busy.toFixed(1)} ms  gpu ${isNaN(gpuMs) ? '?' : gpuMs.toFixed(1)} ms  ` +
+        `late frames ${late}  display ${(1000 / f.period).toFixed(0)} Hz\n` +
         `canvas ${canvas.width}x${canvas.height} (x${devicePixelRatio.toFixed(2)})  wasm ${M.HEAPU8.length >> 20} MB\n${this.glRenderer()}`;
+      late = 0;
       if (++tick % 5 === 0) console.log('web: ' + box.textContent.replace(/\n/g, ' | '));
     }, 1000);
   },
