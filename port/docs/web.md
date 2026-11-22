@@ -35,7 +35,8 @@ the WebGL renderer (`?gpu=1` adds the GPU's time, from a timer query each frame)
 second: frame intervals, time in the game, Asyncify, sound and storage, WebGL calls, draws, framebuffer binds and
 upload bytes, long tasks and page events. Session toggles, to compare frame rates without touching the settings:
 `?fps=N` (frame limit, 0 every refresh), `?scale=F` (canvas resolution), `?msaa=N`, `?bloom=0`, `?nofx=1` (the
-ENHANCED rendering passes off).
+ENHANCED rendering passes off). `?soundlog` logs, once a second, the sounds started, those restarted before the
+mixer reached them, and the time from a start to the mix that plays it (`GTA2_SOUND_LOG` natively); `=2` adds a line per start and per first mix.
 
 ### Frame rate in a browser
 
@@ -153,6 +154,12 @@ first effects) left gaps of 80 to 370 ms between audio callbacks with SDL's 2048
 for 4096 frames (85 ms at 48 kHz, `SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES`), after which none was measured over 30 s
 of play. The browser's sample rate is used as is (SDL opens the device at it and converts the game's mix). An
 AudioWorklet would need the game's mixer in another thread, so pthreads.
+
+With 85 ms buffers, a sample started between two callbacks used to begin at the next buffer's start: a machine gun
+firing every 100 ms (3 steps) was heard at 85, 85, 85, 85, 171 ms, faster with a hole, and a restart in the same
+window dropped the first shot. `compat/src/miles.cpp` now times each start and stop and places it at the same point
+of the next buffer, for a constant delay of one buffer: the shots are heard 100 ms apart, as natively (measured with
+`?soundlog=2` and `GTA2_SOUND_LOG=2`, the same weapon held 15 s).
 
 ### Short key presses
 

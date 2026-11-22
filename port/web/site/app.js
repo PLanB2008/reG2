@@ -590,6 +590,8 @@ const game = {
         if (params.get('msaa') !== null) M.ENV.GTA2_MSAA_CAP = params.get('msaa');
         if (params.get('bloom') === '0') M.ENV.GTA2_CALM = '1';
         if (params.get('nofx') === '1') M.ENV.GTA2_NOFX = '1';
+        // ?soundlog: the sound starts, those lost and their delay, once a second; =2 also each one (compat/src/miles.cpp).
+        if (params.has('soundlog')) M.ENV.GTA2_SOUND_LOG = params.get('soundlog') || '1';
         // ?fps=N: the frame limit (0 a frame each refresh).
         if (params.get('fps') !== null) M.ENV.GTA2_MAX_FPS = params.get('fps');
         // ?stats: the frame loop's rates in the console, every 5 seconds.
