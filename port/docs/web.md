@@ -80,7 +80,7 @@ IndexedDB, through `idb-keyval`: one entry per file of the game folder (`data/..
 `gta2_registry.ini`, `gta2gl.ini`) as a Blob, and a record saying whether the imported data is complete. At Play,
 the files are copied into Emscripten's in-memory file system under `/reG2`, except the music: its tracks are empty
 files until the game opens one (`compat/src/miles.cpp` calls `port_WebLoadFile`); the page then reads it from
-IndexedDB while the stream plays silence, and keeps the last two tracks in memory. That keeps about 90 to 120 MB
+IndexedDB while the stream plays silence, and keeps the last two tracks in memory. That keeps 90 to 145 MB
 of game files in memory instead of 380 MB (a track is 6 to 32 MB). The game's writes outside `data/` are stored again 250 ms after the file is closed (a
 wrapper on `FS.close`, `FS.unlink` and `FS.rename`), and on `pagehide` and when the tab is hidden. After an import
 the page asks for persistent storage (`navigator.storage.persist`).
