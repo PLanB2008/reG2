@@ -116,7 +116,7 @@ function stick(zone, onMove, onEnd) {
       if (e.pointerId === id) end();
     });
   }
-  return { end, forget: (pointerId) => pointerId === id && end() };
+  return { end, forget: (pointerId) => (pointerId === null || pointerId === id) && end() };
 }
 
 // The menus' d-pad: one finger points a direction from its centre and may slide to another. setBits(bits) gets the
@@ -203,7 +203,7 @@ function dpad(el, setBits) {
     if (dir) arms[dir].classList.remove('down');
     dir = applied = 0;
   };
-  return { release, forget: (pointerId) => pointerId === id && end() };
+  return { release, forget: (pointerId) => id !== null && (pointerId === null || pointerId === id) && end() };
 }
 
 export class TouchControls {
@@ -298,22 +298,25 @@ export class TouchControls {
         el.classList.remove('down');
       });
       this.forgets.push((id) => {
-        if (pointers.delete(id)) update();
+        if (id === null ? pointers.size : pointers.delete(id)) {
+          if (id === null) pointers.clear();
+          update();
+        }
       });
     }
     // No long-press menu on the controls.
     root.addEventListener('contextmenu', (e) => e.preventDefault());
     // A release the button itself did not get (the finger left it, the browser cancelled the touch, a lost
-    // capture) still releases it; with no finger left on the screen, or the page in the background, all is released.
+    // capture) still releases it, as does the last finger lifted (null: any pointer). A quick tap still lasts
+    // MIN_PRESS_MS. The page in the background releases all at once.
     for (const type of ['pointerup', 'pointercancel']) {
       addEventListener(type, (e) => {
-        for (const forget of this.forgets) forget(e.pointerId);
-        for (const s of this.sticks) s.forget(e.pointerId);
+        this.forget(e.pointerId);
       }, true);
     }
     for (const type of ['touchend', 'touchcancel']) {
       addEventListener(type, (e) => {
-        if (!e.touches.length) this.release();
+        if (!e.touches.length) this.forget(null);
       }, { capture: true, passive: true });
     }
     addEventListener('blur', () => this.release());
@@ -395,6 +398,11 @@ export class TouchControls {
       }
     }
     requestAnimationFrame(() => this.poll());
+  }
+
+  forget(pointerId) {
+    for (const forget of this.forgets) forget(pointerId);
+    for (const s of this.sticks) s.forget(pointerId);
   }
 
   release() {
