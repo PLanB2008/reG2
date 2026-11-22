@@ -1,8 +1,9 @@
 #include "Player.hpp"
 #if defined(GTA2_PORT)
-// Port: the autosave's restore and TWIN STICK.
+// Port: the autosave's restore, TWIN STICK and the network players' HUD colours.
 #include "../port/src/saves.hpp"
 #include "../port/src/twin_stick.hpp"
+#include "../port/src/player_looks.hpp"
 #endif
 #include "car_shop_type.hpp"
 #include "hud_message_priority.hpp"
@@ -2470,6 +2471,17 @@ void Player::ChangeLifeCountByAmount(s32 amount)
 MATCH_FUNC(0x569A10)
 void Player::ColorScoreFromRemap()
 {
+#if defined(GTA2_PORT)
+    // Port: each look's colour from one table (port/src/player_looks.hpp), the original's and more for more players
+    const PortPlayerLook* pLook = PortLookOf(mPlayerPed->mRemap);
+    if (pLook && pLook->mHudPalette)
+    {
+        mScores.GetScoreDigits()->ColorDigits(palette_types_enum::user_remaps_7, pLook->mHudPalette);
+        mScores.GetMultiplayerFragDigits()->ColorDigits(palette_types_enum::user_remaps_7, pLook->mHudPalette);
+        mHudPalette = pLook->mHudPalette;
+        mHudPaletteType = palette_types_enum::user_remaps_7;
+    }
+#else
     switch (mPlayerPed->mRemap)
     {
         case ped_remap_enum::ped_remap_yakuza:
@@ -2514,27 +2526,8 @@ void Player::ColorScoreFromRemap()
             mHudPaletteType = palette_types_enum::user_remaps_7;
             break;
 
-#if defined(GTA2_PORT)
-        // Port: more players than the original's 6 (MAX_PLAYERS): the blond redneck, Elvis and the police look get
-        // colours of their own, from the user remaps the HUD leaves unused (pink, cyan, teal)
-        case ped_remap_enum::ped_remap_blond_head_redneck:
-        case ped_remap_enum::ped_remap_elvis:
-        case ped_remap_enum::ped_remap_blue_police:
-        {
-            const s16 palette = mPlayerPed->mRemap == ped_remap_enum::ped_remap_blond_head_redneck ? 11
-                                : mPlayerPed->mRemap == ped_remap_enum::ped_remap_elvis           ? 9
-                                                                                                  : 1;
-            mScores.GetScoreDigits()->ColorDigits(palette_types_enum::user_remaps_7, palette);
-            mScores.GetMultiplayerFragDigits()->ColorDigits(palette_types_enum::user_remaps_7, palette);
-            mHudPalette = palette;
-            mHudPaletteType = palette_types_enum::user_remaps_7;
-            break;
-        }
-        case ped_remap_enum::ped_remap_red_head_redneck:
-#else
         case ped_remap_enum::ped_remap_red_head_redneck:
         case ped_remap_enum::ped_remap_blond_head_redneck:
-#endif
             mScores.GetScoreDigits()->ColorDigits(palette_types_enum::user_remaps_7, 4);
             mScores.GetMultiplayerFragDigits()->ColorDigits(palette_types_enum::user_remaps_7, 4);
             mHudPalette = 4;
@@ -2544,6 +2537,7 @@ void Player::ColorScoreFromRemap()
         default:
             return;
     }
+#endif
 }
 
 MATCH_FUNC(0x569C20)

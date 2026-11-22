@@ -37,6 +37,7 @@
 #include "winmain.hpp"
 #if defined(GTA2_PORT)
 #include "../port/src/net_hooks.hpp" // the network game's hooks (port/docs/netcode.md)
+#include "../port/src/player_looks.hpp"
 #endif
 
 #if defined(GTA2_PORT_SDL)
@@ -1022,6 +1023,14 @@ inline s32 TagGame::GetPlayerTime(Player* pPlayer)
 MATCH_FUNC(0x5d0dc0)
 void Hud_Arrow::SetPlayerArrowColour(Ped* pPed)
 {
+#if defined(GTA2_PORT)
+    // Port: each look's arrow from one table (port/src/player_looks.hpp); a user remap goes in the high byte (DrawArrow)
+    const PortPlayerLook* pLook = PortLookOf(pPed->mRemap);
+    if (pLook && pLook->mArrowSprite)
+    {
+        mTargets.mArrowSprtIdx = (s16)(pLook->mArrowSprite | pLook->mArrowRemap << 8);
+    }
+#else
     switch (pPed->mRemap)
     {
         case 11:
@@ -1033,27 +1042,10 @@ void Hud_Arrow::SetPlayerArrowColour(Ped* pPed)
         case 8:
             mTargets.mArrowSprtIdx = 3;
             break;
-#if defined(GTA2_PORT)
-        // Port: more players than the original's 6 (MAX_PLAYERS): the blond redneck, Elvis and the police look get
-        // arrows of their own, an arrow drawn with a user remap (the high byte, DrawArrow): rust, cyan, mustard
-        case 5:
-            mTargets.mArrowSprtIdx = 4;
-            break;
-        case 6:
-            mTargets.mArrowSprtIdx = 2 | 1 << 8;
-            break;
-        case 12:
-            mTargets.mArrowSprtIdx = 6 | 9 << 8;
-            break;
-        case 0:
-            mTargets.mArrowSprtIdx = 1 | 13 << 8;
-            break;
-#else
         case 5:
         case 6:
             mTargets.mArrowSprtIdx = 4;
             break;
-#endif
         case 7:
             mTargets.mArrowSprtIdx = 5;
             break;
@@ -1067,6 +1059,7 @@ void Hud_Arrow::SetPlayerArrowColour(Ped* pPed)
         default:
             return;
     }
+#endif
 }
 
 MATCH_FUNC(0x5d0e40)

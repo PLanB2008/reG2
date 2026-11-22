@@ -202,7 +202,7 @@ void net::engine::KeepPlayerArrows()
         {
             const ArrowTrace& t = a.mTargets.mPrimaryTarget;
             const bool mine = a.mTargets.mGangInfo.mInUse && t.mTargetType == ArrowTargetType::Player_6 && t.mPlayer == p;
-            // Made before its player had a ped (the slots past the scripts' 6 get one later): uncoloured, sprite 0 (a cursor)
+            // Made while its player had no ped (CreatePlayerArrows): uncoloured, sprite 0 (a cursor)
             if (mine && a.mTargets.mArrowSprtIdx == 0)
             {
                 a.SetPlayerArrowColour(p->mPlayerPed);
