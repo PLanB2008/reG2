@@ -463,7 +463,8 @@ the input, to `recordings/session-<n>.rec` (the newest 10, each stopped at 200 M
 `GTA2_NET_RECORD=<file>` elsewhere, `off` none). A client does nothing but react to what arrives and to its own input,
 so `--replay <file>` plays the session again without a server, tick for tick, as fast as the game runs: a minute in
 about 2 s, the same every time. **F12, or the key under Esc, marks a moment** in play: the client and its replay print
-`net: mark <n> at frame <f>`, so a bug seen in play is "the last session, mark 2".
+`net: mark <n> at frame <f>`, so a bug seen in play is "the last session, mark 2". A recording replays only on a build
+of the same protocol (its welcome's version): another one's is refused with both numbers.
 
 ## Security
 

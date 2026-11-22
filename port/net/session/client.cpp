@@ -83,9 +83,8 @@ bool net::Client::StartReplay(const char* path, engine::NetworkGame* pGame, std:
 {
     Welcome welcome;
     mReplay.reset(new ClientReplay());
-    if (!mReplay->Open(path, &welcome))
+    if (!mReplay->Open(path, &welcome, error))
     {
-        *error = std::string("not a recording: ") + path;
         return false;
     }
     if (!PlainNames(BadMapName(welcome), "the recording", error))
