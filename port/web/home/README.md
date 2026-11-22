@@ -28,7 +28,8 @@ Then open <http://localhost:8000/>. The site is dark only.
 - `img/`: copies of `docs/images/*` (the reG2 logo for dark backgrounds, screenshots) and `port/resources/reg2_256.png`, so the
   page works when only this folder is published. Git stores identical files once, so the copies cost nothing
   in the repository; replace them when the originals change.
-- `fonts/`: Big Shoulders and Barlow, both under the SIL Open Font License (licences next to them). `ds.css`
+- `fonts/`: Saira (variable, latin subset, roman and italic) and Share Tech Mono, both under the SIL Open
+  Font License (licences next to them), from Google Fonts. `ds.css`
   loads them from `fonts/` beside itself, which is this folder once published.
 - `home.css`: this page's layout only.
 
@@ -43,12 +44,13 @@ cuts, slanted display type, gang colours. Use the tokens instead of literal valu
   `.acc-amber`, `.acc-cyan`, `.acc-lime` or `.acc-pink`, which sets `--accent`; labels, bullets, link
   underlines, rules and image shadows inside it follow `--accent`. Text on an accent block uses `--accent-ink`.
 - `--lcd` and `--lcd-ink`: the pager (`.pager`), used for the beta warning.
-- Type: `--font-display` (Big Shoulders, uppercase headings) and `--font-body` (Barlow); sizes
-  `--step--1` to `--step-5`.
+- Type: `--font-display` (Saira black italic at `--display-stretch`, 125% wide, for uppercase headings),
+  `--font-body` (Saira at normal width) and `--font-hud` (Share Tech Mono, for tags, captions, the pager and
+  `.hud` readouts); sizes `--step--1` to `--step-5`.
 - Shape: `--space-1` to `--space-7`, `--rule` (thick rules), `--radius` (square corners), `--cut` (angled
   corners of `.btn.primary`), `--slant` (skew of `.slant` and `.label`), `--measure`, `--page-max`, `--gutter`.
 - Components: `.btn` (`.primary`, `.big`, `.danger`), `.row`, `.panel` (`.warn`), `.label` (slanted title
-  block, `<h2 class="label"><span>Title</span></h2>`), `.tag` (sticker), `.pager`, `.slant`, `.bar`,
+  block, `<h2 class="label">Title</h2>`), `.tag` (sticker), `.pager`, `.hud`, `.scanlines` (faint CRT lines over a positioned box), `.slant`, `.bar`,
   `.stripe` (on `body`), `.nocase` (keeps macOS or gta2_re in uppercase headings), `.foot`, `.skip`, `.lede`,
   `.small`.
 
