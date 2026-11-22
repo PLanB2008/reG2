@@ -34,6 +34,13 @@ foreach(t ${net_tests})
     endif()
 endforeach()
 
+# The test map's script compiler (scripts/mis2scr.py), if there is a Python
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_Interpreter_FOUND)
+    add_test(NAME test_mis2scr COMMAND Python3::Interpreter ${NET}/tests/test_mis2scr.py)
+    set_tests_properties(test_mis2scr PROPERTIES LABELS net)
+endif()
+
 # The rest is the game's: built into it with the game's flags (CMakeLists.txt). Its own NetPlay and NetUi stand in for
 # the game's DirectPlay ones (engine/netplay.cpp).
 file(GLOB_RECURSE net_game_src ${NET}/*.cpp)
