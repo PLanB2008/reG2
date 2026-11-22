@@ -476,7 +476,7 @@ bool net::Server::Fill(Slot& s, const Snapshot& fixed, std::vector<Item>& items,
         }
         engine::SetSnapshotReach(candidate, mConfig.interestRadius); // nothing it has goes missing
         SortById(candidate);
-        w = BitWriter();
+        w.Clear();
         SnapshotHeader h = {mTick, base ? base->tick : mTick, s.lastCmdTick, forwarded};
         WriteSnapshotHeader(w, h);
         WriteDelta(w, schema, base ? *base : kEmpty, candidate, Env().snapCheck);
@@ -485,7 +485,7 @@ bool net::Server::Fill(Slot& s, const Snapshot& fixed, std::vector<Item>& items,
             mStats.inArea += (uint32_t)items.size();
             mStats.fresh += (uint32_t)fresh;
             mStats.cut += fresh < items.size();
-            s.sent[mTick % kRing] = candidate;
+            s.sent[mTick % kRing] = std::move(candidate);
             for (const Item& it : items)
             {
                 if (it.pick == 2)
