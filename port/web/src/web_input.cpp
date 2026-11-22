@@ -1,4 +1,5 @@
 // What the page asks of the game between frames: its state, the touch controls' gamepad, the pause.
+#include "Frontend.hpp"
 #include "Game.hpp"
 #include "Ped.hpp"
 #include "Player.hpp"
@@ -77,7 +78,7 @@ EMSCRIPTEN_KEEPALIVE double port_WebPlayer(int what)
     return pSprite ? (what ? pSprite->mXy.y.mValue : pSprite->mXy.x.mValue) / 16384.0 : 0;
 }
 
-// For tests: a parked car just west of the player on foot, which he gets into (a car layout to test by touch).
+// For tests: a parked car just west of the player on foot, for the touch controls' ENTER.
 EMSCRIPTEN_KEEPALIVE int port_WebTestCar()
 {
     const Player* pPlayer = port_GameRunning() && gGame_0x40 ? gGame_0x40->mLocalPlayer : NULL;
@@ -89,18 +90,18 @@ EMSCRIPTEN_KEEPALIVE int port_WebTestCar()
     }
     Fix16 x = pSprite->mXy.x;
     x.mValue -= 16384 * 3 / 2;
-    Car* pCar = gCarManager_6C->SpawnCarAtCorrectZ(x, pSprite->mXy.y, kAngZero_6F804C, car_model_enum::BUICK);
-    if (!pCar)
+    return gCarManager_6C->SpawnCarAtCorrectZ(x, pSprite->mXy.y, kAngZero_6F804C, car_model_enum::BUICK) ? 1 : 0;
+}
+
+// For tests: the frontend's page (0), its selected option (1) and its state (2); -1 outside the frontend.
+EMSCRIPTEN_KEEPALIVE int port_WebMenu(int what)
+{
+    if (!gFrontend)
     {
-        return 0;
+        return -1;
     }
-    // ENTER's own objective, aimed at this car: he walks to its door and gets in.
-    pPed->SetObjective2(objectives_enum::no_obj_0);
-    pPed->SetObjective(objectives_enum::enter_car_as_driver_35);
-    pPed->mEnterCarAsPassenger = 0;
-    pPed->mTargetObjectiveCar = pCar;
-    pPed->mTargetCarDoor = 0;
-    return 1;
+    const int page = gFrontend->mCurrentPageIdx;
+    return what == 0 ? page : what == 1 ? gFrontend->mMenuPagesArray[page].mCurrentOptionIdx : static_cast<int>(gFrontend->mState);
 }
 
 // The mouse in the canvas' CSS pixels, where the game draws its cursor: with the pointer locked, the page's own

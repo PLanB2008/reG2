@@ -9,7 +9,7 @@ target_link_options(gta2 PRIVATE
     -sASYNCIFY -sASYNCIFY_IGNORE_INDIRECT -sASYNCIFY_ONLY=@${web}/asyncify_only.json
     -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sALLOW_MEMORY_GROWTH -sINITIAL_MEMORY=64MB -sSTACK_SIZE=2MB
     -sMODULARIZE -sEXPORT_NAME=createReg2 -sENVIRONMENT=web -sFORCE_FILESYSTEM -sINVOKE_RUN=0
-    -sEXPORTED_RUNTIME_METHODS=FS,ENV,HEAPU8,callMain,ccall -sEXPORTED_FUNCTIONS=_main,_port_WebState,_port_WebPause,_port_WebPad,_port_WebCursorX,_port_WebCursorY,_port_WebPlayer,_port_WebTestCar
+    -sEXPORTED_RUNTIME_METHODS=FS,ENV,HEAPU8,callMain,ccall -sEXPORTED_FUNCTIONS=_main,_port_WebState,_port_WebPause,_port_WebPad,_port_WebCursorX,_port_WebCursorY,_port_WebPlayer,_port_WebTestCar,_port_WebMenu
     --js-library ${web}/src/web_library.js)
 set_target_properties(gta2 PROPERTIES SUFFIX .js)
 

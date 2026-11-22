@@ -393,7 +393,7 @@ const scenarios = {
     rmSync(dir, { recursive: true, force: true });
   },
 
-  // A phone in landscape: the menus by touch, the stick and a button.
+  // A phone in landscape: the menus with the d-pad and OK, the stick.
   async touch() {
     const { ctx, page, close } = await open(true);
     await importGame(page);
@@ -401,21 +401,26 @@ const scenarios = {
     await page.waitForFunction(() => window.reg2 && window.reg2.module);
     await page.waitForTimeout(6000);
     check('touch: controls shown', !(await hidden(page, 'touch')));
-    const back = await page.locator('#touch .tbtn.menu-only').boundingBox();
-    await page.touchscreen.tap(back.x + back.width / 2, back.y + back.height / 2);
-    await page.waitForTimeout(2500);
-    // The intro (if BACK did not skip it), the style, PLAY, START PLAY IN AREA.
-    for (let i = 0; i < 5 && !((await state(page)) & 2); i++) {
-      await press(page, 'Enter');
-      await page.waitForTimeout(2500);
-    }
+    const tapAt = async (locator) => {
+      const b = await locator.boundingBox();
+      await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2);
+      await page.waitForTimeout(1500);
+    };
+    const ok = page.locator('#touch .tbtn.menu-only', { hasText: 'OK' });
+    const option = () => page.evaluate(() => window.reg2.module._port_WebMenu(1));
+    // The d-pad and OK only: the intro, the style, then down and up on the start menu.
+    await tapAt(ok);
+    await tapAt(ok);
+    await tapAt(page.locator('#touch .dpad .d'));
+    check('touch: the d-pad moves down the menu', (await option()) === 1);
+    await tapAt(page.locator('#touch .dpad .u'));
+    check('touch: and up', (await option()) === 0);
+    // PLAY, START PLAY IN AREA.
+    for (let i = 0; i < 4 && !((await state(page)) & 2); i++) await tapAt(ok);
     await page.waitForFunction(() => window.reg2.state() & 2, null, { timeout: 60000 });
     await page.waitForTimeout(3000);
     const cdp = await ctx.newCDPSession(page);
     const player = (i) => page.evaluate((i) => window.reg2.module._port_WebPlayer(i), i);
-    // The keys above hid the controls: a first touch brings them back.
-    await page.touchscreen.tap(420, 60);
-    await page.waitForTimeout(500);
     const before = [await player(0), await player(1)];
     // The stick pushed down (the player starts below a wall): he walks.
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 150, y: 250 }] });
