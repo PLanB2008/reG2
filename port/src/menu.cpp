@@ -91,7 +91,7 @@ const s32 kDefaultControls[kNumControls] = {DIK_UP, DIK_DOWN, DIK_LEFT, DIK_RIGH
                                             DIK_SPACE, DIK_Z, DIK_X, DIK_C, DIK_LMENU, DIK_RSHIFT};
 const wchar_t* const kControlNames[kNumControls] = {L"FORWARD", L"BACKWARD", L"LEFT", L"RIGHT", L"ATTACK",
                                                     L"ENTER OR EXIT", L"JUMP OR BRAKE", L"PREVIOUS WEAPON",
-                                                    L"NEXT WEAPON", L"SPECIAL 1", L"SPECIAL 2", L"SPECIAL 3"};
+                                                    L"NEXT WEAPON", L"HORN OR TAUNT", L"LOOK AROUND", L"SPECIAL 3"};
 // Pad binding codes (compat/src/pad.cpp): buttons 0 to 11, then the stick and d-pad directions.
 const wchar_t* const kPadButtonNames[12] = {L"A", L"B", L"X", L"Y", L"LB", L"RB", L"BACK", L"START", L"L3", L"R3", L"LT", L"RT"};
 const s32 kPadB = 1;
