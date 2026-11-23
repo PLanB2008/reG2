@@ -18,13 +18,13 @@ namespace
 {
 const int kNumControls = 12;
 const DWORD kDefaultKeys[kNumControls] = {DIK_UP, DIK_DOWN, DIK_LEFT, DIK_RIGHT, DIK_LCONTROL, DIK_RETURN,
-                                          DIK_SPACE, DIK_Z, DIK_X, DIK_TAB, DIK_LMENU, DIK_RSHIFT};
+                                          DIK_SPACE, DIK_Z, DIK_X, DIK_C, DIK_LMENU, DIK_RSHIFT};
 // Forward, backward, left, right, attack, enter/exit, jump/handbrake, previous and next weapon,
 // special 1 to 3.
 const int kDefaultPad[kNumControls] = {kPadUp, kPadDown, kPadLeft, kPadRight, 0, 3, 1, 4, 5, 2, 10, 11};
-// W, S, A, D and F by position.
+// W, S, A, D, F and E by position.
 const int kDefaultAlt[kNumControls] = {DIK_W, DIK_S, DIK_A, DIK_D, kMouseCode + SDL_BUTTON_LEFT, DIK_F, 0,
-                                       kWheelUpCode, kWheelDownCode, 0, 0, 0};
+                                       kWheelUpCode, kWheelDownCode, DIK_E, 0, 0};
 const Sint16 kThreshold = 24000;
 
 const int kMaxGamepads = 8;
