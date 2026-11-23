@@ -37,8 +37,8 @@ h1 span { display: block; }
   padding: var(--space-7) var(--edge);
   border-top: 1px solid var(--line);
 }
-/* A bold bar over the title column. */
-.sec { background: linear-gradient(var(--text), var(--text)) var(--edge) 0 / 14rem 4px no-repeat; }
+/* A bold red bar over the title column. */
+.sec { background: linear-gradient(var(--red), var(--red)) var(--edge) 0 / 14rem 6px no-repeat; }
 .sec > h2 { font-size: var(--step-0); margin: 0.3rem 0 0; }
 .prose { max-width: var(--measure); }
 .body > :first-child, .body > :first-child > :first-child { margin-top: 0; }
@@ -96,7 +96,7 @@ figcaption { margin-top: var(--space-2); font-size: var(--step--1); color: var(-
 }
 
 @media (max-width: 56rem) {
-  .sec { grid-template-columns: minmax(0, 1fr); padding-top: var(--space-6); padding-bottom: var(--space-6); background-size: 5rem 4px; }
+  .sec { grid-template-columns: minmax(0, 1fr); padding-top: var(--space-6); padding-bottom: var(--space-6); background-size: 5rem 6px; }
   .sec > h2 { font-size: var(--step-1); margin-bottom: var(--space-3); }
   .items dt { color: var(--muted); }
 }

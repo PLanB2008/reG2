@@ -38,8 +38,8 @@ Then open <http://localhost:8000/>. The site is dark only.
 ## Design (`ds.css`)
 
 Shared by this page and the game page, dark only. The look follows the game's own frontend: a darkened city
-behind the menu, wide tracked capitals, white items and the selected one in red. One accent, red, and only
-for the selected or main action. The screenshots carry the colour.
+behind the menu, wide tracked capitals, white items and the selected one in red. One accent, red, for the selected or main action and the
+section bars. The screenshots carry the colour.
 
 - Colours: `--bg`, `--bg-2` (raised surfaces), `--line`, `--text`, `--muted`, `--red` (the selection and main
   action), `--red-ink` (text on red), `--amber` (warnings), `--ok`, `--focus`.
@@ -51,6 +51,6 @@ for the selected or main action. The screenshots carry the colour.
   moves the selection), `.nocase` (keeps macOS or gta2_re in `.caps`), `.muted`, `.small`, `.skip`.
 
 Two touches of the era, kept faint: a fine grain over the background (an SVG noise tile) and a bold bar over each
-section title. Both in `home.css`, not on the game page.
+section title, in the red of the game's menus. Both in `home.css`, not on the game page.
 
 No Rockstar or GTA2 logos, fonts or artwork as branding; no gradients, glows or other decorative effects.
