@@ -452,9 +452,24 @@ int port_GetAltBinding(int control)
     if (!sAltRead)
     {
         sAltRead = true;
+        const DWORD kUnsaved = 0xFFFFFFFF;
+        bool unsaved[kNumControls];
         for (int i = 0; i < kNumControls; i++)
         {
-            sAlt[i] = static_cast<int>(ReadControl("alt_%d", i, static_cast<DWORD>(kDefaultAlt[i])));
+            const DWORD saved = ReadControl("alt_%d", i, kUnsaved);
+            unsaved[i] = saved == kUnsaved;
+            sAlt[i] = static_cast<int>(unsaved[i] ? static_cast<DWORD>(kDefaultAlt[i]) : saved);
+        }
+        // A default the player already uses on another control stays unbound.
+        for (int i = 0; i < kNumControls; i++)
+        {
+            for (int j = 0; unsaved[i] && sAlt[i] && j < kNumControls; j++)
+            {
+                if (j != i && (sAlt[j] == sAlt[i] || static_cast<int>(KeyFor(j)) == sAlt[i]))
+                {
+                    sAlt[i] = 0;
+                }
+            }
         }
     }
     return sAlt[control];
