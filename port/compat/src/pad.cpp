@@ -228,12 +228,12 @@ void WriteControl(const char* format, int control, DWORD value)
 // Read in every message loop poll (port_UpdatePad): from the registry again only once it changed.
 DWORD KeyFor(int control)
 {
-    static DWORD sKeys[kNumBindings];
+    static DWORD sKeys[kNumControls];
     static unsigned sKeysGeneration;
     static bool sKeysRead;
     if (!sKeysRead || sKeysGeneration != port_RegistryGeneration())
     {
-        for (int i = 0; i < kNumBindings; i++)
+        for (int i = 0; i < kNumControls; i++)
         {
             sKeys[i] = ReadControl("%d", i, kDefaultKeys[i]) & 0xFF;
         }
