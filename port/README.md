@@ -208,9 +208,10 @@ Saves are kept per city, in `player/`:
   the pause menu offers RETRY JOB or RETRY FRENZY (RESTART while it runs), with the job's name, the
   money then and how long ago. Passing it, a church save or a new game deletes the checkpoint.
 - FRENZY RESPAWN (`port_kf_respawn`): a failed kill frenzy is no longer marked started in the save, and a new skull
-  or vehicle and its trigger are back at once; standing on the skull starts it again. The old vehicle locks the
-  player out once he leaves it and despawns as traffic does; while it or the player is on the new one's spot, it stays
-  the frenzy's instead. A passed one stays gone. Off in network games and bonus stages.
+  and its trigger are back at once; standing on the skull starts it again. A vehicle frenzy's old vehicle locks the
+  player out once he leaves it and despawns as traffic does, and a new one is parked with its trigger the first time no
+  car is within 3 blocks of its spot and no player sees it. A passed one stays gone. Off in network games and bonus
+  stages.
 - INFINITE LIVES (`port_infinite_lives`, off in both styles): dying costs no life, so never GAME OVER, but still ends at
   the hospital; it sets the original's `do_infinite_lives` debug flag, at once in a game, and changes nothing in network
   games, which count no lives.
