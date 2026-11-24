@@ -651,6 +651,7 @@ bool GLRenderer::Init(GLFuncs::Loader loader, const char** ppError)
     gl.glGenTextures(2, mBlurTex);
     gl.glGenFramebuffers(1, &mMsFbo);
     gl.glGenRenderbuffers(3, mMsColour);
+    gl.glGenFramebuffers(2, mBlitFbo);
 
     mBatch.reserve(kMaxBatchVerts);
     mReady = true;
@@ -690,6 +691,7 @@ void GLRenderer::Shutdown()
     gl.glDeleteTextures(2, mBlurTex);
     gl.glDeleteFramebuffers(1, &mMsFbo);
     gl.glDeleteRenderbuffers(3, mMsColour);
+    gl.glDeleteFramebuffers(2, mBlitFbo);
     gl.glDeleteSamplers(1, &mSamplerMip);
     gl.glDeleteTextures(1, &mWhiteTex);
     gl.glDeleteTextures(1, &mOccTex);
@@ -886,24 +888,37 @@ void GLRenderer::ResolveMultisample()
     {
         return;
     }
-    gl.glBindFramebuffer(GL_READ_FRAMEBUFFER, mMsFbo);
-    gl.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, mFbo);
     const bool used[3] = {true, mTargetsBloom, mTargetsShadows};
+    const GLuint targets[3] = {mFboTex, mBloomSrcTex, mShadowTex};
     for (s32 i = 0; i < 3; i++)
     {
-        if (!used[i])
+        if (used[i])
         {
-            continue;
+            BlitColour(mMsColour[i], true, targets[i], 0, 0, mTargetW, mTargetH);
         }
-        const GLenum buffers[3] = {i == 0 ? (GLenum)GL_COLOR_ATTACHMENT0 : (GLenum)GL_NONE,
-                                   i == 1 ? (GLenum)GL_COLOR_ATTACHMENT1 : (GLenum)GL_NONE, GL_COLOR_ATTACHMENT2};
-        gl.glReadBuffer(GL_COLOR_ATTACHMENT0 + i);
-        gl.glDrawBuffers(i + 1, buffers);
-        gl.glBlitFramebuffer(0, 0, mTargetW, mTargetH, 0, 0, mTargetW, mTargetH, GL_COLOR_BUFFER_BIT, GL_NEAREST);
     }
-    SetDrawBuffers();
-    gl.glReadBuffer(GL_COLOR_ATTACHMENT0);
     gl.glBindFramebuffer(GL_FRAMEBUFFER, mFbo);
+}
+
+// Through framebuffers with only these two attached: Apple's AMD driver crashes in blits from or to framebuffers
+// with several colour attachments (issue 17).
+void GLRenderer::BlitColour(GLuint src, bool srcRenderbuffer, GLuint dstTex, s32 x0, s32 y0, s32 x1, s32 y1)
+{
+    gl.glBindFramebuffer(GL_READ_FRAMEBUFFER, mBlitFbo[0]);
+    gl.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, mBlitFbo[1]);
+    if (srcRenderbuffer)
+    {
+        gl.glFramebufferRenderbuffer(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, src);
+    }
+    else
+    {
+        gl.glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, src, 0);
+    }
+    gl.glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, dstTex, 0);
+    gl.glBlitFramebuffer(x0, y0, x1, y1, x0, y0, x1, y1, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    // Detached so that freed buffers aren't kept alive by these framebuffers.
+    gl.glFramebufferRenderbuffer(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, 0);
+    gl.glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0, 0);
 }
 
 // For the bound scene target: colour, bloom source and shadow mask, as the options have them.
