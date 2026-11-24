@@ -263,6 +263,15 @@ void ExplodingScore::DrawNumbers()
     PortFrameLoop::StepLocked<Fix16> keep(mX, mY);
 #endif
     pCamera->ProjectWorldToScreen_4B90E0(mX, mY, mZ, &screen_x, &screen_y);
+#if defined(GTA2_PORT)
+    // Port: the original's middle half of the screen and pull, in 640x480 pixels; scaled to the real screen, or
+    // above 640x480 the scores jump to the top left.
+    const Fix16 kFp160 = Fix16(pCamera->mScreenPxWidth / 4);
+    const Fix16 kFp480 = Fix16(pCamera->mScreenPxWidth * 3 / 4);
+    const Fix16 kFp120 = Fix16(pCamera->mScreenPxHeight / 4);
+    const Fix16 kFp360 = Fix16(pCamera->mScreenPxHeight * 3 / 4);
+    const Fix16 kFp255_702BC4 = Fix16(255 * pCamera->mScreenPxWidth / 640);
+#endif
     if (screen_x < kFp160)
     {
         screen_x = kFp160 - screen_x;
@@ -435,16 +444,31 @@ void ExplodingScore::DrawSingleNumber(s32 number_to_draw, s32 xpos_sub)
         base_scale = kFpOne_702DE4;
     }
 
+#if defined(GTA2_PORT)
+    // Port: the digits' offsets are 640x480 pixels; scaled like the digits, or above 640x480 they overlap.
+    Fix16 x_to_use = proj_x + Fix16(x_off) * pCam->mUiScale;
+    Fix16 y_to_use = proj_y + Fix16(y_off) * pCam->mUiScale;
+#else
     Fix16 x_to_use = proj_x + Fix16(x_off);
     Fix16 y_to_use = proj_y + Fix16(y_off);
+#endif
 
     if (x_to_use >= kFpZero_702DE0)
     {
+#if defined(GTA2_PORT)
+        // Port: the real screen's edges, not 640x480's.
+        if (x_to_use <= Fix16(pCam->mScreenPxWidth))
+#else
         if (x_to_use <= Fix16(640))
+#endif
         {
             if (y_to_use >= kFpZero_702DE0)
             {
+#if defined(GTA2_PORT)
+                if (y_to_use <= Fix16(pCam->mScreenPxHeight))
+#else
                 if (y_to_use <= Fix16(480))
+#endif
                 {
                     s32 palette_type = palette_types_enum::user_remaps_7;
                     Fix16 finalScale = pCam->mUiScale * base_scale;
