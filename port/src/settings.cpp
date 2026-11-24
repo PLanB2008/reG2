@@ -58,10 +58,10 @@ const Id kGraphicsSettings[] = {kPreset,
 // On the web the page owns full screen, there are no display modes, the frames follow the browser's and
 // there is no OpenAL for 3D sound.
 #if defined(__EMSCRIPTEN__)
-const Id kDisplaySettings[] = {kScreenGroup, kFrameLimit, kShowFps, kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea};
+const Id kDisplaySettings[] = {kScreenGroup, kFrameLimit, kShowFps, kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea, kMinimap};
 #else
 const Id kDisplaySettings[] = {kScreenGroup, kFullScreen, kDisplayMode, kVsync, kFrameLimit, kShowFps,
-                               kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea};
+                               kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea, kMinimap};
 #endif
 #else
 const Id kGraphicsSettings[] = {kHeadlights, kLightEffects};
@@ -81,7 +81,7 @@ namespace
 const wchar_t* const kNames[kCount] = {L"SOUND EFFECTS", L"MUSIC", L"3D SOUND", L"TEXT SPEED", L"LANGUAGE",
                                        L"FULL SCREEN", L"BRIGHTNESS", L"LIGHTING", L"EXPLODING SCORES", L"FRAME LIMIT",
                                        L"TRUE COLOUR", L"BLOOM", L"PIXEL LIGHTING", L"CAR HEADLIGHTS",
-                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"STRAFE ANIMATION", L"VIBRATION", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS", L"FRENZY RESPAWN", L"INFINITE LIVES", L"AMBIENT OCCLUSION", L"FIRE EFFECTS", L"CROSSHAIR"};
+                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"STRAFE ANIMATION", L"VIBRATION", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS", L"FRENZY RESPAWN", L"INFINITE LIVES", L"AMBIENT OCCLUSION", L"FIRE EFFECTS", L"CROSSHAIR", L"MINIMAP"};
 const wchar_t* const kGroupNames[kGroupsEnd - kCount - 1] = {L"SAVES", L"DIFFICULTY", L"TIME OF DAY", L"LIGHTING", L"IMAGE", L"SCREEN", L"VIEW"};
 
 struct Language
@@ -364,6 +364,10 @@ const Translation kTranslations[] = {
     {L"AIM CAMERA", NULL, {L"CAMERA DE VISEE", L"ZIELKAMERA", L"CAMERA DI MIRA", L"CÁMARA DE MIRA"}},
     {L"STRAFE ANIMATION", NULL, {L"ANIMATION DE STRAFE", L"STRAFE-ANIMATION", L"ANIMAZIONE STRAFE", L"ANIMACIÓN DE STRAFE"}},
     {L"CROSSHAIR", NULL, {L"VISEUR", L"FADENKREUZ", L"MIRINO", L"PUNTO DE MIRA"}},
+    {L"MINIMAP", NULL, {L"MINI-CARTE", L"MINIKARTE", L"MINIMAPPA", L"MINIMAPA"}},
+    {L"A MAP OF THE STREETS AROUND YOU, WITH JOBS AND TARGETS", NULL,
+     {L"UN PLAN DES RUES AUTOUR DE VOUS, AVEC MISSIONS ET CIBLES", L"EINE KARTE DER STRASSEN UM SIE, MIT JOBS UND ZIELEN",
+      L"UNA MAPPA DELLE STRADE INTORNO A TE, CON LAVORI E BERSAGLI", L"UN MAPA DE LAS CALLES A TU ALREDEDOR, CON TRABAJOS Y OBJETIVOS"}},
     {L"VIBRATION", NULL, {L"VIBRATIONS", L"VIBRATION", L"VIBRAZIONE", L"VIBRACIÓN"}},
     {L"TWIN STICK", NULL, {L"DOUBLE STICK", L"TWIN-STICK", L"DOPPIO STICK", L"DOBLE STICK"}},
     {L"DEFAULT KEYS", NULL, {L"CONTROLES PAR DEFAUT", L"STANDARDSTEUERUNG", L"COMANDI PREDEFINITI", L"CONTROLES PREDETERMINADOS"}},
@@ -515,6 +519,8 @@ const char* ScreenName(Id id)
             return "gl_ambient_occlusion";
         case kFireEffects:
             return "gl_fire_effects";
+        case kMinimap:
+            return "port_minimap";
         default:
             return "car_headlights";
     }
@@ -938,6 +944,11 @@ bool Autosave()
     return Screen(kAutosave) != 0;
 }
 
+bool Minimap()
+{
+    return Screen(kMinimap) != 0;
+}
+
 bool Retry()
 {
     return Screen(kRetry) != 0;
@@ -1006,6 +1017,8 @@ const wchar_t* Help(Id id)
             return L"SOFT SHADE IN CORNERS AND AT THE FOOT OF WALLS";
         case kFireEffects:
             return L"HEAT HAZE, SMOKE AND EMBERS AROUND FIRES";
+        case kMinimap:
+            return L"A MAP OF THE STREETS AROUND YOU, WITH JOBS AND TARGETS";
 #if defined(GTA2_PORT_SDL)
         case kPreset:
         {
@@ -1159,6 +1172,7 @@ void ApplyStyle(Style style)
     gRegistry.Set_Screen_Setting(ScreenName(kAutosave), enhanced);
     gRegistry.Set_Screen_Setting(ScreenName(kRetry), enhanced);
     gRegistry.Set_Screen_Setting(ScreenName(kKfRespawn), enhanced);
+    gRegistry.Set_Screen_Setting(ScreenName(kMinimap), enhanced);
     gRegistry.Set_Screen_Setting(ScreenName(kInfiniteLives), 0);
     // Unlimited with vsync: a frame each refresh of the screen. In a browser 60: drawing at 120 or 144 Hz loads its
     // compositor for little, with the game's 30 steps a second.
@@ -1394,6 +1408,7 @@ void Change(Id id, s32 delta)
         case kKfRespawn:
         case kAmbientOcclusion:
         case kFireEffects:
+        case kMinimap:
             gRegistry.Set_Screen_Setting(ScreenName(id), Screen(id) ? 0 : 1);
             break;
         case kInfiniteLives:

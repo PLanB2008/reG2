@@ -74,6 +74,9 @@ the gamepad.
 
 ![Twin stick](docs/images/pc_twin_stick.gif)
 
+**Minimap.** DISPLAY > MINIMAP: a small map in the bottom left corner, built from the level itself, with the church,
+garages, phones, the job's targets and the gangs' territories.
+
 **And also** 3D sound, camera zoom, HUD scale, a frame rate counter. The new menus follow the game's language, as far as your
 copy of the game has it.
 

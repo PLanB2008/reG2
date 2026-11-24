@@ -49,6 +49,7 @@ enum Id
     kAmbientOcclusion,
     kFireEffects,
     kCrosshair,
+    kMinimap,
     kCount,
     // Group titles in the pages' lists: the settings after one, up to the next, are under it.
     kSavesGroup,
@@ -109,6 +110,9 @@ bool Clock();
 
 // HUD SCALE: 1 for the original's size.
 f32 HudScale();
+
+// MINIMAP: a map of the streets around the player in a corner of the HUD (minimap.hpp).
+bool Minimap();
 
 // CONTROLS: TWIN STICK moves and aims apart on foot (twin_stick.hpp).
 bool TwinStick();

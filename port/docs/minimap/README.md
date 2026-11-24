@@ -1,7 +1,8 @@
 # A minimap for the port
 
-Status: design study, nothing in the game yet. This note records the frame designs, the map
-treatments, where every map layer comes from, and how it would be built.
+Status: in the game as DISPLAY > MINIMAP (`port/src/minimap.cpp`), in a lighter style than the frames
+below: see [In the game](#in-the-game). The rest of this note is the design study it came from: the frame
+designs, the map treatments, where every map layer comes from, and how it would be built.
 
 The goal is a minimap that looks like part of GTA2's own HUD rather than a modern overlay.
 
@@ -168,6 +169,32 @@ Differences with this study: the map here is built from the level's `.gmp` and `
 time instead of prebuilt tiles, so custom levels work without extra files, and the frame follows
 GTA2's HUD rather than GTA3's. Their code derives from re3, so it is a reference for features
 and blip rules, not code to copy.
+
+## In the game
+
+DISPLAY > MINIMAP, off by default and in CLASSIC, on in ENHANCED.
+
+- **Place and look:** the bottom left corner, 76x76 HUD pixels, 8 from the safe area's edges, scaled by
+  HUD SCALE. A thin dark border and an N on its top edge, no frame: lighter than the frames above,
+  closer to the original HUD's flat parts. On wide screens the brief, centred with the layout, stays
+  clear of it; where a brief reaches it (4:3), it fades while the brief shows.
+- **Map:** built when a level loads from `gMap_0x370` and the style's tiles, 4 texels per block: each
+  texel the average colour of 16x16 texels of the top lid, turned and flipped as its face word says, a
+  lid more than 60% see-through above the ground skipped (tree tops, wires), roofs lighter as they
+  rise and a cast shadow to the bottom right (`render_map.py`'s shading). Custom levels work as they are.
+- **View:** north up, the player's arrow turned as the game turns sprites; 22 blocks across on foot to
+  36 as the camera rises with speed.
+- **Pins:** the church (the `THREAD_DECLARE5` trigger whose thread starts with `DO_SAVE_GAME`) and the
+  garages (`car_shop_130` objects, bays within 4 blocks grouped).
+- **Arrows:** a job's targets (`Hud_Arrow` targets without a gang) as the red blip, or a triangle when
+  more than half a block above or below, held at the edge and fading beyond it; off a job, the gangs'
+  phones as blips in their colour (yellow, red, green) and info phones as the gang's icon, where the
+  game shows their arrow or within twice the map's size.
+- **Gangs:** each gang of the respect meters as its icon on the border, toward the nearest part of its
+  territory (`Gang_14` zones), none while the player is in it.
+
+Behaviour (which blips, phones only off a job, the fade past the edge, the height markers) follows the
+radar mods below; none of their code or tiles is used.
 
 ## Tools
 
