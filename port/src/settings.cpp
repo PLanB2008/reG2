@@ -1,4 +1,5 @@
 #include "settings.hpp"
+#include <stdlib.h>
 #include "frame_loop.hpp"
 #include "Camera.hpp"
 #include "Frontend.hpp"
@@ -54,15 +55,25 @@ const s32 kNumGameSettings = sizeof(kGameSettings) / sizeof(kGameSettings[0]);
 const Id kGraphicsSettings[] = {kPreset,
                                 kLightingGroup, kPerPixelLighting, kShadows, kAmbientOcclusion, kFireEffects, kHeadlights,
                                 kLightEffects, kBloom, kImageGroup, kTrueColour, kTextureFilter, kAntiAliasing};
+// On the web the page owns full screen, there are no display modes, the frames follow the browser's and
+// there is no OpenAL for 3D sound.
+#if defined(__EMSCRIPTEN__)
+const Id kDisplaySettings[] = {kScreenGroup, kFrameLimit, kShowFps, kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea};
+#else
 const Id kDisplaySettings[] = {kScreenGroup, kFullScreen, kDisplayMode, kVsync, kFrameLimit, kShowFps,
                                kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea};
+#endif
 #else
 const Id kGraphicsSettings[] = {kHeadlights, kLightEffects};
 const Id kDisplaySettings[] = {kScreenGroup, kFullScreen, kFrameLimit, kShowFps, kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea};
 #endif
 const s32 kNumGraphicsSettings = sizeof(kGraphicsSettings) / sizeof(kGraphicsSettings[0]);
 const s32 kNumDisplaySettings = sizeof(kDisplaySettings) / sizeof(kDisplaySettings[0]);
+#if defined(__EMSCRIPTEN__)
+const Id kSoundSettings[] = {kSfxVolume, kMusicVolume};
+#else
 const Id kSoundSettings[] = {kSfxVolume, kMusicVolume, k3dSound};
+#endif
 const s32 kNumSoundSettings = sizeof(kSoundSettings) / sizeof(kSoundSettings[0]);
 
 namespace
@@ -134,6 +145,8 @@ const Translation kTranslations[] = {
     {L"CLOCK", NULL, {L"HORLOGE", L"UHR", L"OROLOGIO", L"RELOJ"}},
     {L"EXPLODING SCORES", NULL, {L"SCORES EXPLOSIFS", L"PUNKTE-EXPLOSION", L"PUNTI ESPLOSIVI", L"PUNTOS EXPLOSIVOS"}},
     {L"BLOOD", NULL, {L"SANG", L"BLUT", L"SANGUE", L"SANGRE"}},
+    {L"MULTIPLAYER", NULL, {L"MULTIJOUEUR", L"MEHRSPIELER", L"MULTIGIOCATORE", L"MULTIJUGADOR"}},
+    {L"SOON", NULL, {L"BIENTOT", L"BALD", L"PRESTO", L"PRONTO"}},
     {L"CHECK FOR UPDATES", NULL, {L"MISES A JOUR", L"UPDATES SUCHEN", L"AGGIORNAMENTI", L"ACTUALIZACIONES"}},
     {L"AUTOSAVE", NULL, {L"SAUVEGARDE AUTO", L"AUTOSPEICHERN", L"SALVATAGGIO AUTO", L"GUARDADO AUTO"}},
     {L"AFTER EACH JOB OR FRENZY, AND WITH SAVE AND QUIT", NULL,
@@ -543,6 +556,15 @@ s32 ScreenDefault(Id id)
 
 s32 Screen(Id id)
 {
+#if defined(__EMSCRIPTEN__)
+    // The page's ?nofx (web/site/app.js): the ENHANCED rendering passes off for this session, to compare frame rates.
+    static const bool sNoFx = getenv("GTA2_NOFX") != NULL;
+    if (sNoFx && (id == kPerPixelLighting || id == kShadows || id == kAmbientOcclusion || id == kFireEffects ||
+                  id == kBloom || id == kAntiAliasing))
+    {
+        return 0;
+    }
+#endif
     return gRegistry.Get_Screen_Setting(ScreenName(id), ScreenDefault(id));
 }
 
@@ -1125,8 +1147,13 @@ void ApplyStyle(Style style)
     gRegistry.Set_Screen_Setting(ScreenName(kRetry), enhanced);
     gRegistry.Set_Screen_Setting(ScreenName(kKfRespawn), enhanced);
     gRegistry.Set_Screen_Setting(ScreenName(kInfiniteLives), 0);
-    // Unlimited with vsync: a frame each refresh of the screen.
+    // Unlimited with vsync: a frame each refresh of the screen. In a browser 60: drawing at 120 or 144 Hz loads its
+    // compositor for little, with the game's 30 steps a second.
+#if defined(__EMSCRIPTEN__)
+    gRegistry.Set_Screen_Setting(ScreenName(kFrameLimit), 60);
+#else
     gRegistry.Set_Screen_Setting(ScreenName(kFrameLimit), 0);
+#endif
     gRegistry.Set_Screen_Setting(ScreenName(kVsync), 1);
     port_ApplyVsync();
     PortFrameLoop::ApplySettings();

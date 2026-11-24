@@ -277,6 +277,7 @@ const char* kPresentFS =
     "uniform sampler2D uTex;\n"
     "uniform vec3 uGamma;\n"
     "uniform int uFlipY;\n"
+    "uniform int uShadowMask;\n" // the soft shadow mask (red) as black of that alpha
     "in vec2 vUV;\n"
     "layout(location = 0) out vec4 oColor;\n"
     "layout(location = 2) out vec4 oShadow;\n"
@@ -284,6 +285,7 @@ const char* kPresentFS =
     "{\n"
     "    vec2 uv = uFlipY != 0 ? vec2(vUV.x, 1.0 - vUV.y) : vUV;\n"
     "    vec4 c = texture(uTex, uv);\n"
+    "    if (uShadowMask != 0) c = vec4(0.0, 0.0, 0.0, c.r);\n"
     "    oColor = vec4(pow(c.rgb, 1.0 / uGamma), c.a);\n"
     "    oShadow = vec4(0.0, 0.0, 0.0, c.a);\n"
     "}\n";
@@ -552,6 +554,7 @@ bool GLRenderer::Init(GLFuncs::Loader loader, const char** ppError)
     }
     mUniGamma = gl.glGetUniformLocation(mPresentProgram, "uGamma");
     mUniFlipY = gl.glGetUniformLocation(mPresentProgram, "uFlipY");
+    mUniShadowMask = gl.glGetUniformLocation(mPresentProgram, "uShadowMask");
     mUniDownTexel = gl.glGetUniformLocation(mDownProgram, "uTexel");
     mUniBlurStep = gl.glGetUniformLocation(mBlurProgram, "uStep");
     mUniBloomIntensity = gl.glGetUniformLocation(mComposeProgram, "uIntensity");
@@ -662,6 +665,10 @@ bool GLRenderer::Init(GLFuncs::Loader loader, const char** ppError)
 
 void GLRenderer::ThrottleFrames()
 {
+#if defined(__EMSCRIPTEN__)
+    // The browser keeps the GPU at most a frame or two behind, and WebGL cannot wait on a fence.
+    return;
+#endif
     if (mFrameFence)
     {
         gl.glClientWaitSync(mFrameFence, GL_SYNC_FLUSH_COMMANDS_BIT, 1000000000ull);
@@ -833,13 +840,8 @@ void GLRenderer::CreateTargets()
     gl.glBindFramebuffer(GL_FRAMEBUFFER, mFbo);
     if (mTargetsShadows)
     {
-        // Sampled as (0, 0, 0, mask) to darken the scene with alpha blending.
         gl.glBindTexture(GL_TEXTURE_2D, mShadowTex);
         gl.glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
-        gl.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_ZERO);
-        gl.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_ZERO);
-        gl.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_ZERO);
-        gl.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_RED);
     }
     gl.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, mTargetsShadows ? mShadowTex : 0, 0);
     SetDrawBuffers();
@@ -939,9 +941,12 @@ void GLRenderer::ApplyShadows()
     gl.glViewport(0, 0, mTargetW, mTargetH);
     const GLenum one[1] = {GL_COLOR_ATTACHMENT0};
     gl.glDrawBuffers(1, one);
+    // Detached while it is sampled: WebGL refuses a draw that reads a texture attached to its target.
+    gl.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, 0, 0);
     gl.glUseProgram(mPresentProgram);
     gl.glUniform3f(mUniGamma, 1.0f, 1.0f, 1.0f);
     gl.glUniform1i(mUniFlipY, 0);
+    gl.glUniform1i(mUniShadowMask, 1);
     gl.glActiveTexture(GL_TEXTURE0);
     gl.glBindTexture(GL_TEXTURE_2D, mShadowTex);
     gl.glBindSampler(0, mSamplerNearest);
@@ -949,6 +954,8 @@ void GLRenderer::ApplyShadows()
     gl.glBlendEquation(GL_FUNC_ADD);
     gl.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     DrawFullscreen();
+    gl.glUniform1i(mUniShadowMask, 0);
+    gl.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, mShadowTex, 0);
     SetDrawBuffers();
     const GLfloat zero[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     gl.glClearBufferfv(GL_COLOR, 2, zero);
@@ -1289,21 +1296,36 @@ void GLRenderer::Flush()
         mBatch.clear();
         return;
     }
-    BindTarget();
     const int scene = (mOptions.mBloom > 0.0f || mOptions.mPerPixelLighting || mTargetsShadows || mAoStrength > 0.0f) ? 1 : 0;
     if (scene != mActiveScene)
     {
         mActiveScene = scene;
         mStateValid = false;
     }
-    gl.glUseProgram(mScene[scene].mId);
-    gl.glUniform2f(mScene[scene].mScale, 2.0f / mLogicalW, 2.0f / mLogicalH);
-    gl.glUniform1i(mScene[scene].mSmooth, mSmoothMagnify && !(mBatchState & RS_TEXELS) ? 1 : 0);
-    gl.glBindVertexArray(mVao);
+    // The target, program and vertex array stay from the last batch unless something else drew since (mStateValid).
+    if (!mStateValid)
+    {
+        BindTarget();
+        gl.glUseProgram(mScene[scene].mId);
+        gl.glBindVertexArray(mVao);
+        gl.glActiveTexture(GL_TEXTURE0);
+        mFlushScale[0] = 0.0f;
+        mFlushSmooth = -1;
+    }
+    if (mFlushScale[0] != 2.0f / mLogicalW || mFlushScale[1] != 2.0f / mLogicalH)
+    {
+        mFlushScale[0] = 2.0f / mLogicalW;
+        mFlushScale[1] = 2.0f / mLogicalH;
+        gl.glUniform2f(mScene[scene].mScale, mFlushScale[0], mFlushScale[1]);
+    }
+    const int smooth = mSmoothMagnify && !(mBatchState & RS_TEXELS) ? 1 : 0;
+    if (smooth != mFlushSmooth)
+    {
+        mFlushSmooth = smooth;
+        gl.glUniform1i(mScene[scene].mSmooth, smooth);
+    }
     gl.glBindBuffer(GL_ARRAY_BUFFER, mVbo);
-    gl.glBufferData(GL_ARRAY_BUFFER, kMaxBatchVerts * sizeof(RVertex), NULL, GL_STREAM_DRAW);
-    gl.glBufferSubData(GL_ARRAY_BUFFER, 0, mBatch.size() * sizeof(RVertex), &mBatch[0]);
-    gl.glActiveTexture(GL_TEXTURE0);
+    gl.glBufferData(GL_ARRAY_BUFFER, mBatch.size() * sizeof(RVertex), &mBatch[0], GL_STREAM_DRAW);
     gl.glBindTexture(GL_TEXTURE_2D, mBatchTex ? mBatchTex->mId : mWhiteTex);
     const bool mipmap = mOptions.mTextureFilter > 0 && mBatchTex && mBatchTex->mLevels > 1 &&
                         (mBatchState & (RS_FILTER_LINEAR | RS_PIXEL_EXACT)) == RS_FILTER_LINEAR;
