@@ -182,19 +182,44 @@ DISPLAY > MINIMAP, off by default and in CLASSIC, on in ENHANCED.
   texel the average colour of 16x16 texels of the top lid, turned and flipped as its face word says, a
   lid more than 60% see-through above the ground skipped (tree tops, wires), roofs lighter as they
   rise and a cast shadow to the bottom right (`render_map.py`'s shading). Custom levels work as they are.
-- **View:** north up, the player's arrow turned as the game turns sprites; 22 blocks across on foot to
+- **GUIDE ARROWS** (with MINIMAP, on by default and in CLASSIC, off in ENHANCED): off, the game's arrows
+  round the player are hidden and phones and targets show on the minimap alone, as GTA3's radar does.
+- **View:** north up, the player's arrow facing as the player does (a heading of 0 faces south); 22 blocks across on foot to
   36 as the camera rises with speed.
-- **Pins:** the church (the `THREAD_DECLARE5` trigger whose thread starts with `DO_SAVE_GAME`) and the
-  garages (`car_shop_130` objects, bays within 4 blocks grouped).
-- **Arrows:** a job's targets (`Hud_Arrow` targets without a gang) as the red blip, or a triangle when
+- **Pins:** the church (the `THREAD_DECLARE5` trigger whose thread starts with `DO_SAVE_GAME`), the
+  garages as spray shops (`car_shop_130` objects declared by the level's script or in the object pool; a
+  garage's row of bays, respray beside the car weapons, one pin), the hospitals and police stations
+  (`Restart_16` and `Arrest_Restart_20` zones), the train stations (platform zones within 8 blocks
+  grouped) and the cranes (`gCranePool_D9C`, at their rotors). As on GTA3's radar, a pin up to twice the map's size away already shows on its edge, fading.
+- **Arrows:** a job's targets (`Hud_Arrow` targets without a gang) as a larger pink blip, apart from the red
+  phones as on GTA3's radar, or a triangle when
   more than half a block above or below, held at the edge and fading beyond it; off a job, the gangs'
   phones as blips in their colour (yellow, red, green) and info phones as the gang's icon, where the
   game shows their arrow or within twice the map's size.
-- **Gangs:** each gang of the respect meters as its icon on the border, toward the nearest part of its
-  territory (`Gang_14` zones), none while the player is in it.
+- **Gangs:** each gang of the respect meters as its icon on the border toward its information phone
+  (`Gang::mInfoPhoneX/Y`), as the game's gang arrows lead there, and above the phone once it is on the map; a
+  gang without one toward the nearest part of its territory (`Gang_14` zones), in the top left corner while
+  the player is in it.
+- **MAP** in the pause menu, or at once with M (unless a control uses it; M or Esc then resumes the game): the
+  whole city over the screen, opened zoomed out, coloured as the city maps
+  printed with the game: the map's brightness in each gang's territory colour (violet where no gang rules,
+  light blue for water), the districts' names (navigation zones) on black, the pins, phones (darker while the
+  gang's respect is too low for the job, `Hud_Arrow::CheckVisibility`'s rule), targets, a waypoint and a
+  key with the territories. Enter or a click sets the waypoint (or clears it), which both maps show until
+  the player reaches it; with GUIDE ARROWS (or without the minimap) the game's job arrow, recoloured in the
+  waypoint's blue from the player's style, points to it from beside the player as the game's arrows do. Arrows, WASD, the left stick or the d-pad
+  move it while held, or the mouse drags it; the wheel, Q and E, - and + or the right stick
+  zoom (20 blocks across to the whole city); Space, C or the pad's X goes back to the player. It works with
+  MINIMAP off.
 
 Behaviour (which blips, phones only off a job, the fade past the edge, the height markers) follows the
 radar mods below; none of their code or tiles is used.
+
+## Pins in the key's style
+
+`tools/key_pins.py` draws the pins both maps use in the style of the key printed with the city maps (our own
+drawings, in `assets/key_pins`): a wrench for the garages, a cross for the hospitals, a receiver in the phones'
+colours, an i for the gangs' information phones, a hook for the cranes, the church's S under its cross.
 
 ## Tools
 

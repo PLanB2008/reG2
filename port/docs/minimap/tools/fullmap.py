@@ -97,13 +97,15 @@ G5 = {
     'T': ["#####", "..#..", "..#..", "..#..", "..#.."],
     'P': ["####.", "#...#", "####.", "#....", "#...."],
     'G': [".###.", "#....", "#.###", "#...#", ".###."],
+    'crane': ["#####", ".#..#", ".#..#", ".#.##", "###.."],
 }
 
 
 def badge(kind, scale):
     spec = {'save': ('disc', '#d8c8a0', 'cross', '#5a2010'), 'restart': ('disc', '#f0f0e8', 'plus', '#d02018'),
             'arrest': ('disc', '#2848a8', 'bars', '#e8e8f0'), 'garage': ('square', '#e8b414', 'G', '#141414'),
-            'station': ('square', '#40464c', 'T', '#f0f0f0'), 'police': ('shield', '#2848a8', 'P', '#f0f0f0')}[kind]
+            'station': ('square', '#40464c', 'T', '#f0f0f0'), 'police': ('shield', '#2848a8', 'P', '#f0f0f0'),
+            'crane': ('square', '#c84010', 'crane', '#f0f0f0')}[kind]
     shape, col, gl, gcol = spec
     c = Canvas(13, 13)
     if shape == 'disc':
@@ -147,7 +149,7 @@ def icons(k):
         I['pickup_%d' % oid] = spr(CODE + s, scale=0.45 * k)
     for g in range(1, 8):
         I['gang_%d' % g] = spr(USER + 64 + g - 1, scale=1.0 * k)
-    for b in ('save', 'restart', 'arrest', 'garage', 'station', 'police'):
+    for b in ('save', 'restart', 'arrest', 'garage', 'station', 'police', 'crane'):
         I[b] = badge(b, k)
     I['start'] = player_badge(k)
     return I
@@ -280,7 +282,7 @@ def main(out):
     os.makedirs(out, exist_ok=True)
     pins = os.path.join(out, 'pins'); os.makedirs(pins, exist_ok=True)
     for k in (1, 2):
-        for b in ('save', 'restart', 'arrest', 'garage', 'station', 'police'):
+        for b in ('save', 'restart', 'arrest', 'garage', 'station', 'police', 'crane'):
             badge(b, k).save(os.path.join(pins, '%s_%dx.png' % (b, k)))
     d = parse()
     full = render(d, 4, 1.0)

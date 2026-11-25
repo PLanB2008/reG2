@@ -1356,7 +1356,7 @@ void port_FreePictures()
 namespace
 {
 // The MINIMAP's textures (port/src/minimap.cpp), by slot: the level's map and the frame's pictures.
-const s32 kNumMinimapTextures = 8;
+const s32 kNumMinimapTextures = 24;
 RTexture* gMinimapTextures[kNumMinimapTextures];
 u32 gMinimapVersions[kNumMinimapTextures];
 IRenderer* gMinimapOwner;
