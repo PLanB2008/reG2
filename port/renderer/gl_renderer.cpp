@@ -29,15 +29,19 @@ const char* kFaithfulVS =
 // (transparent texels keep their palette colour), and the edge is one screen pixel wide where the
 // bilinear alpha crosses one half, so magnified glyphs are neither blurred nor blocky. Opaque
 // texels get the plain bilinear sample.
+// uSmooth 2 (SHARP BILINEAR): each texel's centre sampled as is, blended only over a screen pixel at its edges.
 #define SMOOTH_SAMPLE \
     "uniform int uSmooth;\n" \
     "vec4 SmoothSample(vec2 uv)\n" \
     "{\n" \
-    "    vec4 c = texture(uTex, uv);\n" \
     "    vec2 size = vec2(textureSize(uTex, 0));\n" \
     "    vec2 p = uv * size - 0.5;\n" \
-    "    float scale = 1.0 / max(max(fwidth(p).x, fwidth(p).y), 1e-6);\n" \
-    "    if (uSmooth == 0 || scale <= 1.0 || c.a >= 0.999)\n" \
+    "    vec2 fw = max(fwidth(p), vec2(1e-6));\n" \
+    "    if (uSmooth == 2)\n" \
+    "        uv = (floor(p) + clamp((fract(p) - 0.5) / fw + 0.5, 0.0, 1.0) + 0.5) / size;\n" \
+    "    vec4 c = texture(uTex, uv);\n" \
+    "    float scale = 1.0 / max(fw.x, fw.y);\n" \
+    "    if (uSmooth != 1 || scale <= 1.0 || c.a >= 0.999)\n" \
     "        return c;\n" \
     "    ivec2 i0 = ivec2(floor(p));\n" \
     "    ivec2 hi = ivec2(size) - 1;\n" \
@@ -1049,7 +1053,7 @@ void GLRenderer::UploadTexture(RTexture* pTex, s32 width, s32 height, const u32*
         gl.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pRgba);
     }
     s32 levels = 1;
-    if (mipmaps != RMIP_NONE && mOptions.mTextureFilter > 0)
+    if (mipmaps != RMIP_NONE && mOptions.Mipmaps())
     {
         // The levels below the base hold about a third of its texels; the margin covers thin sizes.
         mMipBuffer.resize((size_t)width * height / 2 + width + height + 8);
@@ -1318,7 +1322,9 @@ void GLRenderer::Flush()
         mFlushScale[1] = 2.0f / mLogicalH;
         gl.glUniform2f(mScene[scene].mScale, mFlushScale[0], mFlushScale[1]);
     }
-    const int smooth = mSmoothMagnify && !(mBatchState & RS_TEXELS) ? 1 : 0;
+    const int smooth = mSmoothMagnify ? !(mBatchState & RS_TEXELS)
+                       : mOptions.mTextureFilter == 4 && (mBatchState & RS_FILTER_LINEAR) ? 2
+                                                                                           : 0;
     if (smooth != mFlushSmooth)
     {
         mFlushSmooth = smooth;
@@ -1327,9 +1333,10 @@ void GLRenderer::Flush()
     gl.glBindBuffer(GL_ARRAY_BUFFER, mVbo);
     gl.glBufferData(GL_ARRAY_BUFFER, mBatch.size() * sizeof(RVertex), &mBatch[0], GL_STREAM_DRAW);
     gl.glBindTexture(GL_TEXTURE_2D, mBatchTex ? mBatchTex->mId : mWhiteTex);
-    const bool mipmap = mOptions.mTextureFilter > 0 && mBatchTex && mBatchTex->mLevels > 1 &&
-                        (mBatchState & (RS_FILTER_LINEAR | RS_PIXEL_EXACT)) == RS_FILTER_LINEAR;
-    ApplyState(mipmap ? mBatchState | kStateMipmap : mBatchState);
+    const u32 state = mOptions.mTextureFilter == 3 && !mSmoothMagnify ? mBatchState & ~RS_FILTER_LINEAR : mBatchState;
+    const bool mipmap = mOptions.Mipmaps() && mBatchTex && mBatchTex->mLevels > 1 &&
+                        (state & (RS_FILTER_LINEAR | RS_PIXEL_EXACT)) == RS_FILTER_LINEAR;
+    ApplyState(mipmap ? state | kStateMipmap : state);
     gl.glDrawArrays(GL_TRIANGLES, 0, (GLsizei)mBatch.size());
     mDrawCalls++;
     mVertices += (u32)mBatch.size();

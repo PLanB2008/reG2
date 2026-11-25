@@ -95,7 +95,9 @@ const s32 kNumLanguages = sizeof(kLanguages) / sizeof(kLanguages[0]);
 const wchar_t* const kTextSpeeds[] = {L"VERY FAST", L"FAST", L"NORMAL", L"SLOW", L"VERY SLOW"};
 const s32 kMaxFpsValues[] = {30, 60, 120, 144, 240, 0};
 const s32 kNumMaxFpsValues = sizeof(kMaxFpsValues) / sizeof(kMaxFpsValues[0]);
-const wchar_t* const kTextureFilters[] = {L"BILINEAR", L"TRILINEAR", L"ANISOTROPIC"};
+const wchar_t* const kTextureFilters[] = {L"BILINEAR", L"ANISOTROPIC", L"PIXELATED", L"SHARP BILINEAR"};
+// The gl_texture_filter value of each; a stored 1 (trilinear) shows as anisotropic.
+const s32 kTextureFilterValues[] = {0, 2, 3, 4};
 const s32 kNumTextureFilters = sizeof(kTextureFilters) / sizeof(kTextureFilters[0]);
 const s32 kMsaaValues[] = {0, 2, 4, 8};
 const s32 kNumMsaaValues = sizeof(kMsaaValues) / sizeof(kMsaaValues[0]);
@@ -320,8 +322,9 @@ const Translation kTranslations[] = {
     {L"LIGHT EFFECTS", NULL, {L"EFFETS LUMINEUX", L"LICHTEFFEKTE", L"EFFETTI LUCE", L"EFECTOS DE LUZ"}},
     {L"TEXTURE FILTERING", NULL, {L"FILTRAGE TEXTURES", L"TEXTURFILTER", L"FILTRO TEXTURE", L"FILTRADO TEXTURAS"}},
     {L"BILINEAR", NULL, {L"BILINEAIRE", L"BILINEAR", L"BILINEARE", L"BILINEAL"}},
-    {L"TRILINEAR", NULL, {L"TRILINEAIRE", L"TRILINEAR", L"TRILINEARE", L"TRILINEAL"}},
     {L"ANISOTROPIC", NULL, {L"ANISOTROPE", L"ANISOTROP", L"ANISOTROPICO", L"ANISOTRÓPICO"}},
+    {L"PIXELATED", NULL, {L"PIXELISE", L"VERPIXELT", L"PIXELLATO", L"PIXELADO"}},
+    {L"SHARP BILINEAR", NULL, {L"BILINEAIRE NET", L"SCHARF BILINEAR", L"BILINEARE NITIDO", L"BILINEAL NÍTIDO"}},
     {L"ANTI-ALIASING", NULL, {L"ANTICRENELAGE", L"KANTENGLÄTTUNG", L"ANTI-ALIASING", L"ANTIALIASING"}},
     {L"SHADOWS", NULL, {L"OMBRES", L"SCHATTEN", L"OMBRE", L"SOMBRAS"}},
     {L"AMBIENT OCCLUSION", NULL, {L"OCCLUSION AMBIANTE", L"UMGEBUNGSVERDECKUNG", L"OCCLUSIONE AMBIENTALE", L"OCLUSIÓN AMBIENTAL"}},
@@ -650,6 +653,16 @@ s32 MsaaIndex(s32 stored)
     return i;
 }
 
+s32 TextureFilterIndex()
+{
+    s32 i = 0;
+    while (i < kNumTextureFilters - 1 && kTextureFilterValues[i] < Screen(kTextureFilter))
+    {
+        i++;
+    }
+    return i;
+}
+
 s32 MsaaIndex()
 {
     return MsaaIndex(Screen(kAntiAliasing));
@@ -684,7 +697,7 @@ s32 PresetSetting(Id id)
         case kAntiAliasing:
             return kMsaaValues[MsaaIndex()];
         case kTextureFilter:
-            return Clamp(Screen(id), 0, kNumTextureFilters - 1);
+            return kTextureFilterValues[TextureFilterIndex()];
         case kBloom:
             return Clamp(Screen(id), 0, kMaxBloom);
         default:
@@ -1125,7 +1138,7 @@ void ApplyRenderOptions()
 {
 #if defined(GTA2_PORT_SDL)
     port_SetRenderOptions(Screen(kTrueColour) != 0, Clamp(Screen(kBloom), 0, kMaxBloom), Screen(kPerPixelLighting) != 0,
-                          Clamp(Screen(kTextureFilter), 0, kNumTextureFilters - 1), kMsaaValues[MsaaIndex()], Screen(kShadows) != 0);
+                          kTextureFilterValues[TextureFilterIndex()], kMsaaValues[MsaaIndex()], Screen(kShadows) != 0);
 #endif
 }
 
@@ -1234,7 +1247,13 @@ void Value(Id id, wchar_t* pOut)
             break;
 #if defined(GTA2_PORT_SDL)
         case kTextureFilter:
-            wcscpy(pOut, Translate(kTextureFilters[Clamp(Screen(id), 0, kNumTextureFilters - 1)]));
+            wcscpy(pOut, Translate(kTextureFilters[TextureFilterIndex()]));
+            if (TextureFilterIndex() == 0)
+            {
+                wcscat(pOut, L" (");
+                wcscat(pOut, Translate(L"ORIGINAL"));
+                wcscat(pOut, L")");
+            }
             break;
         case kShadows:
             wcscpy(pOut, Translate(Screen(id) ? L"SOFT" : L"ORIGINAL"));
@@ -1402,7 +1421,7 @@ void Change(Id id, s32 delta)
             port_ApplyVsync();
             break;
         case kTextureFilter:
-            gRegistry.Set_Screen_Setting(ScreenName(id), Wrap(Clamp(Screen(id), 0, kNumTextureFilters - 1) + delta, kNumTextureFilters));
+            gRegistry.Set_Screen_Setting(ScreenName(id), kTextureFilterValues[Wrap(TextureFilterIndex() + delta, kNumTextureFilters)]);
             ApplyRenderOptions();
             break;
         case kPreset:
