@@ -3510,7 +3510,7 @@ void sound_obj::Init()
         if (mbSoundInitialized)
         {
             mB3dSound = 0;
-            mnActiveSamples = 16;
+            mnActiveSamples = SOUND_CHANNELS;
             AddVocalsEntity();
         }
     }
@@ -3830,7 +3830,7 @@ bool sound_obj::Set3DSound(char_type b3dSound)
                 {
                     gSampManager.AllocSamples(1);
                     mB3dSound = 0;
-                    mnActiveSamples = 16;
+                    mnActiveSamples = SOUND_CHANNELS;
                     return false;
                 }
             }
@@ -3838,7 +3838,7 @@ bool sound_obj::Set3DSound(char_type b3dSound)
             if (gSampManager.AllocSamples(1))
             {
                 mB3dSound = 0;
-                mnActiveSamples = 16;
+                mnActiveSamples = SOUND_CHANNELS;
                 return true;
             }
 
@@ -4120,7 +4120,7 @@ void sound_obj::AddDetailsToRequestedOrderList(u8 sample)
 MATCH_FUNC(0x41A9D0)
 void sound_obj::AddReleasingSounds()
 {
-    bool toProcess[16];
+    bool toProcess[SOUND_CHANNELS];
 
     const u8 queue = mnActiveSampleQueue == 0 ? 1 : 0;
 

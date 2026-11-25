@@ -115,7 +115,7 @@ cSampleManager::cSampleManager()
     mpAudioBuffer1 = NULL;
     mpAudioBuffer2 = NULL;
 
-    for (s32 k = 0; k < 16; k++)
+    for (s32 k = 0; k < SOUND_CHANNELS; k++)
     {
         mhSamples[k] = NULL;
     }
@@ -125,7 +125,7 @@ cSampleManager::cSampleManager()
         mhStreams[j] = NULL;
     }
 
-    for (s32 m = 0; m < 16; m++)
+    for (s32 m = 0; m < SOUND_CHANNELS; m++)
     {
         m3dSample[m] = NULL;
     }
@@ -143,7 +143,7 @@ cSampleManager::cSampleManager()
     }
 
     mhDriver = NULL;
-    mCountSamples = 16;
+    mCountSamples = SOUND_CHANNELS;
     mBytesPerSample = 2;
     m3dSampCount = 0;
     m3dProviderIdx = -1;
@@ -233,7 +233,7 @@ bool cSampleManager::SoundInit(s32* not_used)
 
     Enum3DProviders();
 
-    mCountSamples = 16;
+    mCountSamples = SOUND_CHANNELS;
     AllocSamples(1);
 
     if (mhDriver)
@@ -338,9 +338,9 @@ bool cSampleManager::Init3DProvider(u8* pMaxSamples)
             m3dSampCount = 0;
             AIL_3D_provider_attribute(m3dProvider, "Maximum supported samples", pMaxSamples);
 
-            if (*pMaxSamples > 16u)
+            if (*pMaxSamples > static_cast<u32>(SOUND_CHANNELS))
             {
-                *pMaxSamples = 16;
+                *pMaxSamples = SOUND_CHANNELS;
             }
 
             if (*pMaxSamples < 8u)
@@ -382,7 +382,7 @@ void cSampleManager::Reset3DSamples()
 
     Close3DProvider();
 
-    mCountSamples = 16;
+    mCountSamples = SOUND_CHANNELS;
     m3dSampCount = 0;
     m3dProviderIdx = -1;
     mbEaxSupported = 0;
