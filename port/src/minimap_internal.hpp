@@ -22,7 +22,7 @@ enum Slot
 {
     kMapSlot,
     kStyledSlot, // the MAP's picture, gang territories tinted
-    kFrameSlot,  // frame E of port/docs/minimap: the tubes round the map
+    kFrameSlot,  // frame E of port/docs/minimap, slim: the tubes round the map
     kGlassSlot,  // and its glass over the map
     kArrowSlot,
     kBlipSlot,

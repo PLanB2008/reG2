@@ -1,4 +1,4 @@
-// The minimap in the HUD's bottom left corner (frame E of port/docs/minimap), the MAP waypoint's arrow by the player, and
+// The minimap in the HUD's bottom left corner (frame E of port/docs/minimap, slim), the MAP waypoint's arrow by the player, and
 // the drawing both maps share.
 #include "minimap.hpp"
 #include "minimap_internal.hpp"
@@ -28,16 +28,17 @@ namespace
 {
 const f32 kPi = 3.14159265f;
 
-// Frame E in HUD pixels at 1x: its size, the map's hole, the tubes' middle lines (the rail the gang icons ride on) and
-// the N cap on the top tube (tools/designs.py tube_frame), its distance from the screen's bottom left corner.
-const f32 kFrameW = 104.0f;
-const f32 kFrameH = 92.0f;
-const f32 kHole[4] = {13.0f, 13.0f, 91.0f, 79.0f};
-const f32 kRail[4] = {7.0f, 7.0f, 97.0f, 85.0f};
-const f32 kRailCorner = 9.0f; // the corner caps
-const f32 kNorthCap = 7.0f;   // its half width
+// Frame E, slim, in HUD pixels at 1x: its size, the map's hole, the tubes' middle lines (the rail the gang icons ride
+// on), its corner caps and the N cap on the top tube (tools/designs.py tube_frame_slim), its distance from the screen's
+// bottom left corner.
+const f32 kFrameW = 92.0f;
+const f32 kFrameH = 80.0f;
+const f32 kHole[4] = {7.0f, 7.0f, 85.0f, 73.0f};
+const f32 kRail[4] = {3.6f, 3.6f, 88.4f, 76.4f};
+const f32 kRailCorner = 6.0f;
+const f32 kNorthCap = 5.5f; // its half width
 const f32 kMargin = 6.0f;
-const f32 kGangIconSize = 11.0f;
+const f32 kGangIconSize = 9.0f;
 const f32 kPhoneSize = 12.0f;
 
 // Blocks across the map: closer on foot, further out as the camera rises with speed (its height 0 to 14).
@@ -141,7 +142,7 @@ void DrawTurfs(const View& v, f32 frameLeft, f32 frameTop)
         const f32 cap = kRailCorner * ui;
         f32 x = alongX ? fminf(fmaxf(railX + dx * k, rail[0] + cap), rail[2] - cap) : (dx < 0 ? rail[0] : rail[2]);
         f32 y = alongX ? (dy < 0 ? rail[1] : rail[3]) : fminf(fmaxf(railY + dy * k, rail[1] + cap), rail[3] - cap);
-        const f32 clearance = (kNorthCap + kGangIconSize / 2 + 1.0f) * ui;
+        const f32 clearance = (kNorthCap + kGangIconSize / 2 + 3.0f) * ui;
         if (alongX && dy < 0 && fabsf(x - railX) < clearance)
         {
             x = railX + (x < railX ? -clearance : clearance);

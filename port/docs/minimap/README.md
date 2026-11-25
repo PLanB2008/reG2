@@ -1,6 +1,6 @@
 # A minimap for the port
 
-Status: in the game as DISPLAY > MINIMAP in frame E below (`port/src/minimap*.cpp`), and as the pause
+Status: in the game as DISPLAY > MINIMAP in a slim frame E (`port/src/minimap*.cpp`), and as the pause
 menu's MAP (`port/src/city_map.cpp`): see [In the game](#in-the-game). The rest of this note is the design
 study it came from: the frame designs, the map treatments, where every map layer comes from, and how it
 would be built.
@@ -175,8 +175,10 @@ and blip rules, not code to copy.
 
 DISPLAY > MINIMAP, off by default and in both styles: it adds what the original never showed, so players turn it on.
 
-- **Place and look:** frame E (104x92 HUD pixels at 1x, the map in its 78x66 hole, the glass over it) in the
-  bottom left corner, 6 from the safe area's edges, scaled by HUD SCALE. Where a brief's face reaches it
+- **Place and look:** frame E, slim (`tools/designs.py` `tube_frame_slim`: frame E's tubes, caps and N with
+  half its border, 92x80 HUD pixels at 1x, the map in its 78x66 hole, the glass over it; written by
+  `tools/export_frame.py tube_frame_slim <dir>`) in the bottom left corner, 6 from the safe area's edges,
+  scaled by HUD SCALE. Where a brief's face reaches it
   (4:3), it fades while the brief shows.
 - **Map:** built for each level (`PortMinimap::Reset` from `Hud::Init`) from `gMap_0x370` and the style's
   tiles, 4 texels per block: each texel the average colour of 16x16 texels of the top lid, turned and flipped
