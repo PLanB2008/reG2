@@ -193,9 +193,9 @@ DISPLAY > MINIMAP, off by default and in both styles: it adds what the original 
   grouped) and the cranes (`gCranePool_D9C`, at their rotors). As on GTA3's radar, a pin up to twice the
   map's size away already shows on its edge, fading. The hospitals and police stations (`Restart_16` and
   `Arrest_Restart_20` zones), which the game takes the player to by itself, are on the MAP only.
-- **Phones and targets** (`Hud_Arrow` targets): off a job, the phones as the game draws them, their object's
-  sprite and remap from the player's style (`ObjectDefinitions`: the blue information phone, its green,
-  red and yellow clones), where the game shows their arrow or within twice the map's size, see-through while
+- **Phones and targets** (`Hud_Arrow` targets): off a job, the phones as badges in the pins' style (a receiver
+  on the game's phone colours: the job phones' green, yellow and red, the gangs' blue information phones;
+  `tools/fullmap.py` `badge`), where the game shows their arrow or within twice the map's size, see-through while
   the gang's respect is too low for the job (`Hud_Arrow::CheckVisibility`'s rule). A job's targets as a pink
   blip, apart from the red phones as on GTA3's radar, or a triangle when more than half a block above or
   below, held at the edge and fading beyond it.

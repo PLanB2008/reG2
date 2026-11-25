@@ -528,7 +528,7 @@ void DrawLegendIcon(s32 i, f32 x, f32 y, f32 ui)
             break;
         case kPhoneLook:
         case kLockedLook:
-            DrawPhone(v, row.mValue, x, y, 12.0f, row.mLook == kLockedLook ? kLockedAlpha : 1.0f);
+            DrawPhone(v, row.mValue, x, y, row.mLook == kLockedLook ? kLockedAlpha : 1.0f);
             break;
         case kWaypointLook:
             DrawWaypointMark(x, y, ui, 1.0f);

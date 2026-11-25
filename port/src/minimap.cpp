@@ -8,12 +8,10 @@
 #include "Game.hpp"
 #include "Gang.hpp"
 #include "Hud.hpp"
-#include "ObjectDefinitions.hpp"
 #include "Player.hpp"
 #include "ScriptManager.hpp"
 #include "enums.hpp"
 #include "gtx_0x106C.hpp"
-#include "objects_more.hpp"
 #include "settings.hpp"
 #include "sprite.hpp"
 #include "winmain.hpp"
@@ -39,7 +37,6 @@ const f32 kRailCorner = 6.0f;
 const f32 kNorthCap = 5.5f; // its half width
 const f32 kMargin = 6.0f;
 const f32 kGangIconSize = 9.0f;
-const f32 kPhoneSize = 12.0f;
 
 // Blocks across the map: closer on foot, further out as the camera rises with speed (its height 0 to 14).
 const f32 kMinBlocksAcross = 22.0f;
@@ -304,20 +301,14 @@ void DrawGangIcon(const View& v, s32 arrowColour, f32 x, f32 y, f32 size)
     DrawSprite(sprite_types_enum::user_6, sprite, palette_types_enum::sprites_2, 0, x, y, v.mUi * size, v.mAlpha);
 }
 
-void DrawPhone(const View& v, s32 arrowColour, f32 x, f32 y, f32 size, f32 alpha)
+void DrawPhone(const View& v, s32 arrowColour, f32 x, f32 y, f32 alpha)
 {
-    // The phones' colours by the arrow's (Hud.cpp get_phone_colour), the phone objects' remaps of the blue information
-    // phone (ObjectDefinitions: green 0, red 1, yellow 2).
-    const s32 model = arrowColour == 1   ? objects::yellow_phone_not_ringing_178
-                      : arrowColour == 2 ? objects::red_phone_not_ringing_176
-                      : arrowColour == 3 ? objects::green_phone_not_ringing_180
-                                         : objects::blue_phone_not_ringing_163;
-    const ObjectDefinition* pDef = gObjectDefinitions ? gObjectDefinitions->GetObjectDefinition(model) : NULL;
-    if (pDef)
-    {
-        const s16 remap = pDef->mRemap < 0 ? 0 : pDef->mRemap;
-        DrawSprite(pDef->mSpriteType, pDef->mBaseSpriteIdx, pDef->mPaletteType, remap, x, y, v.mUi * size, alpha);
-    }
+    // The phones' colours by the arrow's (Hud.cpp get_phone_colour).
+    const Slot slot = arrowColour == 1   ? kPhoneYellowSlot
+                      : arrowColour == 2 ? kPhoneRedSlot
+                      : arrowColour == 3 ? kPhoneGreenSlot
+                                         : kPhoneInfoSlot;
+    DrawIcon(v, slot, x, y, Rgba(1, 1, 1, alpha));
 }
 
 bool PhoneAvailable(const Hud_ArrowTargets& t)
@@ -360,7 +351,7 @@ void DrawTargets(const View& v, f32 playerZ, bool city)
                 }
                 const bool job = t.mArrowColour >= 1 && t.mArrowColour <= 3;
                 const f32 locked = !job || PhoneAvailable(t) ? 1.0f : kLockedAlpha;
-                DrawPhone(v, t.mArrowColour, x, y, kPhoneSize, EdgeAlpha(out) * v.mAlpha * locked);
+                DrawPhone(v, t.mArrowColour, x, y, EdgeAlpha(out) * v.mAlpha * locked);
                 continue;
             }
             // A job's target, at the edge when far.

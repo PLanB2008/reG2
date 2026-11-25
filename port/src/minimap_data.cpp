@@ -92,6 +92,30 @@ const unsigned char kCrane1x[] = {
 const unsigned char kCrane2x[] = {
 #embed "../resources/minimap/crane_2x.png"
 };
+const unsigned char kPhoneGreen1x[] = {
+#embed "../resources/minimap/phone_green_1x.png"
+};
+const unsigned char kPhoneGreen2x[] = {
+#embed "../resources/minimap/phone_green_2x.png"
+};
+const unsigned char kPhoneYellow1x[] = {
+#embed "../resources/minimap/phone_yellow_1x.png"
+};
+const unsigned char kPhoneYellow2x[] = {
+#embed "../resources/minimap/phone_yellow_2x.png"
+};
+const unsigned char kPhoneRed1x[] = {
+#embed "../resources/minimap/phone_red_1x.png"
+};
+const unsigned char kPhoneRed2x[] = {
+#embed "../resources/minimap/phone_red_2x.png"
+};
+const unsigned char kPhoneInfo1x[] = {
+#embed "../resources/minimap/phone_info_1x.png"
+};
+const unsigned char kPhoneInfo2x[] = {
+#embed "../resources/minimap/phone_info_2x.png"
+};
 
 struct Art
 {
@@ -110,6 +134,10 @@ const Art kArt[] = {
     {kArrestSlot, {kArrest1x, kArrest2x}, {sizeof(kArrest1x), sizeof(kArrest2x)}},
     {kStationSlot, {kStation1x, kStation2x}, {sizeof(kStation1x), sizeof(kStation2x)}},
     {kCraneSlot, {kCrane1x, kCrane2x}, {sizeof(kCrane1x), sizeof(kCrane2x)}},
+    {kPhoneGreenSlot, {kPhoneGreen1x, kPhoneGreen2x}, {sizeof(kPhoneGreen1x), sizeof(kPhoneGreen2x)}},
+    {kPhoneYellowSlot, {kPhoneYellow1x, kPhoneYellow2x}, {sizeof(kPhoneYellow1x), sizeof(kPhoneYellow2x)}},
+    {kPhoneRedSlot, {kPhoneRed1x, kPhoneRed2x}, {sizeof(kPhoneRed1x), sizeof(kPhoneRed2x)}},
+    {kPhoneInfoSlot, {kPhoneInfo1x, kPhoneInfo2x}, {sizeof(kPhoneInfo1x), sizeof(kPhoneInfo2x)}},
 };
 bool sLoaded;
 bool sLoadedOk;

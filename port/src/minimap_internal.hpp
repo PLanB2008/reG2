@@ -33,6 +33,10 @@ enum Slot
     kArrestSlot,  // a police station, where the player comes back after an arrest
     kStationSlot,
     kCraneSlot,
+    kPhoneGreenSlot, // the job phones by their colour, and the gangs' information phones
+    kPhoneYellowSlot,
+    kPhoneRedSlot,
+    kPhoneInfoSlot,
     kWaypointArrowSlot, // the game's job arrow in the waypoint's blue
     kNumSlots,
 };
@@ -132,9 +136,8 @@ f32 EdgeAlpha(f32 out);
 void DrawMap(const View& v, bool styled);
 // A gang's icon from the respect meters, size HUD pixels wide.
 void DrawGangIcon(const View& v, s32 arrowColour, f32 x, f32 y, f32 size);
-// A phone as the game draws it (its object's sprite and remap from the player's style): the arrow's colour 1 yellow,
-// 2 red, 3 green, else a gang's information phone; size HUD pixels wide.
-void DrawPhone(const View& v, s32 arrowColour, f32 x, f32 y, f32 size, f32 alpha);
+// A phone's badge: the arrow's colour 1 yellow, 2 red, 3 green, else a gang's information phone.
+void DrawPhone(const View& v, s32 arrowColour, f32 x, f32 y, f32 alpha);
 // The HUD's arrows: a job's targets and, off a job, the phones; city: the MAP's, every phone wherever it is.
 void DrawTargets(const View& v, f32 playerZ, bool city);
 // A job phone the player has too little respect with its gang for yet (Hud_Arrow::CheckVisibility).
