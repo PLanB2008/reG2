@@ -205,7 +205,7 @@ DISPLAY > MINIMAP, off by default and in CLASSIC, on in ENHANCED.
   printed with the game: the map's brightness in each gang's territory colour (violet where no gang rules,
   light blue for water), the districts' names (navigation zones) on black, the pins, phones (darker while the
   gang's respect is too low for the job, `Hud_Arrow::CheckVisibility`'s rule), targets, a waypoint and a
-  key with the territories. Enter or a click sets the waypoint (or clears it), which both maps show until
+  key with the territories. Enter or a click sets the waypoint, elsewhere moves it, on it clears it; both maps show it until
   the player reaches it; with GUIDE ARROWS (or without the minimap) the game's job arrow, recoloured in the
   waypoint's blue from the player's style, points to it from beside the player as the game's arrows do. Arrows, WASD, the left stick or the d-pad
   move it while held, or the mouse drags it; the wheel, Q and E, - and + or the right stick

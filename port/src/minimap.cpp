@@ -1302,6 +1302,7 @@ f32 sCityAcross;
 bool sCityDragging;
 f32 sCityMouseX, sCityMouseY;
 f32 sCityDragTravel; // screen pixels the mouse moved since its button went down: a click if few
+f32 sCityNear = 4.0f; // blocks: a click or Enter this close to the waypoint takes it away, further moves it
 Uint64 sCityTicks;
 const f32 kCityMinAcross = 20.0f;
 const f32 kCityMaxAcross = kMapBlocks * 1.05f;
@@ -1501,7 +1502,7 @@ void ToggleCityWaypoint()
 #if defined(GTA2_PORT_SDL)
     if (sCityAcross > 0)
     {
-        ToggleWaypoint(sCityX, sCityY, sCityAcross / 30.0f);
+        ToggleWaypoint(sCityX, sCityY, sCityNear);
     }
 #endif
 }
@@ -1597,16 +1598,19 @@ bool DrawCityMap(f32 left, f32 top, f32 right, f32 bottom, f32 ui)
     }
     else
     {
-        // A click, not a drag: the waypoint there, or none if it was there.
-        if (sCityDragging && sCityDragTravel < 6.0f * ui)
+        // A click, not a drag: the waypoint there, or none if it was on it. A tap of a touchpad can press and release
+        // between two frames, never seen down: its press counted (leftClicks) at the pointer.
+        const bool click = sCityDragging ? sCityDragTravel < 6.0f * ui : leftClicks > 0 && inside;
+        const f32 clickX = sCityDragging ? sCityMouseX : mouseX, clickY = sCityDragging ? sCityMouseY : mouseY;
+        if (click)
         {
-            ToggleWaypoint(sCityX + (sCityMouseX - centreX) * sCityAcross / height, sCityY + (sCityMouseY - centreY) * sCityAcross / height,
-                           12.0f * ui * sCityAcross / height);
+            ToggleWaypoint(sCityX + (clickX - centreX) * sCityAcross / height, sCityY + (clickY - centreY) * sCityAcross / height, sCityNear);
         }
         sCityDragging = false;
     }
     sCityX = fminf(fmaxf(sCityX, 0.0f), static_cast<f32>(kMapBlocks));
     sCityY = fminf(fmaxf(sCityY, 0.0f), static_cast<f32>(kMapBlocks));
+    sCityNear = 7.0f * ui * sCityAcross / height; // about the waypoint mark's size
 
     View v;
     v.mUi = ui;
