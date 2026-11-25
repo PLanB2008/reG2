@@ -96,7 +96,7 @@ const wchar_t* const kTextSpeeds[] = {L"VERY FAST", L"FAST", L"NORMAL", L"SLOW",
 const s32 kMaxFpsValues[] = {30, 60, 120, 144, 240, 0};
 const s32 kNumMaxFpsValues = sizeof(kMaxFpsValues) / sizeof(kMaxFpsValues[0]);
 const wchar_t* const kTextureFilters[] = {L"BILINEAR", L"ANISOTROPIC", L"PIXELATED", L"SHARP BILINEAR"};
-// The gl_texture_filter value of each; 1 (trilinear) is no longer offered and shows as anisotropic.
+// The gl_texture_filter value of each; a stored 1 (trilinear) shows as anisotropic.
 const s32 kTextureFilterValues[] = {0, 2, 3, 4};
 const s32 kNumTextureFilters = sizeof(kTextureFilters) / sizeof(kTextureFilters[0]);
 const s32 kMsaaValues[] = {0, 2, 4, 8};
