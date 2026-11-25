@@ -469,6 +469,8 @@ void FindZonePins()
 // Each gang's colour, the brighter half of its respect meter pip's texels (user sprite 70 plus its arrow colour, as
 // tools/fullmap.py takes it): its bar's colour beside its icon on the HUD, read from the player's style once per level.
 const s32 kMaxArrowColours = 16;
+const f32 kMinSaturation = 0.75f;
+const f32 kMinValue = 0.85f;
 f32 sGangColours[kMaxArrowColours][3];
 bool sGangColourRead[kMaxArrowColours];
 
@@ -526,9 +528,23 @@ void ReadGangColour(s32 arrowColour)
             count++;
         }
     }
+    // Its hue, stronger: the Zaibatsu's pip is a pale grey-cyan that hardly shows as a tint, the other gangs' are already
+    // strong (saturation 0.73 and up).
+    f32* rgb = sGangColours[arrowColour];
     for (s32 k = 0; k < 3; k++)
     {
-        sGangColours[arrowColour][k] = sum[k] / count;
+        rgb[k] = sum[k] / count;
+    }
+    const f32 high = fmaxf(rgb[0], fmaxf(rgb[1], rgb[2])), low = fminf(rgb[0], fminf(rgb[1], rgb[2]));
+    if (high > 0.0f)
+    {
+        const f32 saturation = fmaxf((high - low) / high, kMinSaturation), value = fmaxf(high, kMinValue);
+        for (s32 k = 0; k < 3; k++)
+        {
+            // Each channel's place between the lowest and the highest kept, stretched to the new saturation and value.
+            const f32 t = high > low ? (rgb[k] - low) / (high - low) : 1.0f;
+            rgb[k] = value * (1.0f - saturation * (1.0f - t));
+        }
     }
 }
 
