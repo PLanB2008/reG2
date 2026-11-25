@@ -1049,7 +1049,7 @@ void GLRenderer::UploadTexture(RTexture* pTex, s32 width, s32 height, const u32*
         gl.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pRgba);
     }
     s32 levels = 1;
-    if (mipmaps != RMIP_NONE && mOptions.mTextureFilter > 0)
+    if (mipmaps != RMIP_NONE && mOptions.Mipmaps())
     {
         // The levels below the base hold about a third of its texels; the margin covers thin sizes.
         mMipBuffer.resize((size_t)width * height / 2 + width + height + 8);
@@ -1327,9 +1327,10 @@ void GLRenderer::Flush()
     gl.glBindBuffer(GL_ARRAY_BUFFER, mVbo);
     gl.glBufferData(GL_ARRAY_BUFFER, mBatch.size() * sizeof(RVertex), &mBatch[0], GL_STREAM_DRAW);
     gl.glBindTexture(GL_TEXTURE_2D, mBatchTex ? mBatchTex->mId : mWhiteTex);
-    const bool mipmap = mOptions.mTextureFilter > 0 && mBatchTex && mBatchTex->mLevels > 1 &&
-                        (mBatchState & (RS_FILTER_LINEAR | RS_PIXEL_EXACT)) == RS_FILTER_LINEAR;
-    ApplyState(mipmap ? mBatchState | kStateMipmap : mBatchState);
+    const u32 state = mOptions.mTextureFilter == 3 && !mSmoothMagnify ? mBatchState & ~RS_FILTER_LINEAR : mBatchState;
+    const bool mipmap = mOptions.Mipmaps() && mBatchTex && mBatchTex->mLevels > 1 &&
+                        (state & (RS_FILTER_LINEAR | RS_PIXEL_EXACT)) == RS_FILTER_LINEAR;
+    ApplyState(mipmap ? state | kStateMipmap : state);
     gl.glDrawArrays(GL_TRIANGLES, 0, (GLsizei)mBatch.size());
     mDrawCalls++;
     mVertices += (u32)mBatch.size();
