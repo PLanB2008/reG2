@@ -50,7 +50,7 @@ enum Id
     kFireEffects,
     kCrosshair,
     kMinimap,
-    kGuideArrows,
+    kMinimapOnly,
     kCount,
     // Group titles in the pages' lists: the settings after one, up to the next, are under it.
     kSavesGroup,
@@ -114,8 +114,8 @@ f32 HudScale();
 
 // MINIMAP: a map of the streets around the player in a corner of the HUD (minimap.hpp).
 bool Minimap();
-// GUIDE ARROWS: with MINIMAP, the game's arrows round the player toward phones and targets; off, only the minimap
-// shows them. Always true without the minimap.
+// MINIMAP ONLY: with MINIMAP, the game's arrows round the player hidden, phones and targets on the minimap alone. True
+// while the game's arrows show: it off, or no minimap.
 bool GuideArrows();
 
 // CONTROLS: TWIN STICK moves and aims apart on foot (twin_stick.hpp).

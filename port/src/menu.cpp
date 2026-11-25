@@ -85,7 +85,13 @@ struct Item
 
 const s32 kMaxItems = 20;
 const wchar_t* const kTitles[kNumPages] = {L"OPTIONS", L"GAME", L"GRAPHICS", L"DISPLAY", L"SOUND", L"CONTROLS", L"STATISTICS",
-                                           L"MISSION TRANSCRIPT", L"MAP", L"LOAD GAME", L"LOAD GAME", L"QUIT GAME"};
+                                           L"MISSION TRANSCRIPT",
+#if defined(__EMSCRIPTEN__)
+                                           L"MAP",
+#else
+                                           L"MAP (M)", // its key in game
+#endif
+                                           L"LOAD GAME", L"LOAD GAME", L"QUIT GAME"};
 
 const s32 kNumControls = 12;
 // SPECIAL 3, the last control, does nothing in the game: it keeps its bindings but is not shown.

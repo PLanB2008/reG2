@@ -1,8 +1,9 @@
 # A minimap for the port
 
-Status: in the game as DISPLAY > MINIMAP (`port/src/minimap.cpp`), in a lighter style than the frames
-below: see [In the game](#in-the-game). The rest of this note is the design study it came from: the frame
-designs, the map treatments, where every map layer comes from, and how it would be built.
+Status: in the game as DISPLAY > MINIMAP in frame E below (`port/src/minimap*.cpp`), and as the pause
+menu's MAP (`port/src/city_map.cpp`): see [In the game](#in-the-game). The rest of this note is the design
+study it came from: the frame designs, the map treatments, where every map layer comes from, and how it
+would be built.
 
 The goal is a minimap that looks like part of GTA2's own HUD rather than a modern overlay.
 
@@ -172,54 +173,52 @@ and blip rules, not code to copy.
 
 ## In the game
 
-DISPLAY > MINIMAP, off by default and in CLASSIC, on in ENHANCED.
+DISPLAY > MINIMAP, off by default and in both styles: it adds what the original never showed, so players turn it on.
 
-- **Place and look:** the bottom left corner, 76x76 HUD pixels, 8 from the safe area's edges, scaled by
-  HUD SCALE. A thin dark border and an N on its top edge, no frame: lighter than the frames above,
-  closer to the original HUD's flat parts. On wide screens the brief, centred with the layout, stays
-  clear of it; where a brief reaches it (4:3), it fades while the brief shows.
-- **Map:** built when a level loads from `gMap_0x370` and the style's tiles, 4 texels per block: each
-  texel the average colour of 16x16 texels of the top lid, turned and flipped as its face word says, a
-  lid more than 60% see-through above the ground skipped (tree tops, wires), roofs lighter as they
-  rise and a cast shadow to the bottom right (`render_map.py`'s shading). Custom levels work as they are.
-- **GUIDE ARROWS** (with MINIMAP, on by default and in CLASSIC, off in ENHANCED): off, the game's arrows
-  round the player are hidden and phones and targets show on the minimap alone, as GTA3's radar does.
-- **View:** north up, the player's arrow facing as the player does (a heading of 0 faces south); 22 blocks across on foot to
-  36 as the camera rises with speed.
-- **Pins:** the church (the `THREAD_DECLARE5` trigger whose thread starts with `DO_SAVE_GAME`), the
-  garages as spray shops (`car_shop_130` objects declared by the level's script or in the object pool; a
-  garage's row of bays, respray beside the car weapons, one pin), the hospitals and police stations
-  (`Restart_16` and `Arrest_Restart_20` zones), the train stations (platform zones within 8 blocks
-  grouped) and the cranes (`gCranePool_D9C`, at their rotors). As on GTA3's radar, a pin up to twice the map's size away already shows on its edge, fading.
-- **Arrows:** a job's targets (`Hud_Arrow` targets without a gang) as a larger pink blip, apart from the red
-  phones as on GTA3's radar, or a triangle when
-  more than half a block above or below, held at the edge and fading beyond it; off a job, the gangs'
-  phones as blips in their colour (yellow, red, green) and info phones as the gang's icon, where the
-  game shows their arrow or within twice the map's size.
-- **Gangs:** each gang of the respect meters as its icon on the border toward its information phone
-  (`Gang::mInfoPhoneX/Y`), as the game's gang arrows lead there, and above the phone once it is on the map; a
-  gang without one toward the nearest part of its territory (`Gang_14` zones), in the top left corner while
-  the player is in it.
-- **MAP** in the pause menu, or at once with M (unless a control uses it; M or Esc then resumes the game): the
-  whole city over the screen, opened zoomed out, coloured as the city maps
-  printed with the game: the map's brightness in each gang's territory colour (violet where no gang rules,
-  light blue for water), the districts' names (navigation zones) on black, the pins, phones (darker while the
-  gang's respect is too low for the job, `Hud_Arrow::CheckVisibility`'s rule), targets, a waypoint and a
-  key with the territories. Enter or a click sets the waypoint, elsewhere moves it, on it clears it; both maps show it until
-  the player reaches it; with GUIDE ARROWS (or without the minimap) the game's job arrow, recoloured in the
-  waypoint's blue from the player's style, points to it from beside the player as the game's arrows do. Arrows, WASD, the left stick or the d-pad
-  move it while held, or the mouse drags it; the wheel, Q and E, - and + or the right stick
-  zoom (20 blocks across to the whole city); Space, C or the pad's X goes back to the player. It works with
-  MINIMAP off.
+- **Place and look:** frame E (104x92 HUD pixels at 1x, the map in its 78x66 hole, the glass over it) in the
+  bottom left corner, 6 from the safe area's edges, scaled by HUD SCALE. Where a brief's face reaches it
+  (4:3), it fades while the brief shows.
+- **Map:** built for each level (`PortMinimap::Reset` from `Hud::Init`) from `gMap_0x370` and the style's
+  tiles, 4 texels per block: each texel the average colour of 16x16 texels of the top lid, turned and flipped
+  as its face word says. A lid more than 60% see-through above the ground is skipped (tree tops, wires), and
+  so is a lid tile past the style's 992 (1023 marks a diagonal block's three-sided lid). Roofs lighten as they
+  rise, with a cast shadow to the bottom right (`render_map.py`'s shading). Custom levels work as they are.
+- **View:** north up, the player's arrow (or the car's) facing as it does (a heading of 0 faces south); 22
+  blocks across on foot to 36 as the camera rises with speed.
+- **Pins:** the design study's badges (`assets/pins`): the church (the `THREAD_DECLARE5` trigger whose
+  thread starts with `DO_SAVE_GAME`), the garages (`car_shop_130` objects the level's script declares or the
+  object pool holds; a garage's row of bays, one pin), the train stations (platform zones within 8 blocks
+  grouped) and the cranes (`gCranePool_D9C`, at their rotors). As on GTA3's radar, a pin up to twice the
+  map's size away already shows on its edge, fading. The hospitals and police stations (`Restart_16` and
+  `Arrest_Restart_20` zones), which the game takes the player to by itself, are on the MAP only.
+- **Phones and targets** (`Hud_Arrow` targets): off a job, the phones as the game draws them, their object's
+  sprite and remap from the player's style (`ObjectDefinitions`: the blue information phone, its green,
+  red and yellow clones), where the game shows their arrow or within twice the map's size, see-through while
+  the gang's respect is too low for the job (`Hud_Arrow::CheckVisibility`'s rule). A job's targets as a pink
+  blip, apart from the red phones as on GTA3's radar, or a triangle when more than half a block above or
+  below, held at the edge and fading beyond it.
+- **Gangs:** each gang of the respect meters as its icon on the frame's tubes toward its information phone
+  (`Gang::mInfoPhoneX/Y`), as the game's gang arrows lead there, off the corner caps and the N cap, and above
+  the phone once it is on the map; a gang without one toward the nearest part of its territory (`Gang_14`
+  zones), in the top left corner while the player is in it.
+- **MINIMAP ONLY** (DISPLAY, with MINIMAP, off by default): the game's arrows round the player hidden, phones
+  and targets on the minimap alone.
+- **MAP (M)** in the pause menu, or at once with M (unless a control uses it or the player is typing a chat
+  message; M or Esc then resumes the game); SDL builds only. The whole city on the left of a column with the
+  key, the buttons and the controls, opened fitted to where the level is played (its zones' bounds: a bonus
+  level's arena). The map's own colours, each gang's territory tinted and edged with the gang's colour (its
+  respect meter's pip, user sprite 70 plus its arrow colour); the districts' names once each (the navigation
+  zones of a name, at their area-weighted middle) on black, under the pins, phones, targets and player. The
+  key lists what the level has. Arrows, WASD, the left stick or the d-pad move it while held, or the mouse
+  drags it; the wheel, Q and E, - and +, the right stick or the + and − buttons zoom (20 blocks across to the
+  whole city); Space, C, the pad's X or the arrow button go back to the player. Enter or a click sets the
+  waypoint, elsewhere moves it, on it clears it; both maps show it until the player reaches it, and while the
+  game's arrows show, the game's job arrow, recoloured in the waypoint's blue from the player's style, points
+  to it from beside the player. It works with MINIMAP off. On the web a tap is a click, so the buttons zoom.
 
 Behaviour (which blips, phones only off a job, the fade past the edge, the height markers) follows the
-radar mods below; none of their code or tiles is used.
-
-## Pins in the key's style
-
-`tools/key_pins.py` draws the pins both maps use in the style of the key printed with the city maps (our own
-drawings, in `assets/key_pins`): a wrench for the garages, a cross for the hospitals, a receiver in the phones'
-colours, an i for the gangs' information phones, a hook for the cranes, the church's S under its cross.
+radar mods below; none of their code or tiles is used. A pin that shows on the MAP only once the player has
+seen it, a map filled in as one plays, is a follow-up.
 
 ## Tools
 

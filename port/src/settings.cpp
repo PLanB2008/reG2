@@ -58,10 +58,11 @@ const Id kGraphicsSettings[] = {kPreset,
 // On the web the page owns full screen, there are no display modes, the frames follow the browser's and
 // there is no OpenAL for 3D sound.
 #if defined(__EMSCRIPTEN__)
-const Id kDisplaySettings[] = {kScreenGroup, kFrameLimit, kShowFps, kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea, kMinimap, kGuideArrows};
+const Id kDisplaySettings[] = {kScreenGroup, kFrameLimit, kShowFps, kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea, kMinimap,
+                               kMinimapOnly};
 #else
 const Id kDisplaySettings[] = {kScreenGroup, kFullScreen, kDisplayMode, kVsync, kFrameLimit, kShowFps,
-                               kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea, kMinimap, kGuideArrows};
+                               kViewGroup, kBrightness, kZoom, kHudScale, kSafeArea, kMinimap, kMinimapOnly};
 #endif
 #else
 const Id kGraphicsSettings[] = {kHeadlights, kLightEffects};
@@ -81,7 +82,7 @@ namespace
 const wchar_t* const kNames[kCount] = {L"SOUND EFFECTS", L"MUSIC", L"3D SOUND", L"TEXT SPEED", L"LANGUAGE",
                                        L"FULL SCREEN", L"BRIGHTNESS", L"LIGHTING", L"EXPLODING SCORES", L"FRAME LIMIT",
                                        L"TRUE COLOUR", L"BLOOM", L"PIXEL LIGHTING", L"CAR HEADLIGHTS",
-                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"STRAFE ANIMATION", L"VIBRATION", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS", L"FRENZY RESPAWN", L"INFINITE LIVES", L"AMBIENT OCCLUSION", L"FIRE EFFECTS", L"CROSSHAIR", L"MINIMAP", L"GUIDE ARROWS"};
+                                       L"VSYNC", L"DISPLAY MODE", L"CAMERA ZOOM", L"HUD SCALE", L"SAFE AREA", L"LIGHT EFFECTS", L"TEXTURE FILTERING", L"ANTI-ALIASING", L"SHADOWS", L"PRESET", L"CYCLE LENGTH", L"START TIME", L"CLOCK", L"CONTROLS", L"AIM CAMERA", L"STRAFE ANIMATION", L"VIBRATION", L"BLOOD", L"CHECK FOR UPDATES", L"SHOW FPS", L"AUTOSAVE", L"RETRY JOBS", L"FRENZY RESPAWN", L"INFINITE LIVES", L"AMBIENT OCCLUSION", L"FIRE EFFECTS", L"CROSSHAIR", L"MINIMAP", L"MINIMAP ONLY"};
 const wchar_t* const kGroupNames[kGroupsEnd - kCount - 1] = {L"SAVES", L"DIFFICULTY", L"TIME OF DAY", L"LIGHTING", L"IMAGE", L"SCREEN", L"VIEW"};
 
 struct Language
@@ -297,7 +298,7 @@ const Translation kTranslations[] = {
     {L"DATE", NULL, {L"DATE", L"DATUM", L"DATA", L"FECHA"}},
     {L"CITY", NULL, {L"VILLE", L"STADT", L"CITTÀ", L"CIUDAD"}},
     {L"NO SAVE", NULL, {L"AUCUNE SAUVEGARDE", L"KEIN SPIELSTAND", L"NESSUN SALVATAGGIO", L"NINGUNA PARTIDA"}},
-    {L"BEFORE - %ls", NULL, {L"AVANT - %ls", L"VOR - %ls", L"PRIMA DI - %ls", L"ANTES DE - %ls"}},
+    {L"BEFORE: %ls", NULL, {L"AVANT : %ls", L"VOR: %ls", L"PRIMA DI: %ls", L"ANTES DE: %ls"}},
     {L"CHURCH", NULL, {L"EGLISE", L"KIRCHE", L"CHIESA", L"IGLESIA"}},
     {L"DOWNTOWN", NULL, {L"CENTRE-VILLE", L"INNENSTADT", L"CENTRO", L"CENTRO"}},
     {L"RESIDENTIAL", NULL, {L"RESIDENTIEL", L"WOHNVIERTEL", L"RESIDENZIALE", L"RESIDENCIAL"}},
@@ -369,6 +370,7 @@ const Translation kTranslations[] = {
      {L"UN PLAN DES RUES AUTOUR DE VOUS, AVEC MISSIONS ET CIBLES", L"EINE KARTE DER STRASSEN UM SIE, MIT JOBS UND ZIELEN",
       L"UNA MAPPA DELLE STRADE INTORNO A TE, CON LAVORI E BERSAGLI", L"UN MAPA DE LAS CALLES A TU ALREDEDOR, CON TRABAJOS Y OBJETIVOS"}},
     {L"MAP", NULL, {L"CARTE", L"KARTE", L"MAPPA", L"MAPA"}},
+    {L"MAP (M)", NULL, {L"CARTE (M)", L"KARTE (M)", L"MAPPA (M)", L"MAPA (M)"}},
     {L"YOU", NULL, {L"VOUS", L"SIE", L"TU", L"TÚ"}},
     {L"JOB TARGET", NULL, {L"CIBLE DE MISSION", L"JOB-ZIEL", L"OBIETTIVO", L"OBJETIVO"}},
     {L"EASY JOB", NULL, {L"MISSION FACILE", L"LEICHTER JOB", L"LAVORO FACILE", L"TRABAJO FÁCIL"}},
@@ -378,33 +380,41 @@ const Translation kTranslations[] = {
     {L"CHURCH - SAVE", NULL, {L"EGLISE - SAUVEGARDE", L"KIRCHE - SPEICHERN", L"CHIESA - SALVA", L"IGLESIA - GUARDAR"}},
     {L"GARAGE", NULL, {L"GARAGE", L"WERKSTATT", L"OFFICINA", L"TALLER"}},
     {L"GANG INFORMATION", NULL, {L"INFOS DU GANG", L"GANG-INFO", L"INFORMAZIONI GANG", L"INFORMACIÓN DE BANDA"}},
-    {L"NEUTRAL", NULL, {L"NEUTRE", L"NEUTRAL", L"NEUTRALE", L"NEUTRAL"}},
-    {L"WATER", NULL, {L"EAU", L"WASSER", L"ACQUA", L"AGUA"}},
+    {L"TERRITORY", NULL, {L"TERRITOIRE", L"GEBIET", L"TERRITORIO", L"TERRITORIO"}},
     {L"HOSPITAL", NULL, {L"HOPITAL", L"KRANKENHAUS", L"OSPEDALE", L"HOSPITAL"}},
     {L"POLICE STATION", NULL, {L"COMMISSARIAT", L"POLIZEIWACHE", L"STAZIONE DI POLIZIA", L"COMISARÍA"}},
     {L"TRAIN STATION", NULL, {L"GARE", L"BAHNHOF", L"STAZIONE", L"ESTACIÓN"}},
-    {L"ARROWS OR DRAG - MOVE", NULL, {L"FLECHES OU GLISSER - DEPLACER", L"PFEILE ODER ZIEHEN - BEWEGEN", L"FRECCE O TRASCINA - SPOSTA", L"FLECHAS O ARRASTRAR - MOVER"}},
-    {L"WHEEL OR Q AND E - ZOOM", NULL, {L"MOLETTE OU Q ET E - ZOOM", L"RAD ODER Q UND E - ZOOM", L"ROTELLA O Q ED E - ZOOM", L"RUEDA O Q Y E - ZOOM"}},
+    {L"ARROWS OR DRAG - MOVE", NULL,
+     {L"FLECHES OU GLISSER - DEPLACER", L"PFEILE ODER ZIEHEN - BEWEGEN",
+      L"FRECCE O TRASCINA - SPOSTA", L"FLECHAS O ARRASTRAR - MOVER"}},
+    {L"WHEEL OR Q AND E - ZOOM", NULL,
+     {L"MOLETTE OU Q ET E - ZOOM", L"RAD ODER Q UND E - ZOOM",
+      L"ROTELLA O Q ED E - ZOOM", L"RUEDA O Q Y E - ZOOM"}},
     {L"ESC OR M - BACK", NULL, {L"ECHAP OU M - RETOUR", L"ESC ODER M - ZURÜCK", L"ESC O M - INDIETRO", L"ESC O M - VOLVER"}},
-    {L"LEFT STICK - MOVE", NULL, {L"STICK GAUCHE - DEPLACER", L"LINKER STICK - BEWEGEN", L"LEVETTA SINISTRA - SPOSTA", L"STICK IZQUIERDO - MOVER"}},
+    {L"LEFT STICK - MOVE", NULL,
+     {L"STICK GAUCHE - DEPLACER", L"LINKER STICK - BEWEGEN",
+      L"LEVETTA SINISTRA - SPOSTA", L"STICK IZQUIERDO - MOVER"}},
     {L"B - BACK", NULL, {L"B - RETOUR", L"B - ZURÜCK", L"B - INDIETRO", L"B - VOLVER"}},
     {L"WAYPOINT", NULL, {L"POINT DE PASSAGE", L"WEGPUNKT", L"PUNTO DI PASSAGGIO", L"PUNTO DE RUTA"}},
     {L"NEEDS MORE RESPECT", NULL, {L"IL FAUT PLUS DE RESPECT", L"BRAUCHT MEHR RESPEKT", L"SERVE PIÙ RISPETTO", L"NECESITA MÁS RESPETO"}},
-    {L"ENTER OR CLICK - WAYPOINT", NULL, {L"ENTREE OU CLIC - POINT DE PASSAGE", L"EINGABE ODER KLICK - WEGPUNKT", L"INVIO O CLIC - PUNTO DI PASSAGGIO", L"INTRO O CLIC - PUNTO DE RUTA"}},
-    {L"SPACE - BACK TO YOU", NULL, {L"ESPACE - REVENIR A VOUS", L"LEERTASTE - ZURÜCK ZU IHNEN", L"SPAZIO - TORNA A TE", L"ESPACIO - VOLVER A TI"}},
+    {L"ENTER OR CLICK - WAYPOINT", NULL,
+     {L"ENTREE OU CLIC - POINT DE PASSAGE", L"EINGABE ODER KLICK - WEGPUNKT",
+      L"INVIO O CLIC - PUNTO DI PASSAGGIO", L"INTRO O CLIC - PUNTO DE RUTA"}},
+    {L"SPACE - BACK TO YOU", NULL,
+     {L"ESPACE - REVENIR A VOUS", L"LEERTASTE - ZURÜCK ZU IHNEN",
+      L"SPAZIO - TORNA A TE", L"ESPACIO - VOLVER A TI"}},
     {L"RIGHT STICK - ZOOM", NULL, {L"STICK DROIT - ZOOM", L"RECHTER STICK - ZOOM", L"LEVETTA DESTRA - ZOOM", L"STICK DERECHO - ZOOM"}},
     {L"A - WAYPOINT", NULL, {L"A - POINT DE PASSAGE", L"A - WEGPUNKT", L"A - PUNTO DI PASSAGGIO", L"A - PUNTO DE RUTA"}},
     {L"X - BACK TO YOU", NULL, {L"X - REVENIR A VOUS", L"X - ZURÜCK ZU IHNEN", L"X - TORNA A TE", L"X - VOLVER A TI"}},
-    {L"GUIDE ARROWS", NULL, {L"FLECHES DE GUIDAGE", L"LEITPFEILE", L"FRECCE GUIDA", L"FLECHAS GUÍA"}},
-    {L"ARROWS AROUND YOU POINT TO PHONES AND TARGETS, AS ON THE MINIMAP", NULL,
-     {L"DES FLECHES AUTOUR DE VOUS MONTRENT TELEPHONES ET CIBLES, COMME LA MINI-CARTE",
-      L"PFEILE UM SIE ZEIGEN TELEFONE UND ZIELE, WIE DIE MINIKARTE",
-      L"FRECCE INTORNO A TE INDICANO TELEFONI E BERSAGLI, COME LA MINIMAPPA",
-      L"FLECHAS A TU ALREDEDOR SEÑALAN TELÉFONOS Y OBJETIVOS, COMO EL MINIMAPA"}},
-    {L"NO ARROWS: ONLY THE MINIMAP SHOWS PHONES AND TARGETS", NULL,
-     {L"PAS DE FLECHES : SEULE LA MINI-CARTE MONTRE TELEPHONES ET CIBLES", L"KEINE PFEILE: NUR DIE MINIKARTE ZEIGT TELEFONE UND ZIELE",
-      L"NESSUNA FRECCIA: SOLO LA MINIMAPPA MOSTRA TELEFONI E BERSAGLI",
-      L"SIN FLECHAS: SOLO EL MINIMAPA MUESTRA TELÉFONOS Y OBJETIVOS"}},
+    {L"MINIMAP ONLY", NULL, {L"MINI-CARTE SEULE", L"NUR MINIKARTE", L"SOLO MINIMAPPA", L"SOLO MINIMAPA"}},
+    {L"THE GAME'S ARROWS HIDDEN: PHONES AND TARGETS ON THE MINIMAP ONLY", NULL,
+     {L"FLECHES DU JEU CACHEES : TELEPHONES ET CIBLES SUR LA MINI-CARTE SEULE",
+      L"PFEILE DES SPIELS AUS: TELEFONE UND ZIELE NUR AUF DER MINIKARTE",
+      L"FRECCE DEL GIOCO NASCOSTE: TELEFONI E BERSAGLI SOLO SULLA MINIMAPPA",
+      L"FLECHAS DEL JUEGO OCULTAS: TELÉFONOS Y OBJETIVOS SOLO EN EL MINIMAPA"}},
+    {L"THE GAME'S ARROWS AS ALWAYS, WITH THE MINIMAP", NULL,
+     {L"LES FLECHES DU JEU COMME TOUJOURS, AVEC LA MINI-CARTE", L"DIE PFEILE DES SPIELS WIE IMMER, MIT DER MINIKARTE",
+      L"LE FRECCE DEL GIOCO COME SEMPRE, CON LA MINIMAPPA", L"LAS FLECHAS DEL JUEGO COMO SIEMPRE, CON EL MINIMAPA"}},
     {L"VIBRATION", NULL, {L"VIBRATIONS", L"VIBRATION", L"VIBRAZIONE", L"VIBRACIÓN"}},
     {L"TWIN STICK", NULL, {L"DOUBLE STICK", L"TWIN-STICK", L"DOPPIO STICK", L"DOBLE STICK"}},
     {L"DEFAULT KEYS", NULL, {L"CONTROLES PAR DEFAUT", L"STANDARDSTEUERUNG", L"COMANDI PREDEFINITI", L"CONTROLES PREDETERMINADOS"}},
@@ -558,8 +568,8 @@ const char* ScreenName(Id id)
             return "gl_fire_effects";
         case kMinimap:
             return "port_minimap";
-        case kGuideArrows:
-            return "port_guide_arrows";
+        case kMinimapOnly:
+            return "port_minimap_only";
         default:
             return "car_headlights";
     }
@@ -599,7 +609,7 @@ s32 ScreenDefault(Id id)
     {
         return 1;
     }
-    return id == kLighting || id == kExplodingScores || id == kVsync || id == kClock || id == kAimCamera || id == kStrafeAnimation || id == kCrosshair || id == kBlood || id == kUpdateCheck || id == kGuideArrows ? 1 : 0;
+    return id == kLighting || id == kExplodingScores || id == kVsync || id == kClock || id == kAimCamera || id == kStrafeAnimation || id == kCrosshair || id == kBlood || id == kUpdateCheck ? 1 : 0;
 }
 
 s32 Screen(Id id)
@@ -910,7 +920,7 @@ Id Requirement(Id id)
     {
         return kLighting;
     }
-    if (id == kGuideArrows)
+    if (id == kMinimapOnly)
     {
         return kMinimap;
     }
@@ -994,7 +1004,7 @@ bool Minimap()
 
 bool GuideArrows()
 {
-    return !Minimap() || Screen(kGuideArrows) != 0;
+    return !Minimap() || Screen(kMinimapOnly) == 0;
 }
 
 bool Retry()
@@ -1067,9 +1077,9 @@ const wchar_t* Help(Id id)
             return L"HEAT HAZE, SMOKE AND EMBERS AROUND FIRES";
         case kMinimap:
             return L"A MAP OF THE STREETS AROUND YOU, WITH JOBS AND TARGETS";
-        case kGuideArrows:
-            return Screen(id) ? L"ARROWS AROUND YOU POINT TO PHONES AND TARGETS, AS ON THE MINIMAP"
-                              : L"NO ARROWS: ONLY THE MINIMAP SHOWS PHONES AND TARGETS";
+        case kMinimapOnly:
+            return Screen(id) ? L"THE GAME'S ARROWS HIDDEN: PHONES AND TARGETS ON THE MINIMAP ONLY"
+                              : L"THE GAME'S ARROWS AS ALWAYS, WITH THE MINIMAP";
 #if defined(GTA2_PORT_SDL)
         case kPreset:
         {
@@ -1223,8 +1233,6 @@ void ApplyStyle(Style style)
     gRegistry.Set_Screen_Setting(ScreenName(kAutosave), enhanced);
     gRegistry.Set_Screen_Setting(ScreenName(kRetry), enhanced);
     gRegistry.Set_Screen_Setting(ScreenName(kKfRespawn), enhanced);
-    gRegistry.Set_Screen_Setting(ScreenName(kMinimap), enhanced);
-    gRegistry.Set_Screen_Setting(ScreenName(kGuideArrows), !enhanced);
     gRegistry.Set_Screen_Setting(ScreenName(kInfiniteLives), 0);
     // Unlimited with vsync: a frame each refresh of the screen. In a browser 60: drawing at 120 or 144 Hz loads its
     // compositor for little, with the game's 30 steps a second.
@@ -1461,7 +1469,7 @@ void Change(Id id, s32 delta)
         case kAmbientOcclusion:
         case kFireEffects:
         case kMinimap:
-        case kGuideArrows:
+        case kMinimapOnly:
             gRegistry.Set_Screen_Setting(ScreenName(id), Screen(id) ? 0 : 1);
             break;
         case kInfiniteLives:

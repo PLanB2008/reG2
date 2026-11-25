@@ -2,7 +2,7 @@
 #include "Hud.hpp"
 #if defined(GTA2_PORT)
 // Port: AUTOSAVE, RETRY JOBS, the pause menu, the day and night cycle, the frame loop, TWIN STICK, the MINIMAP and
-// GUIDE ARROWS on the HUD.
+// MINIMAP ONLY on the HUD.
 #include "../port/src/autosave.hpp"
 #include "../port/src/retry.hpp"
 #include "../port/src/pause_menu.hpp"
@@ -3395,7 +3395,8 @@ void Hud::DrawGui()
         SetFullAmbient();
         mPlayerStats.DrawPlayerStats();
 #if defined(GTA2_PORT)
-        // Port: the MINIMAP and its waypoint's arrow, the CLOCK, SHOW FPS, SAVING, the RETRY hint and the TWIN STICK reticle with the HUD.
+        // Port: the MINIMAP and the waypoint's arrow, the CLOCK, SHOW FPS, SAVING, the RETRY hint and the TWIN STICK
+        // reticle with the HUD.
         PortMinimap::Draw();
         PortMinimap::DrawWaypointArrow();
         PortDayNight::DrawClock();
@@ -3416,8 +3417,8 @@ void Hud::DrawGui()
         mPagers.DrawPagers();
         mTexts.Service();
 #if defined(GTA2_PORT)
-        // Port: with the MINIMAP and GUIDE ARROWS off, phones and targets only on the minimap (not in a network game,
-        // whose arrows point at the other players).
+        // Port: with MINIMAP ONLY, phones and targets on the minimap alone (not in a network game, whose arrows point at
+        // the other players).
         if (PortSettings::GuideArrows() || IsNetworkGame())
 #endif
         mArrows.DrawArrows();
@@ -3528,8 +3529,10 @@ void Hud::Init()
     mWantedLevel.Init();
     mArrows.CreatePlayerArrows();
 #if defined(GTA2_PORT)
-    // Port: the pause menu's style and sounds loaded with the city, so that opening the menu does not stall a frame.
+    // Port: the pause menu's style and sounds loaded with the city, so that opening the menu does not stall a frame; the
+    // MINIMAP's map and pins built again for it.
     PortPauseMenu::Preload();
+    PortMinimap::Reset();
 #endif
 }
 
