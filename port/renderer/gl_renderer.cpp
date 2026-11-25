@@ -29,15 +29,19 @@ const char* kFaithfulVS =
 // (transparent texels keep their palette colour), and the edge is one screen pixel wide where the
 // bilinear alpha crosses one half, so magnified glyphs are neither blurred nor blocky. Opaque
 // texels get the plain bilinear sample.
+// uSmooth 2 (SHARP BILINEAR): each texel's centre sampled as is, blended only over a screen pixel at its edges.
 #define SMOOTH_SAMPLE \
     "uniform int uSmooth;\n" \
     "vec4 SmoothSample(vec2 uv)\n" \
     "{\n" \
-    "    vec4 c = texture(uTex, uv);\n" \
     "    vec2 size = vec2(textureSize(uTex, 0));\n" \
     "    vec2 p = uv * size - 0.5;\n" \
-    "    float scale = 1.0 / max(max(fwidth(p).x, fwidth(p).y), 1e-6);\n" \
-    "    if (uSmooth == 0 || scale <= 1.0 || c.a >= 0.999)\n" \
+    "    vec2 fw = max(fwidth(p), vec2(1e-6));\n" \
+    "    if (uSmooth == 2)\n" \
+    "        uv = (floor(p) + clamp((fract(p) - 0.5) / fw + 0.5, 0.0, 1.0) + 0.5) / size;\n" \
+    "    vec4 c = texture(uTex, uv);\n" \
+    "    float scale = 1.0 / max(fw.x, fw.y);\n" \
+    "    if (uSmooth != 1 || scale <= 1.0 || c.a >= 0.999)\n" \
     "        return c;\n" \
     "    ivec2 i0 = ivec2(floor(p));\n" \
     "    ivec2 hi = ivec2(size) - 1;\n" \
@@ -1318,7 +1322,9 @@ void GLRenderer::Flush()
         mFlushScale[1] = 2.0f / mLogicalH;
         gl.glUniform2f(mScene[scene].mScale, mFlushScale[0], mFlushScale[1]);
     }
-    const int smooth = mSmoothMagnify && !(mBatchState & RS_TEXELS) ? 1 : 0;
+    const int smooth = mSmoothMagnify ? !(mBatchState & RS_TEXELS)
+                       : mOptions.mTextureFilter == 4 && (mBatchState & RS_FILTER_LINEAR) ? 2
+                                                                                           : 0;
     if (smooth != mFlushSmooth)
     {
         mFlushSmooth = smooth;

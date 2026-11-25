@@ -26,7 +26,7 @@ struct RenderOptions
     bool mTrueColour = false;       // 8-bit palette colours and an RGBA8 target
     f32 mBloom = 0.0f;              // 0..1, glow from additive draws
     bool mPerPixelLighting = false; // gbh_AddLight lights evaluated per fragment
-    s32 mTextureFilter = 0;         // 0 bilinear, 1 trilinear, 2 anisotropic, 3 nearest (pixelated)
+    s32 mTextureFilter = 0;         // 0 bilinear, 1 trilinear, 2 anisotropic, 3 nearest (pixelated), 4 sharp bilinear
     s32 mMsaa = 0;                  // samples per pixel of the render target, 0 or 1 for none
     bool mSoftShadows = false;      // sprite shadows with soft edges, overlaps darkened once
     u32 mGeneration = 0;            // bumped on every change

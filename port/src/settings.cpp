@@ -95,7 +95,7 @@ const s32 kNumLanguages = sizeof(kLanguages) / sizeof(kLanguages[0]);
 const wchar_t* const kTextSpeeds[] = {L"VERY FAST", L"FAST", L"NORMAL", L"SLOW", L"VERY SLOW"};
 const s32 kMaxFpsValues[] = {30, 60, 120, 144, 240, 0};
 const s32 kNumMaxFpsValues = sizeof(kMaxFpsValues) / sizeof(kMaxFpsValues[0]);
-const wchar_t* const kTextureFilters[] = {L"BILINEAR", L"TRILINEAR", L"ANISOTROPIC", L"PIXELATED"};
+const wchar_t* const kTextureFilters[] = {L"BILINEAR", L"TRILINEAR", L"ANISOTROPIC", L"PIXELATED", L"SHARP BILINEAR"};
 const s32 kNumTextureFilters = sizeof(kTextureFilters) / sizeof(kTextureFilters[0]);
 const s32 kMsaaValues[] = {0, 2, 4, 8};
 const s32 kNumMsaaValues = sizeof(kMsaaValues) / sizeof(kMsaaValues[0]);
@@ -323,6 +323,7 @@ const Translation kTranslations[] = {
     {L"TRILINEAR", NULL, {L"TRILINEAIRE", L"TRILINEAR", L"TRILINEARE", L"TRILINEAL"}},
     {L"ANISOTROPIC", NULL, {L"ANISOTROPE", L"ANISOTROP", L"ANISOTROPICO", L"ANISOTRÓPICO"}},
     {L"PIXELATED", NULL, {L"PIXELISE", L"VERPIXELT", L"PIXELLATO", L"PIXELADO"}},
+    {L"SHARP BILINEAR", NULL, {L"BILINEAIRE NET", L"SCHARF BILINEAR", L"BILINEARE NITIDO", L"BILINEAL NÍTIDO"}},
     {L"ANTI-ALIASING", NULL, {L"ANTICRENELAGE", L"KANTENGLÄTTUNG", L"ANTI-ALIASING", L"ANTIALIASING"}},
     {L"SHADOWS", NULL, {L"OMBRES", L"SCHATTEN", L"OMBRE", L"SOMBRAS"}},
     {L"AMBIENT OCCLUSION", NULL, {L"OCCLUSION AMBIANTE", L"UMGEBUNGSVERDECKUNG", L"OCCLUSIONE AMBIENTALE", L"OCLUSIÓN AMBIENTAL"}},

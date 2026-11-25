@@ -186,7 +186,8 @@ walls, worked out from the map's blocks, in every LIGHTING mode.
 FIRE EFFECTS (`gl_fire_effects`, on in ENHANCED) adds heat haze over the flames and a plume of smoke, drawn from the
 game's own smoke frames and lit by the fires, with a few embers, over burning cars, wrecks and fires.
 TEXTURE FILTERING (`gl_texture_filter`) is BILINEAR as the original, TRILINEAR or ANISOTROPIC (mipmaps, on in
-ENHANCED), or PIXELATED: the game's textures drawn as sharp squares of texels, the menus left smooth.
+ENHANCED), PIXELATED: the game's textures drawn as sharp squares of texels, the menus left smooth, or SHARP BILINEAR:
+the same squares with their edges blended over one screen pixel, so they keep an even size as the camera moves.
 Their settings are grouped under small titles, and the less common ones say under the page what they
 do, or what their value does (PRESET, LIGHTING, FRAME LIMIT, CONTROLS, AIM CAMERA, STRAFE ANIMATION).
 In a game, Escape opens the same menu as a pause menu, with RESUME, RADIO (in a car with a radio: its station by
